@@ -60,7 +60,6 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 ### Pricing:
 - **Monthly:** $5/month
-- **Yearly:** $48/year (save 20%)
 
 ---
 
@@ -86,18 +85,6 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 2. Search for **"PingTo"**
 3. Click **"Add to Chrome"**
 4. Done! 🎉
-
-### Manual Installation (Developer Mode)
-
-First, clone the repository and install dependencies:
-
-git clone https://github.com/yourusername/pingto.git
-cd pingto
-npm install
-npm run build
-
-Then load the `dist` folder in Chrome via **Load unpacked**.
-
 ---
 
 ## 🎯 Usage
@@ -194,85 +181,9 @@ All data is stored locally in `chrome.storage.local`:
 - Node.js (for development tools)
 - Basic JavaScript knowledge
 
-### Setup
-
-Clone the repository and install dependencies:
-
-git clone https://github.com/yourusername/pingto.git
-cd pingto
-npm install
-npm run watch   # Development with hot reload
-npm run build   # Production build
-npm run package # Create extension package
-
-### Project Structure
-
-pingto/
-├── _locales/          # Translations (EN/RU)
-├── modules/           # Core modules (storage, history, collections, etc.)
-├── pages/             # WebSocket, Collections, Environments pages
-├── icons/             # Extension icons
-├── background.js      # Service Worker
-├── popup.html         # Main UI
-├── popup.css          # Styles
-├── popup.js           # Main logic
-└── manifest.json      # Extension config
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-### Reporting Issues
-- Check existing issues first
-- Use the issue template
-- Include steps to reproduce
-- Attach screenshots if possible
-
-### Feature Requests
-- Describe the feature clearly
-- Explain why it's needed
-- Provide use cases
-- Be open to discussion
-
-### Pull Requests
-1. Fork the repository
-2. Create a feature branch
-3. Write clean, documented code
-4. Add tests if applicable
-5. Submit PR with description
-
-### Code Guidelines
-- Use ES modules
-- Follow existing code style
-- Add comments for complex logic
-- Update documentation
-- Test thoroughly
-
----
-
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [Lucide Icons](https://lucide.dev) — Beautiful open-source icons
-- [Chrome Extensions](https://developer.chrome.com/docs/extensions/) — Browser extension platform
-- [Bruno API Client](https://www.usebruno.com) — Inspiration for Git-based collections
-
----
-
-## 📞 Contact
-
-- **Website:** [api-client-pro.dev](https://api-client-pro.dev)
-- **Email:** [support@pingto.dev](mailto:support@pingto.dev)
-- **Twitter:** [@pingto](https://twitter.com/pingto)
-- **GitHub:** [github.com/yourusername/pingto](https://github.com/yourusername/pingto)
-- **Discord:** [Join our Discord](https://discord.gg/yourinvite)
 
 ---
 

@@ -1,0 +1,254 @@
+{
+  "appName": {
+    "message": "API Client Pro"
+  },
+  "appDescription": {
+    "message": "Ultra-light, private and fast API client right in your browser"
+  },
+  "tabRequest": {
+    "message": "Request"
+  },
+  "tabResponse": {
+    "message": "Response"
+  },
+  "tabHistory": {
+    "message": "History"
+  },
+  "tabCollections": {
+    "message": "Collections"
+  },
+  "tabEnvironments": {
+    "message": "Environments"
+  },
+  "sendBtn": {
+    "message": "Send"
+  },
+  "sendingBtn": {
+    "message": "Sending..."
+  },
+  "methodGet": {
+    "message": "GET"
+  },
+  "methodPost": {
+    "message": "POST"
+  },
+  "methodPut": {
+    "message": "PUT"
+  },
+  "methodPatch": {
+    "message": "PATCH"
+  },
+  "methodDelete": {
+    "message": "DELETE"
+  },
+  "methodOptions": {
+    "message": "OPTIONS"
+  },
+  "methodHead": {
+    "message": "HEAD"
+  },
+  "urlPlaceholder": {
+    "message": "https://api.example.com/endpoint"
+  },
+  "headersTab": {
+    "message": "Headers"
+  },
+  "bodyTab": {
+    "message": "Body"
+  },
+  "authTab": {
+    "message": "Auth"
+  },
+  "graphqlTab": {
+    "message": "GraphQL"
+  },
+  "curlTab": {
+    "message": "cURL"
+  },
+  "addHeaderBtn": {
+    "message": "+ Add Header"
+  },
+  "commonHeadersBtn": {
+    "message": "📋 Common Headers"
+  },
+  "bodyTypeJson": {
+    "message": "JSON"
+  },
+  "bodyTypeForm": {
+    "message": "x-www-form-urlencoded"
+  },
+  "bodyTypeMultipart": {
+    "message": "multipart/form-data"
+  },
+  "bodyTypeText": {
+    "message": "Text/Plain"
+  },
+  "bodyTypeGraphql": {
+    "message": "GraphQL"
+  },
+  "bodyTypeNone": {
+    "message": "No Body"
+  },
+  "authNone": {
+    "message": "No Authorization"
+  },
+  "authBearer": {
+    "message": "Bearer Token"
+  },
+  "authBasic": {
+    "message": "Basic Auth"
+  },
+  "authDigest": {
+    "message": "Digest Auth"
+  },
+  "authOauth2": {
+    "message": "OAuth 2.0"
+  },
+  "tokenPlaceholder": {
+    "message": "Enter token"
+  },
+  "usernamePlaceholder": {
+    "message": "Username"
+  },
+  "passwordPlaceholder": {
+    "message": "Password"
+  },
+  "curlPlaceholder": {
+    "message": "Paste cURL command here..."
+  },
+  "importCurlBtn": {
+    "message": "Import cURL"
+  },
+  "exportCurlBtn": {
+    "message": "Export cURL"
+  },
+  "generateCodeBtn": {
+    "message": "💻 Generate Code"
+  },
+  "saveToCollectionBtn": {
+    "message": "💾 Save to Collection"
+  },
+  "saveAsEnvBtn": {
+    "message": "🔑 Save as Variable"
+  },
+  "statusLabel": {
+    "message": "Status"
+  },
+  "timeLabel": {
+    "message": "Time"
+  },
+  "sizeLabel": {
+    "message": "Size"
+  },
+  "copyResponseBtn": {
+    "message": "Copy Response"
+  },
+  "saveResponseBtn": {
+    "message": "Save Response"
+  },
+  "responseBodyTab": {
+    "message": "Body"
+  },
+  "responseHeadersTab": {
+    "message": "Headers"
+  },
+  "responsePreviewTab": {
+    "message": "Preview"
+  },
+  "historySearchPlaceholder": {
+    "message": "Search history..."
+  },
+  "clearHistoryBtn": {
+    "message": "Clear"
+  },
+  "exportHistoryBtn": {
+    "message": "📤 Export"
+  },
+  "historyEmpty": {
+    "message": "History is empty"
+  },
+  "historyLimit": {
+    "message": "📈 Unlimited history (Pro)"
+  },
+  "newCollectionBtn": {
+    "message": "📁 New Collection"
+  },
+  "importCollectionBtn": {
+    "message": "📥 Import"
+  },
+  "exportAllCollectionsBtn": {
+    "message": "📤 Export All"
+  },
+  "newEnvironmentBtn": {
+    "message": "🌍 New Environment"
+  },
+  "collectionsEmpty": {
+    "message": "No collections yet. Create your first collection!"
+  },
+  "environmentsEmpty": {
+    "message": "No environments yet. Create your first environment!"
+  },
+  "noEnvironment": {
+    "message": "No environment"
+  },
+  "noCollection": {
+    "message": "No collection"
+  },
+  "proBadge": {
+    "message": "Pro"
+  },
+  "freeBadge": {
+    "message": "Free"
+  },
+  "allDataLocal": {
+    "message": "🔒 All data local"
+  },
+  "websocketBtn": {
+    "message": "WebSocket"
+  },
+  "settingsBtn": {
+    "message": "Settings"
+  },
+  "proBtn": {
+    "message": "💎 Pro"
+  },
+  "restoreRequest": {
+    "message": "Request restored"
+  },
+  "curlImported": {
+    "message": "cURL imported successfully"
+  },
+  "curlExport": {
+    "message": "cURL copied to clipboard"
+  },
+  "invalidJson": {
+    "message": "Invalid JSON"
+  },
+  "enterUrl": {
+    "message": "Enter URL"
+  },
+  "networkError": {
+    "message": "Network Error"
+  },
+  "responseError": {
+    "message": "Error"
+  },
+  "proFeatures": {
+    "message": "🚀 Pro features:\n• Unlimited history\n• Unlimited collections\n• Environment variables\n• GraphQL & WebSocket\n• Code generation\n• Git collections\n\nPrice: $5/month"
+  },
+  "language": {
+    "message": "Language"
+  },
+  "languageEn": {
+    "message": "English"
+  },
+  "languageRu": {
+    "message": "Russian"
+  },
+  "themeLight": {
+    "message": "Light"
+  },
+  "themeDark": {
+    "message": "Dark"
+  }
+}

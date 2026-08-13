@@ -1,0 +1,254 @@
+{
+  "appName": {
+    "message": "API Client Pro"
+  },
+  "appDescription": {
+    "message": "Ультралёгкий, приватный и быстрый API-клиент прямо в браузере"
+  },
+  "tabRequest": {
+    "message": "Запрос"
+  },
+  "tabResponse": {
+    "message": "Ответ"
+  },
+  "tabHistory": {
+    "message": "История"
+  },
+  "tabCollections": {
+    "message": "Коллекции"
+  },
+  "tabEnvironments": {
+    "message": "Окружения"
+  },
+  "sendBtn": {
+    "message": "Отправить"
+  },
+  "sendingBtn": {
+    "message": "Отправка..."
+  },
+  "methodGet": {
+    "message": "GET"
+  },
+  "methodPost": {
+    "message": "POST"
+  },
+  "methodPut": {
+    "message": "PUT"
+  },
+  "methodPatch": {
+    "message": "PATCH"
+  },
+  "methodDelete": {
+    "message": "DELETE"
+  },
+  "methodOptions": {
+    "message": "OPTIONS"
+  },
+  "methodHead": {
+    "message": "HEAD"
+  },
+  "urlPlaceholder": {
+    "message": "https://api.example.com/endpoint"
+  },
+  "headersTab": {
+    "message": "Заголовки"
+  },
+  "bodyTab": {
+    "message": "Тело"
+  },
+  "authTab": {
+    "message": "Авторизация"
+  },
+  "graphqlTab": {
+    "message": "GraphQL"
+  },
+  "curlTab": {
+    "message": "cURL"
+  },
+  "addHeaderBtn": {
+    "message": "+ Добавить заголовок"
+  },
+  "commonHeadersBtn": {
+    "message": "📋 Общие заголовки"
+  },
+  "bodyTypeJson": {
+    "message": "JSON"
+  },
+  "bodyTypeForm": {
+    "message": "x-www-form-urlencoded"
+  },
+  "bodyTypeMultipart": {
+    "message": "multipart/form-data"
+  },
+  "bodyTypeText": {
+    "message": "Text/Plain"
+  },
+  "bodyTypeGraphql": {
+    "message": "GraphQL"
+  },
+  "bodyTypeNone": {
+    "message": "Без тела"
+  },
+  "authNone": {
+    "message": "Без авторизации"
+  },
+  "authBearer": {
+    "message": "Bearer Token"
+  },
+  "authBasic": {
+    "message": "Basic Auth"
+  },
+  "authDigest": {
+    "message": "Digest Auth"
+  },
+  "authOauth2": {
+    "message": "OAuth 2.0"
+  },
+  "tokenPlaceholder": {
+    "message": "Введите токен"
+  },
+  "usernamePlaceholder": {
+    "message": "Имя пользователя"
+  },
+  "passwordPlaceholder": {
+    "message": "Пароль"
+  },
+  "curlPlaceholder": {
+    "message": "Вставьте cURL команду..."
+  },
+  "importCurlBtn": {
+    "message": "Импортировать cURL"
+  },
+  "exportCurlBtn": {
+    "message": "Экспортировать cURL"
+  },
+  "generateCodeBtn": {
+    "message": "💻 Генерация кода"
+  },
+  "saveToCollectionBtn": {
+    "message": "💾 Сохранить в коллекцию"
+  },
+  "saveAsEnvBtn": {
+    "message": "🔑 Сохранить как переменную"
+  },
+  "statusLabel": {
+    "message": "Статус"
+  },
+  "timeLabel": {
+    "message": "Время"
+  },
+  "sizeLabel": {
+    "message": "Размер"
+  },
+  "copyResponseBtn": {
+    "message": "Копировать ответ"
+  },
+  "saveResponseBtn": {
+    "message": "Сохранить ответ"
+  },
+  "responseBodyTab": {
+    "message": "Тело"
+  },
+  "responseHeadersTab": {
+    "message": "Заголовки"
+  },
+  "responsePreviewTab": {
+    "message": "Предпросмотр"
+  },
+  "historySearchPlaceholder": {
+    "message": "Поиск по истории..."
+  },
+  "clearHistoryBtn": {
+    "message": "Очистить"
+  },
+  "exportHistoryBtn": {
+    "message": "📤 Экспорт"
+  },
+  "historyEmpty": {
+    "message": "История пуста"
+  },
+  "historyLimit": {
+    "message": "📈 Безлимитная история (Pro)"
+  },
+  "newCollectionBtn": {
+    "message": "📁 Новая коллекция"
+  },
+  "importCollectionBtn": {
+    "message": "📥 Импорт"
+  },
+  "exportAllCollectionsBtn": {
+    "message": "📤 Экспорт всех"
+  },
+  "newEnvironmentBtn": {
+    "message": "🌍 Новое окружение"
+  },
+  "collectionsEmpty": {
+    "message": "Нет коллекций. Создайте свою первую коллекцию!"
+  },
+  "environmentsEmpty": {
+    "message": "Нет окружений. Создайте своё первое окружение!"
+  },
+  "noEnvironment": {
+    "message": "Без окружения"
+  },
+  "noCollection": {
+    "message": "Без коллекции"
+  },
+  "proBadge": {
+    "message": "Pro"
+  },
+  "freeBadge": {
+    "message": "Бесплатно"
+  },
+  "allDataLocal": {
+    "message": "🔒 Все данные локально"
+  },
+  "websocketBtn": {
+    "message": "WebSocket"
+  },
+  "settingsBtn": {
+    "message": "Настройки"
+  },
+  "proBtn": {
+    "message": "💎 Pro"
+  },
+  "restoreRequest": {
+    "message": "Запрос восстановлен"
+  },
+  "curlImported": {
+    "message": "cURL успешно импортирован"
+  },
+  "curlExport": {
+    "message": "cURL скопирован в буфер"
+  },
+  "invalidJson": {
+    "message": "Невалидный JSON"
+  },
+  "enterUrl": {
+    "message": "Введите URL"
+  },
+  "networkError": {
+    "message": "Ошибка сети"
+  },
+  "responseError": {
+    "message": "Ошибка"
+  },
+  "proFeatures": {
+    "message": "🚀 Функции Pro-версии:\n• Безлимитная история\n• Безлимитные коллекции\n• Переменные окружения\n• GraphQL и WebSocket\n• Генерация кода\n• Git-коллекции\n\nЦена: $5/месяц"
+  },
+  "language": {
+    "message": "Язык"
+  },
+  "languageEn": {
+    "message": "Английский"
+  },
+  "languageRu": {
+    "message": "Русский"
+  },
+  "themeLight": {
+    "message": "Светлая"
+  },
+  "themeDark": {
+    "message": "Тёмная"
+  }
+}

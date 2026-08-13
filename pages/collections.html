@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collections Manager</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0D1117;
+      color: #E5E7EB;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #374151;
+    }
+    .header h1 { color: #3B82F6; font-size: 24px; }
+    .header-actions { display: flex; gap: 10px; }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #3B82F6;
+      color: white;
+    }
+    .btn-primary:hover { background: #2563EB; }
+    .btn-secondary {
+      background: #1F2937;
+      color: #E5E7EB;
+      border: 1px solid #374151;
+    }
+    .btn-secondary:hover { background: #374151; }
+    .btn-danger {
+      background: #EF4444;
+      color: white;
+    }
+    .btn-danger:hover { background: #DC2626; }
+    .btn-success {
+      background: #22C55E;
+      color: white;
+    }
+    .btn-success:hover { background: #16A34A; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    .collection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .collection-card {
+      background: #1F2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    .collection-card:hover {
+      border-color: #3B82F6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    }
+    .collection-card .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .collection-card .card-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .collection-card .card-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .collection-card .request-item {
+      padding: 8px 10px;
+      background: #0D1117;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .collection-card .request-item:hover {
+      background: #161B22;
+    }
+    .collection-card .request-item .method {
+      font-weight: 600;
+      color: #3B82F6;
+      min-width: 50px;
+    }
+    .collection-card .request-item .url {
+      color: #9CA3AF;
+      flex: 1;
+      margin: 0 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .collection-card .empty-state {
+      color: #6B7280;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: #1F2937;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      border: 1px solid #374151;
+    }
+    .modal-content h2 {
+      margin-bottom: 16px;
+      color: #E5E7EB;
+    }
+    .modal-content input, .modal-content textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      background: #0D1117;
+      color: #E5E7EB;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .modal-content input:focus, .modal-content textarea:focus {
+      outline: none;
+      border-color: #3B82F6;
+    }
+    .modal-content textarea {
+      min-height: 120px;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 9999;
+      background: #22C55E;
+      color: white;
+      animation: fadeIn 0.3s ease;
+    }
+    .toast.error { background: #EF4444; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @media (max-width: 600px) {
+      .collection-grid { grid-template-columns: 1fr; }
+      .header { flex-direction: column; gap: 12px; align-items: stretch; }
+      .header-actions { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📁 Collections Manager</h1>
+      <div class="header-actions">
+        <button class="btn btn-primary" id="newCollectionBtn">+ New Collection</button>
+        <button class="btn btn-secondary" id="importBtn">📥 Import</button>
+        <button class="btn btn-secondary" id="exportAllBtn">📤 Export All</button>
+        <button class="btn btn-secondary" id="backBtn">← Back</button>
+      </div>
+    </div>
+
+    <div class="collection-grid" id="collectionsGrid"></div>
+  </div>
+
+  <!-- Modal для создания/редактирования -->
+  <div class="modal" id="collectionModal">
+    <div class="modal-content">
+      <h2 id="modalTitle">New Collection</h2>
+      <input type="text" id="collectionName" placeholder="Collection name">
+      <button class="btn btn-primary" id="saveCollectionBtn">Save</button>
+      <button class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Modal для добавления запроса -->
+  <div class="modal" id="requestModal">
+    <div class="modal-content">
+      <h2 id="requestModalTitle">Add Request</h2>
+      <select id="requestMethod">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="PATCH">PATCH</option>
+        <option value="DELETE">DELETE</option>
+      </select>
+      <input type="text" id="requestUrl" placeholder="https://api.example.com/endpoint">
+      <textarea id="requestBody" placeholder="Request body (JSON)"></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="saveRequestBtn">Save Request</button>
+        <button class="btn btn-secondary" id="cancelRequestBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Состояние
+    let collections = [];
+    let currentCollectionId = null;
+    let editingRequestId = null;
+
+    // DOM элементы
+    const grid = document.getElementById('collectionsGrid');
+    const modal = document.getElementById('collectionModal');
+    const requestModal = document.getElementById('requestModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const collectionName = document.getElementById('collectionName');
+    const saveCollectionBtn = document.getElementById('saveCollectionBtn');
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    const newCollectionBtn = document.getElementById('newCollectionBtn');
+    const importBtn = document.getElementById('importBtn');
+    const exportAllBtn = document.getElementById('exportAllBtn');
+    const backBtn = document.getElementById('backBtn');
+    const requestMethod = document.getElementById('requestMethod');
+    const requestUrl = document.getElementById('requestUrl');
+    const requestBody = document.getElementById('requestBody');
+    const saveRequestBtn = document.getElementById('saveRequestBtn');
+    const cancelRequestBtn = document.getElementById('cancelRequestBtn');
+    const requestModalTitle = document.getElementById('requestModalTitle');
+
+    // Утилиты
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Загрузка коллекций
+    async function loadCollections() {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['api_collections'], (result) => {
+          collections = result.api_collections || [];
+          resolve(collections);
+        });
+      });
+    }
+
+    // Сохранение коллекций
+    async function saveCollections() {
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ api_collections: collections }, resolve);
+      });
+    }
+
+    // Рендер коллекций
+    function renderCollections() {
+      if (collections.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#6B7280;">
+            <div style="font-size:48px;margin-bottom:16px;">📁</div>
+            <div style="font-size:16px;margin-bottom:8px;">No collections yet</div>
+            <div style="font-size:14px;">Click "New Collection" to create your first one</div>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = collections.map(coll => `
+        <div class="collection-card" data-id="${coll.id}">
+          <div class="card-header">
+            <span class="card-title">📁 ${coll.name}</span>
+            <div class="card-actions">
+              <button class="btn btn-secondary btn-sm add-request-btn" data-id="${coll.id}">+</button>
+              <button class="btn btn-secondary btn-sm export-collection-btn" data-id="${coll.id}">📤</button>
+              <button class="btn btn-danger btn-sm delete-collection-btn" data-id="${coll.id}">🗑️</button>
+            </div>
+          </div>
+          <div class="requests-list">
+            ${coll.requests && coll.requests.length > 0 ? coll.requests.map(req => `
+              <div class="request-item" data-coll-id="${coll.id}" data-req-id="${req.id}">
+                <span class="method">${req.method}</span>
+                <span class="url">${req.url}</span>
+                <div>
+                  <button class="btn btn-secondary btn-sm edit-request-btn" data-coll-id="${coll.id}" data-req-id="${req.id}">✏️</button>
+                  <button class="btn btn-danger btn-sm delete-request-btn" data-coll-id="${coll.id}" data-req-id="${req.id}">×</button>
+                </div>
+              </div>
+            `).join('') : `<div class="empty-state">No requests yet. Click + to add.</div>`}
+          </div>
+        </div>
+      `).join('');
+
+      // Добавляем обработчики
+      document.querySelectorAll('.delete-collection-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.id);
+          if (confirm('Delete this collection?')) {
+            collections = collections.filter(c => c.id !== id);
+            await saveCollections();
+            renderCollections();
+            showToast('Collection deleted');
+          }
+        });
+      });
+
+      document.querySelectorAll('.add-request-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentCollectionId = parseInt(btn.dataset.id);
+          editingRequestId = null;
+          requestModalTitle.textContent = 'Add Request';
+          requestMethod.value = 'GET';
+          requestUrl.value = '';
+          requestBody.value = '';
+          requestModal.classList.add('active');
+        });
+      });
+
+      document.querySelectorAll('.edit-request-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const collId = parseInt(btn.dataset.collId);
+          const reqId = parseInt(btn.dataset.reqId);
+          const coll = collections.find(c => c.id === collId);
+          const req = coll?.requests?.find(r => r.id === reqId);
+          if (req) {
+            currentCollectionId = collId;
+            editingRequestId = reqId;
+            requestModalTitle.textContent = 'Edit Request';
+            requestMethod.value = req.method || 'GET';
+            requestUrl.value = req.url || '';
+            requestBody.value = req.body || '';
+            requestModal.classList.add('active');
+          }
+        });
+      });
+
+      document.querySelectorAll('.delete-request-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const collId = parseInt(btn.dataset.collId);
+          const reqId = parseInt(btn.dataset.reqId);
+          const coll = collections.find(c => c.id === collId);
+          if (coll) {
+            coll.requests = coll.requests.filter(r => r.id !== reqId);
+            await saveCollections();
+            renderCollections();
+            showToast('Request deleted');
+          }
+        });
+      });
+
+      document.querySelectorAll('.request-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          const collId = parseInt(item.dataset.collId);
+          const reqId = parseInt(item.dataset.reqId);
+          const coll = collections.find(c => c.id === collId);
+          const req = coll?.requests?.find(r => r.id === reqId);
+          if (req) {
+            // Отправляем сообщение в popup
+            chrome.runtime.sendMessage({
+              type: 'loadRequest',
+              data: req
+            });
+            showToast('Request loaded');
+          }
+        });
+      });
+
+      document.querySelectorAll('.export-collection-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.id);
+          const coll = collections.find(c => c.id === id);
+          if (coll) {
+            const json = JSON.stringify(coll, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${coll.name}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Collection exported');
+          }
+        });
+      });
+    }
+
+    // === Обработчики модальных окон ===
+
+    // Новая коллекция
+    newCollectionBtn.addEventListener('click', () => {
+      modalTitle.textContent = 'New Collection';
+      collectionName.value = '';
+      modal.classList.add('active');
+    });
+
+    saveCollectionBtn.addEventListener('click', async () => {
+      const name = collectionName.value.trim();
+      if (!name) {
+        showToast('Enter a name', 'error');
+        return;
+      }
+      collections.push({
+        id: Date.now(),
+        name,
+        requests: [],
+        created: new Date().toISOString()
+      });
+      await saveCollections();
+      renderCollections();
+      modal.classList.remove('active');
+      showToast('Collection created');
+    });
+
+    cancelModalBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    // Закрытие по клику вне модалки
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+
+    // Сохранение запроса
+    saveRequestBtn.addEventListener('click', async () => {
+      const method = requestMethod.value;
+      const url = requestUrl.value.trim();
+      if (!url) {
+        showToast('Enter URL', 'error');
+        return;
+      }
+
+      const coll = collections.find(c => c.id === currentCollectionId);
+      if (!coll) {
+        showToast('Collection not found', 'error');
+        return;
+      }
+
+      const requestData = {
+        id: editingRequestId || Date.now(),
+        method,
+        url,
+        body: requestBody.value || null
+      };
+
+      if (editingRequestId) {
+        const idx = coll.requests.findIndex(r => r.id === editingRequestId);
+        if (idx !== -1) {
+          coll.requests[idx] = requestData;
+        }
+      } else {
+        coll.requests.push(requestData);
+      }
+
+      await saveCollections();
+      renderCollections();
+      requestModal.classList.remove('active');
+      showToast(editingRequestId ? 'Request updated' : 'Request added');
+      editingRequestId = null;
+    });
+
+    cancelRequestBtn.addEventListener('click', () => {
+      requestModal.classList.remove('active');
+      editingRequestId = null;
+    });
+
+    requestModal.addEventListener('click', (e) => {
+      if (e.target === requestModal) {
+        requestModal.classList.remove('active');
+        editingRequestId = null;
+      }
+    });
+
+    // Импорт
+    importBtn.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        const text = await file.text();
+        try {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            collections = [...collections, ...data];
+          } else {
+            collections.push(data);
+          }
+          await saveCollections();
+          renderCollections();
+          showToast('Imported successfully');
+        } catch {
+          showToast('Invalid JSON file', 'error');
+        }
+      };
+      input.click();
+    });
+
+    // Экспорт всех
+    exportAllBtn.addEventListener('click', () => {
+      const json = JSON.stringify(collections, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collections_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('All collections exported');
+    });
+
+    // Назад
+    backBtn.addEventListener('click', () => {
+      window.close();
+    });
+
+    // Инициализация
+    async function init() {
+      await loadCollections();
+      renderCollections();
+    }
+
+    init();
+
+    // Слушаем сообщения из popup
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'refreshCollections') {
+        loadCollections().then(() => renderCollections());
+      }
+    });
+  </script>
+</body>
+</html>

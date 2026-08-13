@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="appName">API Client Pro</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-left">
+        <h1>⚡ <span data-i18n="appName">API Client Pro</span></h1>
+        <span class="badge-pro" id="licenseBadge" data-i18n="proBadge">Pro</span>
+      </div>
+      <div class="header-right">
+        <button id="languageToggle" class="icon-btn" title="Switch language">🇬🇧</button>
+        <button id="themeToggle" class="icon-btn" title="Toggle theme">🌙</button>
+        <button id="fullscreenBtn" class="icon-btn" title="Open in new tab">⛶</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="tabs">
+        <button class="tab active" data-tab="request" data-i18n="tabRequest">Request</button>
+        <button class="tab" data-tab="response" data-i18n="tabResponse">Response</button>
+        <button class="tab" data-tab="history" data-i18n="tabHistory">History</button>
+        <button class="tab pro-tab" data-tab="collections" data-i18n="tabCollections">📁 Collections</button>
+        <button class="tab pro-tab" data-tab="environments" data-i18n="tabEnvironments">🌍 Environments</button>
+      </div>
+
+      <!-- Request Tab -->
+      <div id="tab-request" class="tab-content active">
+        <div class="request-toolbar">
+          <select id="environmentSelect" class="env-select">
+            <option value="" data-i18n="noEnvironment">No environment</option>
+          </select>
+          <select id="collectionSelect" class="collection-select">
+            <option value="" data-i18n="noCollection">No collection</option>
+          </select>
+        </div>
+
+        <div class="request-url">
+          <select id="methodSelect">
+            <option value="GET" data-i18n="methodGet">GET</option>
+            <option value="POST" selected data-i18n="methodPost">POST</option>
+            <option value="PUT" data-i18n="methodPut">PUT</option>
+            <option value="PATCH" data-i18n="methodPatch">PATCH</option>
+            <option value="DELETE" data-i18n="methodDelete">DELETE</option>
+            <option value="OPTIONS" data-i18n="methodOptions">OPTIONS</option>
+            <option value="HEAD" data-i18n="methodHead">HEAD</option>
+          </select>
+          <input type="text" id="urlInput" placeholder="https://api.example.com/endpoint" data-i18n-placeholder="urlPlaceholder" spellcheck="false">
+          <button id="sendBtn" class="btn-primary" data-i18n="sendBtn">Send</button>
+        </div>
+
+        <div class="request-tabs">
+          <button class="req-tab active" data-reqtab="headers" data-i18n="headersTab">Headers</button>
+          <button class="req-tab" data-reqtab="body" data-i18n="bodyTab">Body</button>
+          <button class="req-tab" data-reqtab="auth" data-i18n="authTab">Auth</button>
+          <button class="req-tab pro-tab" data-reqtab="graphql" data-i18n="graphqlTab">GraphQL</button>
+          <button class="req-tab" data-reqtab="curl" data-i18n="curlTab">cURL</button>
+        </div>
+
+        <div id="req-headers" class="req-content active">
+          <div class="headers-list" id="headersList"></div>
+          <button id="addHeaderBtn" class="btn-secondary small" data-i18n="addHeaderBtn">+ Add Header</button>
+          <button id="addCommonHeadersBtn" class="btn-secondary small" data-i18n="commonHeadersBtn">📋 Common Headers</button>
+        </div>
+
+        <div id="req-body" class="req-content">
+          <select id="bodyType">
+            <option value="json" data-i18n="bodyTypeJson">JSON</option>
+            <option value="form" data-i18n="bodyTypeForm">x-www-form-urlencoded</option>
+            <option value="multipart" data-i18n="bodyTypeMultipart">multipart/form-data</option>
+            <option value="text" data-i18n="bodyTypeText">Text/Plain</option>
+            <option value="graphql" data-i18n="bodyTypeGraphql">GraphQL</option>
+            <option value="none" data-i18n="bodyTypeNone">No Body</option>
+          </select>
+          <textarea id="bodyEditor" rows="6" placeholder='{"key": "value"}'></textarea>
+          <div id="formDataFields" style="display:none;"></div>
+        </div>
+
+        <div id="req-auth" class="req-content">
+          <select id="authType">
+            <option value="none" data-i18n="authNone">No Authorization</option>
+            <option value="bearer" data-i18n="authBearer">Bearer Token</option>
+            <option value="basic" data-i18n="authBasic">Basic Auth</option>
+            <option value="digest" data-i18n="authDigest">Digest Auth</option>
+            <option value="oauth2" data-i18n="authOauth2">OAuth 2.0</option>
+          </select>
+          <div id="authFields">
+            <input type="text" id="authToken" placeholder="Enter token" data-i18n-placeholder="tokenPlaceholder" style="display:none;">
+            <div id="basicAuthFields" style="display:none;">
+              <input type="text" id="basicUser" placeholder="Username" data-i18n-placeholder="usernamePlaceholder">
+              <input type="password" id="basicPass" placeholder="Password" data-i18n-placeholder="passwordPlaceholder">
+            </div>
+            <div id="oauth2Fields" style="display:none;">
+              <input type="text" id="oauthTokenUrl" placeholder="Token URL">
+              <input type="text" id="oauthClientId" placeholder="Client ID">
+              <input type="text" id="oauthClientSecret" placeholder="Client Secret">
+            </div>
+          </div>
+        </div>
+
+        <div id="req-graphql" class="req-content">
+          <textarea id="graphqlQuery" rows="4" placeholder="query {&#10;  user(id: 1) {&#10;    name&#10;    email&#10;  }&#10;}"></textarea>
+          <textarea id="graphqlVariables" rows="3" placeholder='{"id": 1}'></textarea>
+          <button id="graphqlPlayBtn" class="btn-secondary small">▶ Execute GraphQL</button>
+        </div>
+
+        <div id="req-curl" class="req-content">
+          <textarea id="curlInput" rows="4" placeholder="Paste cURL command here..." data-i18n-placeholder="curlPlaceholder"></textarea>
+          <button id="parseCurlBtn" class="btn-secondary small" data-i18n="importCurlBtn">Import cURL</button>
+          <button id="exportCurlBtn" class="btn-secondary small" data-i18n="exportCurlBtn">Export cURL</button>
+          <button id="generateCodeBtn" class="btn-secondary small" data-i18n="generateCodeBtn">💻 Generate Code</button>
+        </div>
+
+        <div class="request-actions">
+          <button id="saveToCollectionBtn" class="btn-secondary small" data-i18n="saveToCollectionBtn">💾 Save to Collection</button>
+          <button id="saveAsEnvBtn" class="btn-secondary small" data-i18n="saveAsEnvBtn">🔑 Save as Variable</button>
+        </div>
+      </div>
+
+      <!-- Response Tab -->
+      <div id="tab-response" class="tab-content">
+        <div class="response-meta">
+          <span id="responseStatus"><span data-i18n="statusLabel">Status</span>: —</span>
+          <span id="responseTime"><span data-i18n="timeLabel">Time</span>: —</span>
+          <span id="responseSize"><span data-i18n="sizeLabel">Size</span>: —</span>
+          <button id="copyResponseBtn" class="icon-btn" title="Copy Response" data-i18n-title="copyResponseBtn">📋</button>
+          <button id="saveResponseBtn" class="icon-btn" title="Save Response" data-i18n-title="saveResponseBtn">💾</button>
+        </div>
+        <div class="response-tabs">
+          <button class="resp-tab active" data-resptab="body" data-i18n="responseBodyTab">Body</button>
+          <button class="resp-tab" data-resptab="headers" data-i18n="responseHeadersTab">Headers</button>
+          <button class="resp-tab" data-resptab="preview" data-i18n="responsePreviewTab">Preview</button>
+        </div>
+        <div id="resp-body" class="resp-content active">
+          <pre id="responseBody">Response will appear here...</pre>
+        </div>
+        <div id="resp-headers" class="resp-content">
+          <pre id="responseHeaders">Headers will appear here...</pre>
+        </div>
+        <div id="resp-preview" class="resp-content">
+          <iframe id="responsePreview" style="width:100%;height:200px;border:none;background:white;"></iframe>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="tab-history" class="tab-content">
+        <div class="history-controls">
+          <input type="text" id="historySearch" placeholder="Search history..." data-i18n-placeholder="historySearchPlaceholder">
+          <button id="clearHistoryBtn" class="btn-secondary small" data-i18n="clearHistoryBtn">Clear</button>
+          <button id="exportHistoryBtn" class="btn-secondary small" data-i18n="exportHistoryBtn">📤 Export</button>
+        </div>
+        <div id="historyList"></div>
+        <div id="historyLimit" class="history-limit" data-i18n="historyLimit">📈 Unlimited history (Pro)</div>
+      </div>
+
+      <!-- Collections Tab -->
+      <div id="tab-collections" class="tab-content">
+        <div class="collections-controls">
+          <button id="newCollectionBtn" class="btn-secondary small" data-i18n="newCollectionBtn">📁 New Collection</button>
+          <button id="importCollectionBtn" class="btn-secondary small" data-i18n="importCollectionBtn">📥 Import</button>
+          <button id="exportAllCollectionsBtn" class="btn-secondary small" data-i18n="exportAllCollectionsBtn">📤 Export All</button>
+        </div>
+        <div id="collectionsList"></div>
+      </div>
+
+      <!-- Environments Tab -->
+      <div id="tab-environments" class="tab-content">
+        <div class="env-controls">
+          <button id="newEnvironmentBtn" class="btn-secondary small" data-i18n="newEnvironmentBtn">🌍 New Environment</button>
+        </div>
+        <div id="environmentsList"></div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span data-i18n="allDataLocal">🔒 All data local</span>
+      <div class="footer-right">
+        <button id="websocketBtn" class="icon-btn" title="WebSocket" data-i18n-title="websocketBtn">🔌</button>
+        <button id="settingsBtn" class="icon-btn" title="Settings" data-i18n-title="settingsBtn">⚙️</button>
+        <button id="licenseBtn" class="btn-pro" data-i18n="proBtn">💎 Pro</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

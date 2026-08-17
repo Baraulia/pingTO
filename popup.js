@@ -74,7 +74,6 @@ const dom = {
   closeCodeModal: $('#closeCodeModal'),
   proToggle: $('#proToggle'),
   proStatus: $('#proStatus'),
-  proBtn: $('#proBtn'),
   licenseBtn: $('#licenseBtn'),
   historyLimit: $('#historyLimit'),
   collectionsList: $('#collectionsList'),
@@ -799,7 +798,7 @@ safeAddListener(dom.fullscreenBtn, 'click', () => {
 });
 
 // ====== Pro / License ======
-safeAddListener(dom.proBtn, 'click', () => {
+safeAddListener(dom.licenseBtn, 'click', () => {
     alert(I18nManager.t('proFeatures'));
 });
 

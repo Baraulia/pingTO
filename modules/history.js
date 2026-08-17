@@ -15,7 +15,7 @@ export class HistoryManager {
 
   async add(item) {
     if (!this.loaded) await this.load();
-    item.id = Date.now() + Math.random() * 1000;
+    item.id = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     this.items.unshift(item);
     await this.save();
   }

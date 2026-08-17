@@ -215,7 +215,7 @@ safeAddListener(dom.themeToggle, 'click', () => {
     }
 })();
 
-// ====== Остальные функции (без изменений) ======
+
 function renderAllDynamic() {
     renderHeaders();
     renderHistory();
@@ -474,7 +474,11 @@ safeAddListener(dom.saveResponseBtn, 'click', () => {
 
 // ====== History ======
 function renderHistory() {
-    if (!dom.historyList || !dom.historySearch) return;
+    if (!dom.historyList || !dom.historySearch) {
+        console.warn('⚠️ History DOM elements not found');
+        return;
+    }
+    
     const search = dom.historySearch.value.toLowerCase();
     const items = historyManager.getItems(state.historyLimit);
     
@@ -493,7 +497,7 @@ function renderHistory() {
             <span class="h-method">${item.method}</span>
             <span class="h-url">${item.url}</span>
             <span class="h-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}">
-                ${item.status}
+                ${item.status || '—'}
             </span>
             <span class="h-time">${new Date(item.timestamp).toLocaleString()}</span>
         </div>
@@ -501,23 +505,28 @@ function renderHistory() {
 
     dom.historyList.querySelectorAll('.history-item').forEach(el => {
         el.addEventListener('click', () => {
-            const id = parseInt(el.dataset.id);
+            const id = el.dataset.id;
             const item = historyManager.getById(id);
             if (item) {
-                dom.methodSelect.value = item.method;
-                dom.urlInput.value = item.url;
-                if (item.headers) state.headers = item.headers;
-                if (item.body) dom.bodyEditor.value = item.body;
-                if (item.bodyType) dom.bodyType.value = item.bodyType;
-                if (item.authType) dom.authType.value = item.authType;
-                renderHeaders();
-                UIHelpers.showToast(I18nManager.t('restoreRequest'), 'success');
-                switchTab('request');
+                restoreRequest(item);
             }
         });
     });
 
     if (dom.historyLimit) dom.historyLimit.textContent = I18nManager.t('historyLimit');
+}
+
+// Вспомогательная функция для восстановления запроса
+function restoreRequest(item) {
+    dom.methodSelect.value = item.method;
+    dom.urlInput.value = item.url;
+    if (item.headers) state.headers = item.headers;
+    if (item.body) dom.bodyEditor.value = item.body;
+    if (item.bodyType) dom.bodyType.value = item.bodyType;
+    if (item.authType) dom.authType.value = item.authType;
+    renderHeaders();
+    UIHelpers.showToast(I18nManager.t('restoreRequest'), 'success');
+    switchTab('request');
 }
 
 safeAddListener(dom.historySearch, 'input', renderHistory);
@@ -608,7 +617,7 @@ async function renderCollections() {
     dom.collectionsList.querySelectorAll('.delete-collection').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const id = btn.dataset.id;
+            const id = Number(btn.dataset.id);
             if (confirm('Delete this collection?')) {
                 await collectionsManager.delete(id);
                 renderCollections();
@@ -707,7 +716,7 @@ async function renderEnvironments() {
     dom.environmentsList.querySelectorAll('.delete-env').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const id = btn.dataset.id;
+            const id = Number(btn.dataset.id);
             if (confirm('Delete this environment?')) {
                 await environmentsManager.delete(id);
                 renderEnvironments();
@@ -802,9 +811,74 @@ safeAddListener(dom.licenseBtn, 'click', () => {
     alert(I18nManager.t('proFeatures'));
 });
 
-// ====== Инициализация ======
+// ====== Tab Navigation Initialization ======
+function initTabs() {
+    // Обработчики для основных вкладок (Request, Response, History, Collections, Environments)
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const tabId = this.dataset.tab;
+            console.log(`🖱️ Tab clicked: ${tabId}`); // Для диагностики
+            
+            // Проверяем Pro-функции
+            const proTabs = ['collections', 'environments'];
+            if (proTabs.includes(tabId)) {
+                // Если не Pro - показываем сообщение
+                if (!isPro) {
+                    UIHelpers.showToast(`🌟 ${tabId} is a Pro feature. Enable Pro in settings.`, 'info');
+                    // Все равно переключаем, но с сообщением о Pro
+                    // Можно закомментировать return, чтобы показывать пустую вкладку
+                    // return; // Раскомментируйте, чтобы блокировать переключение
+                }
+            }
+            
+            // Переключаем вкладку
+            switchTab(tabId);
+            
+            // Рендерим контент для конкретной вкладки
+            switch(tabId) {
+                case 'history':
+                    renderHistory();
+                    break;
+                case 'collections':
+                    renderCollections();
+                    break;
+                case 'environments':
+                    renderEnvironments();
+                    break;
+                case 'response':
+                    // Response обновляется автоматически
+                    break;
+                case 'request':
+                    // Ничего не делаем
+                    break;
+            }
+        });
+    });
+    
+    // Обработчики для подвкладок Request (Headers, Auth, Body, cURL)
+    document.querySelectorAll('.req-tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.dataset.reqtab;
+            switchReqTab(tabId);
+        });
+    });
+    
+    // Обработчики для подвкладок Response (Body, Headers, Preview)
+    document.querySelectorAll('.resp-tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.dataset.resptab;
+            switchRespTab(tabId);
+        });
+    });
+    
+    console.log('✅ Tabs initialized');
+}
+
+// Вызовите в init()
 async function init() {
+    await historyManager.load();
     await updateEnvAndCollectionSelects();
+    initTabs(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
     renderHeaders();
     renderHistory();
     renderCollections();

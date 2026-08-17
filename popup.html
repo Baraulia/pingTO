@@ -8,17 +8,24 @@
 </head>
 <body>
   <div id="app">
-    <header class="header">
-      <div class="header-left">
-        <h1>⚡ <span data-i18n="appName">API Client Pro</span></h1>
-        <span class="badge-pro" id="licenseBadge" data-i18n="proBadge">Pro</span>
-      </div>
-      <div class="header-right">
-        <button id="languageToggle" class="icon-btn" title="Switch language">🇬🇧</button>
-        <button id="themeToggle" class="icon-btn" title="Toggle theme">🌙</button>
-        <button id="fullscreenBtn" class="icon-btn" title="Open in new tab">⛶</button>
-      </div>
-    </header>
+  <header class="header">
+  <div class="header-left">
+    <h1>⚡ <span data-i18n="appName">PingTo</span></h1>
+    <span class="badge-pro" id="licenseBadge" data-i18n="proBadge">Pro</span>
+  </div>
+  <div class="header-right">
+    <!-- ПЕРЕКЛЮЧАТЕЛЬ PRO -->
+    <div class="pro-toggle-container">
+      <label class="switch">
+        <input type="checkbox" id="proToggle">
+        <span class="slider round"></span>
+      </label>
+      <span id="proStatus" style="font-size:11px;color:#9CA3AF;">🆓 Free</span>
+    </div>    
+    <button id="themeToggle" class="icon-btn" title="Toggle theme">🌙</button>
+    <button id="fullscreenBtn" class="icon-btn" title="Open in new tab">⛶</button>
+  </div>
+</header>
 
     <main>
       <div class="tabs">

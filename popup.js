@@ -66,6 +66,13 @@ const dom = {
   themeToggle: $('#themeToggle'),
   languageToggle: $('#languageToggle'),
   fullscreenBtn: $('#fullscreenBtn'),
+  codeModal: $('#codeModal'),
+  codeLanguage: $('#codeLanguage'),
+  codeOutput: $('#codeOutput'),
+  copyCodeBtn: $('#copyCodeBtn'),
+  closeCodeModal: $('#closeCodeModal'),
+  proToggle: $('#proToggle'),  // переключатель Pro
+  proStatus: $('#proStatus'),  // статус Pro
   proBtn: $('#proBtn'),
   licenseBtn: $('#licenseBtn'),
   historyLimit: $('#historyLimit'),
@@ -98,6 +105,85 @@ dom.languageToggle.addEventListener('click', async () => {
 // Подписываемся на изменения языка
 document.addEventListener('languageChanged', () => {
   renderAllDynamic();
+});
+
+// ====== Generate Code ======
+dom.generateCodeBtn.addEventListener('click', () => {
+    const method = dom.methodSelect.value;
+    const url = dom.urlInput.value;
+    const headers = {};
+    state.headers.forEach(h => {
+        if (h.key.trim()) headers[h.key.trim()] = h.value.trim();
+    });
+    const body = dom.bodyEditor.value;
+
+    // Показываем модальное окно
+    dom.codeModal.classList.add('active');
+    generateCode(method, url, headers, body);
+});
+
+function generateCode(method, url, headers, body) {
+    const language = dom.codeLanguage.value;
+    const code = CodeGenerator.generate(method, url, headers, body, language);
+    dom.codeOutput.textContent = code;
+}
+
+dom.codeLanguage.addEventListener('change', () => {
+    const method = dom.methodSelect.value;
+    const url = dom.urlInput.value;
+    const headers = {};
+    state.headers.forEach(h => {
+        if (h.key.trim()) headers[h.key.trim()] = h.value.trim();
+    });
+    const body = dom.bodyEditor.value;
+    generateCode(method, url, headers, body);
+});
+
+dom.copyCodeBtn.addEventListener('click', () => {
+    const code = dom.codeOutput.textContent;
+    navigator.clipboard.writeText(code);
+    UIHelpers.showToast('Code copied to clipboard', 'success');
+});
+
+dom.closeCodeModal.addEventListener('click', () => {
+    dom.codeModal.classList.remove('active');
+});
+
+dom.codeModal.addEventListener('click', (e) => {
+    if (e.target === dom.codeModal) {
+        dom.codeModal.classList.remove('active');
+    }
+});
+
+// ====== Pro Mode ======
+let isPro = false;
+
+dom.proToggle.addEventListener('change', () => {
+    isPro = dom.proToggle.checked;
+    dom.proStatus.textContent = isPro ? '✅ Pro' : '🆓 Free';
+    dom.proStatus.style.color = isPro ? '#22C55E' : '#9CA3AF';
+    
+    // Разблокируем Pro-функции
+    document.querySelectorAll('.pro-feature').forEach(el => {
+        el.style.display = isPro ? 'block' : 'none';
+        el.disabled = !isPro;
+    });
+    
+    // Сохраняем статус в storage
+    chrome.storage.local.set({ isPro });
+    UIHelpers.showToast(isPro ? 'Pro features unlocked!' : 'Free mode', isPro ? 'success' : 'info');
+});
+
+// Загружаем сохранённый статус Pro
+chrome.storage.local.get(['isPro'], (result) => {
+    isPro = result.isPro || false;
+    dom.proToggle.checked = isPro;
+    dom.proStatus.textContent = isPro ? '✅ Pro' : '🆓 Free';
+    dom.proStatus.style.color = isPro ? '#22C55E' : '#9CA3AF';
+    document.querySelectorAll('.pro-feature').forEach(el => {
+        el.style.display = isPro ? 'block' : 'none';
+        el.disabled = !isPro;
+    });
 });
 
 function renderAllDynamic() {

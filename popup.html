@@ -195,5 +195,27 @@
   </div>
 
   <script src="popup.js" type="module"></script>
+  <!-- ====== Modal for Code Generation ====== -->
+<div class="modal" id="codeModal">
+    <div class="modal-content">
+        <h3>💻 Generated Code</h3>
+        <div style="margin:12px 0;">
+            <label style="font-size:13px;color:var(--text-secondary);">Language:</label>
+            <select id="codeLanguage" style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-input);color:var(--text-primary);font-size:13px;margin-top:4px;">
+                <option value="javascript">JavaScript (fetch)</option>
+                <option value="python">Python (requests)</option>
+                <option value="php">PHP (cURL)</option>
+                <option value="go">Go (net/http)</option>
+            </select>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:6px;padding:12px;max-height:200px;overflow-y:auto;">
+            <pre id="codeOutput" style="font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;color:var(--text-primary);">Select a language to generate code...</pre>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+            <button id="copyCodeBtn" class="btn-secondary small">📋 Copy</button>
+            <button id="closeCodeModal" class="btn-secondary small">Close</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

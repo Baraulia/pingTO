@@ -8,7 +8,7 @@ import { UIHelpers } from './modules/ui-helpers.js';
 import { CollectionsManager } from './modules/collections.js';
 import { EnvironmentsManager } from './modules/environments.js';
 import { I18nManager } from './modules/i18n.js';
-import { CodeGenerator } from './modules/code-generator.js'; // ⬅️ ДОБАВЛЕНО
+import { CodeGenerator } from './modules/code-generator.js';
 
 // ====== Инициализация ======
 const storage = new StorageManager();
@@ -215,7 +215,6 @@ safeAddListener(dom.themeToggle, 'click', () => {
     }
 })();
 
-
 function renderAllDynamic() {
     renderHeaders();
     renderHistory();
@@ -243,17 +242,45 @@ function switchRespTab(tabId) {
     $$('.resp-content').forEach(c => c.classList.toggle('active', c.id === `resp-${tabId}`));
 }
 
-// ====== Headers ======
+// ====== Headers (БЕЗОПАСНАЯ ВЕРСИЯ) ======
 function renderHeaders() {
     if (!dom.headersList) return;
-    dom.headersList.innerHTML = state.headers.map((h, i) => `
-        <div class="header-row" data-index="${i}">
-            <input type="text" placeholder="Key" value="${h.key}" data-header-key="${i}">
-            <input type="text" placeholder="Value" value="${h.value}" data-header-value="${i}">
-            <button class="remove-header" data-index="${i}">×</button>
-        </div>
-    `).join('');
+    
+    // Очищаем список
+    dom.headersList.innerHTML = '';
+    
+    state.headers.forEach((h, i) => {
+        const row = document.createElement('div');
+        row.className = 'header-row';
+        row.dataset.index = i;
+        
+        // Key input
+        const keyInput = document.createElement('input');
+        keyInput.type = 'text';
+        keyInput.placeholder = 'Key';
+        keyInput.value = UIHelpers.escapeHtml(h.key);
+        keyInput.dataset.headerKey = i;
+        
+        // Value input
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Value';
+        valueInput.value = UIHelpers.escapeHtml(h.value);
+        valueInput.dataset.headerValue = i;
+        
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-header';
+        removeBtn.dataset.index = i;
+        removeBtn.textContent = '×';
+        
+        row.appendChild(keyInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+        dom.headersList.appendChild(row);
+    });
 
+    // Добавляем обработчики событий
     dom.headersList.querySelectorAll('[data-header-key]').forEach(inp => {
         inp.addEventListener('input', (e) => {
             const idx = parseInt(e.target.dataset.headerKey);
@@ -487,30 +514,75 @@ function renderHistory() {
         item.method.toLowerCase().includes(search)
     );
 
+    // Очищаем список
+    dom.historyList.innerHTML = '';
+
     if (filtered.length === 0) {
-        dom.historyList.innerHTML = `<div class="empty-state">${I18nManager.t('historyEmpty')}</div>`;
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.textContent = I18nManager.t('historyEmpty');
+        dom.historyList.appendChild(emptyState);
         return;
     }
 
-    dom.historyList.innerHTML = filtered.map(item => `
-        <div class="history-item" data-id="${item.id}">
-            <span class="h-method">${item.method}</span>
-            <span class="h-url">${item.url}</span>
-            <span class="h-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}">
-                ${item.status || '—'}
-            </span>
-            <span class="h-time">${new Date(item.timestamp).toLocaleString()}</span>
-        </div>
-    `).join('');
-
-    dom.historyList.querySelectorAll('.history-item').forEach(el => {
-        el.addEventListener('click', () => {
-            const id = el.dataset.id;
-            const item = historyManager.getById(id);
-            if (item) {
-                restoreRequest(item);
+    filtered.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.dataset.id = item.id;
+        
+        const methodSpan = document.createElement('span');
+        methodSpan.className = 'h-method';
+        methodSpan.textContent = item.method;
+        
+        const urlSpan = document.createElement('span');
+        urlSpan.className = 'h-url';
+        urlSpan.textContent = UIHelpers.escapeHtml(item.url);
+        
+        const statusSpan = document.createElement('span');
+        statusSpan.className = `h-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}`;
+        statusSpan.textContent = item.status || '—';
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'h-time';
+        timeSpan.textContent = new Date(item.timestamp).toLocaleString();
+        
+        div.appendChild(methodSpan);
+        div.appendChild(urlSpan);
+        div.appendChild(statusSpan);
+        div.appendChild(timeSpan);
+        
+        // ====== ИСПРАВЛЕННЫЙ ОБРАБОТЧИК ======
+        div.addEventListener('click', () => {
+            const id = div.dataset.id;
+            
+            // Пытаемся найти по новому ID
+            let restoredItem = historyManager.getById(id);
+            
+            // Если не нашли и ID похож на число - пробуем найти по старому ID
+            if (!restoredItem && /^\d+(\.\d+)?$/.test(id)) {
+                // Используем getByOldId, если он есть в HistoryManager
+                if (typeof historyManager.getByOldId === 'function') {
+                    restoredItem = historyManager.getByOldId(Number(id));
+                } else {
+                    // Или ищем вручную по _oldId
+                    restoredItem = historyManager.getAll().find(item => 
+                        String(item._oldId) === String(id)
+                    );
+                }
+                
+                if (restoredItem) {
+                    UIHelpers.showToast('Restored from legacy entry', 'info');
+                }
+            }
+            
+            if (restoredItem) {
+                restoreRequest(restoredItem);
+            } else {
+                UIHelpers.showToast('Request not found in history', 'error');
             }
         });
+        
+        dom.historyList.appendChild(div);
     });
 
     if (dom.historyLimit) dom.historyLimit.textContent = I18nManager.t('historyLimit');
@@ -591,60 +663,122 @@ safeAddListener(dom.exportCurlBtn, 'click', () => {
 async function renderCollections() {
     if (!dom.collectionsList) return;
     const collections = await collectionsManager.getAll();
+    
+    // Очищаем список
+    dom.collectionsList.innerHTML = '';
+    
     if (!collections || collections.length === 0) {
-        dom.collectionsList.innerHTML = `<div class="empty-state">${I18nManager.t('collectionsEmpty')}</div>`;
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.textContent = I18nManager.t('collectionsEmpty');
+        dom.collectionsList.appendChild(emptyState);
         return;
     }
 
-    dom.collectionsList.innerHTML = collections.map(coll => `
-        <div class="collection-item" data-id="${coll.id}">
-            <div class="coll-header">
-                <span class="coll-name">📁 ${coll.name}</span>
-                <div class="coll-actions">
-                    <button class="btn-secondary small delete-collection" data-id="${coll.id}">🗑️</button>
-                    <button class="btn-secondary small export-collection" data-id="${coll.id}">📤</button>
-                </div>
-            </div>
-            ${coll.requests && coll.requests.length > 0 ? coll.requests.map(req => `
-                <div class="coll-request" data-coll-id="${coll.id}" data-req-id="${req.id}">
-                    <span><strong>${req.method}</strong> ${req.url}</span>
-                    <button class="btn-secondary small run-request" data-coll-id="${coll.id}" data-req-id="${req.id}">▶</button>
-                </div>
-            `).join('') : '<div class="text-muted" style="font-size:12px;padding:4px 0;">No requests</div>'}
-        </div>
-    `).join('');
-
-    dom.collectionsList.querySelectorAll('.delete-collection').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+    collections.forEach(coll => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'collection-item';
+        wrapper.dataset.id = coll.id;
+        
+        // Заголовок коллекции
+        const header = document.createElement('div');
+        header.className = 'coll-header';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'coll-name';
+        nameSpan.textContent = `📁 ${UIHelpers.escapeHtml(coll.name)}`;
+        
+        const actions = document.createElement('div');
+        actions.className = 'coll-actions';
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-secondary small delete-collection';
+        deleteBtn.dataset.id = coll.id;
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const id = Number(btn.dataset.id);
             if (confirm('Delete this collection?')) {
-                await collectionsManager.delete(id);
+                await collectionsManager.delete(coll.id);
                 renderCollections();
                 updateEnvAndCollectionSelects();
             }
         });
-    });
-
-    dom.collectionsList.querySelectorAll('.run-request').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'btn-secondary small export-collection';
+        exportBtn.dataset.id = coll.id;
+        exportBtn.textContent = '📤';
+        exportBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const collId = parseInt(btn.dataset.collId);
-            const reqId = parseInt(btn.dataset.reqId);
-            const coll = await collectionsManager.getById(collId);
-            if (coll) {
-                const req = coll.requests.find(r => r.id === reqId);
-                if (req) {
-                    dom.methodSelect.value = req.method;
-                    dom.urlInput.value = req.url;
-                    if (req.headers) state.headers = req.headers;
-                    if (req.body) dom.bodyEditor.value = req.body;
-                    renderHeaders();
-                    UIHelpers.showToast('Request loaded from collection', 'success');
-                    switchTab('request');
-                }
+            const data = await collectionsManager.exportOne(coll.id);
+            if (data) {
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `collection_${UIHelpers.escapeHtml(coll.name)}_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                UIHelpers.showToast('Collection exported', 'success');
             }
         });
+        
+        actions.appendChild(deleteBtn);
+        actions.appendChild(exportBtn);
+        header.appendChild(nameSpan);
+        header.appendChild(actions);
+        wrapper.appendChild(header);
+        
+        // Запросы в коллекции
+        if (coll.requests && coll.requests.length > 0) {
+            coll.requests.forEach(req => {
+                const reqDiv = document.createElement('div');
+                reqDiv.className = 'coll-request';
+                reqDiv.dataset.collId = coll.id;
+                reqDiv.dataset.reqId = req.id;
+                
+                const reqInfo = document.createElement('span');
+                const methodStrong = document.createElement('strong');
+                methodStrong.textContent = UIHelpers.escapeHtml(req.method);
+                reqInfo.appendChild(methodStrong);
+                reqInfo.appendChild(document.createTextNode(' ' + UIHelpers.escapeHtml(req.url)));
+                
+                const runBtn = document.createElement('button');
+                runBtn.className = 'btn-secondary small run-request';
+                runBtn.dataset.collId = coll.id;
+                runBtn.dataset.reqId = req.id;
+                runBtn.textContent = '▶';
+                runBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const loadedColl = await collectionsManager.getById(coll.id);
+                    if (loadedColl) {
+                        const loadedReq = loadedColl.requests.find(r => r.id === req.id);
+                        if (loadedReq) {
+                            dom.methodSelect.value = loadedReq.method;
+                            dom.urlInput.value = loadedReq.url;
+                            if (loadedReq.headers) state.headers = loadedReq.headers;
+                            if (loadedReq.body) dom.bodyEditor.value = loadedReq.body;
+                            renderHeaders();
+                            UIHelpers.showToast('Request loaded from collection', 'success');
+                            switchTab('request');
+                        }
+                    }
+                });
+                
+                reqDiv.appendChild(reqInfo);
+                reqDiv.appendChild(runBtn);
+                wrapper.appendChild(reqDiv);
+            });
+        } else {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'text-muted';
+            emptyMsg.style.cssText = 'font-size:12px;padding:4px 0;';
+            emptyMsg.textContent = 'No requests';
+            wrapper.appendChild(emptyMsg);
+        }
+        
+        dom.collectionsList.appendChild(wrapper);
     });
 }
 
@@ -662,13 +796,17 @@ safeAddListener(dom.importCollectionBtn, 'click', () => {
     input.type = 'file';
     input.accept = '.json';
     input.onchange = async (e) => {
-        const file = e.target.files[0];
-        const text = await file.text();
-        const data = JSON.parse(text);
-        await collectionsManager.import(data);
-        renderCollections();
-        updateEnvAndCollectionSelects();
-        UIHelpers.showToast(I18nManager.t('importCollectionBtn'), 'success');
+        try {
+            const file = e.target.files[0];
+            const text = await file.text();
+            const data = JSON.parse(text);
+            await collectionsManager.import(data);
+            renderCollections();
+            updateEnvAndCollectionSelects();
+            UIHelpers.showToast(I18nManager.t('importCollectionBtn'), 'success');
+        } catch (error) {
+            UIHelpers.showToast('Error importing collection: ' + error.message, 'error');
+        }
     };
     input.click();
 });
@@ -690,56 +828,94 @@ safeAddListener(dom.exportAllCollectionsBtn, 'click', async () => {
 async function renderEnvironments() {
     if (!dom.environmentsList) return;
     const environments = await environmentsManager.getAll();
+    
+    dom.environmentsList.innerHTML = '';
+    
     if (!environments || environments.length === 0) {
-        dom.environmentsList.innerHTML = `<div class="empty-state">${I18nManager.t('environmentsEmpty')}</div>`;
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.textContent = I18nManager.t('environmentsEmpty');
+        dom.environmentsList.appendChild(emptyState);
         return;
     }
 
-    dom.environmentsList.innerHTML = environments.map(env => `
-        <div class="environment-item" data-id="${env.id}">
-            <div class="env-header">
-                <span class="env-name">🌍 ${env.name}</span>
-                <div>
-                    <button class="btn-secondary small delete-env" data-id="${env.id}">🗑️</button>
-                    <button class="btn-secondary small activate-env" data-id="${env.id}">▶</button>
-                </div>
-            </div>
-            ${env.variables ? Object.entries(env.variables).map(([key, value]) => `
-                <div class="env-var">
-                    <span class="var-key">{{${key}}}</span>
-                    <span>${value}</span>
-                </div>
-            `).join('') : '<div class="text-muted" style="font-size:12px;">No variables</div>'}
-        </div>
-    `).join('');
-
-    dom.environmentsList.querySelectorAll('.delete-env').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+    environments.forEach(env => {
+        const item = document.createElement('div');
+        item.className = 'environment-item';
+        item.dataset.id = env.id;
+        
+        const header = document.createElement('div');
+        header.className = 'env-header';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'env-name';
+        nameSpan.textContent = `🌍 ${UIHelpers.escapeHtml(env.name)}`;
+        
+        const actions = document.createElement('div');
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-secondary small delete-env';
+        deleteBtn.dataset.id = env.id;
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const id = Number(btn.dataset.id);
             if (confirm('Delete this environment?')) {
-                await environmentsManager.delete(id);
+                await environmentsManager.delete(env.id);
                 renderEnvironments();
                 updateEnvAndCollectionSelects();
             }
         });
-    });
-
-    dom.environmentsList.querySelectorAll('.activate-env').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        
+        const activateBtn = document.createElement('button');
+        activateBtn.className = 'btn-secondary small activate-env';
+        activateBtn.dataset.id = env.id;
+        activateBtn.textContent = '▶';
+        activateBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const id = parseInt(btn.dataset.id);
-            const env = await environmentsManager.getById(id);
-            if (env) {
-                dom.environmentSelect.value = id;
-                UIHelpers.showToast(`Environment "${env.name}" activated`, 'success');
+            const activatedEnv = await environmentsManager.getById(env.id);
+            if (activatedEnv) {
+                dom.environmentSelect.value = env.id;
+                UIHelpers.showToast(`Environment "${activatedEnv.name}" activated`, 'success');
                 let url = dom.urlInput.value;
-                Object.entries(env.variables || {}).forEach(([key, value]) => {
+                Object.entries(activatedEnv.variables || {}).forEach(([key, value]) => {
                     url = url.replace(new RegExp(`{{${key}}}`, 'g'), value);
                 });
                 dom.urlInput.value = url;
             }
         });
+        
+        actions.appendChild(deleteBtn);
+        actions.appendChild(activateBtn);
+        header.appendChild(nameSpan);
+        header.appendChild(actions);
+        item.appendChild(header);
+        
+        // Переменные
+        if (env.variables && Object.keys(env.variables).length > 0) {
+            Object.entries(env.variables).forEach(([key, value]) => {
+                const varDiv = document.createElement('div');
+                varDiv.className = 'env-var';
+                
+                const keySpan = document.createElement('span');
+                keySpan.className = 'var-key';
+                keySpan.textContent = `{{${UIHelpers.escapeHtml(key)}}}`;
+                
+                const valueSpan = document.createElement('span');
+                valueSpan.textContent = UIHelpers.escapeHtml(value);
+                
+                varDiv.appendChild(keySpan);
+                varDiv.appendChild(valueSpan);
+                item.appendChild(varDiv);
+            });
+        } else {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'text-muted';
+            emptyMsg.style.cssText = 'font-size:12px;';
+            emptyMsg.textContent = 'No variables';
+            item.appendChild(emptyMsg);
+        }
+        
+        dom.environmentsList.appendChild(item);
     });
 }
 
@@ -762,19 +938,38 @@ safeAddListener(dom.newEnvironmentBtn, 'click', async () => {
     }
 });
 
-// ====== Update Selects ======
+// ====== Update Selects (БЕЗОПАСНАЯ ВЕРСИЯ) ======
 async function updateEnvAndCollectionSelects() {
     if (!dom.environmentSelect || !dom.collectionSelect) return;
+    
+    // Environments
     const envs = await environmentsManager.getAll();
-    dom.environmentSelect.innerHTML = `<option value="">${I18nManager.t('noEnvironment')}</option>`;
+    dom.environmentSelect.innerHTML = '';
+    const defaultEnvOption = document.createElement('option');
+    defaultEnvOption.value = '';
+    defaultEnvOption.textContent = I18nManager.t('noEnvironment');
+    dom.environmentSelect.appendChild(defaultEnvOption);
+    
     envs.forEach(env => {
-        dom.environmentSelect.innerHTML += `<option value="${env.id}">${env.name}</option>`;
+        const option = document.createElement('option');
+        option.value = env.id;
+        option.textContent = UIHelpers.escapeHtml(env.name);
+        dom.environmentSelect.appendChild(option);
     });
 
+    // Collections
     const colls = await collectionsManager.getAll();
-    dom.collectionSelect.innerHTML = `<option value="">${I18nManager.t('noCollection')}</option>`;
+    dom.collectionSelect.innerHTML = '';
+    const defaultCollOption = document.createElement('option');
+    defaultCollOption.value = '';
+    defaultCollOption.textContent = I18nManager.t('noCollection');
+    dom.collectionSelect.appendChild(defaultCollOption);
+    
     colls.forEach(coll => {
-        dom.collectionSelect.innerHTML += `<option value="${coll.id}">${coll.name}</option>`;
+        const option = document.createElement('option');
+        option.value = coll.id;
+        option.textContent = UIHelpers.escapeHtml(coll.name);
+        dom.collectionSelect.appendChild(option);
     });
 }
 
@@ -801,6 +996,32 @@ safeAddListener(dom.saveToCollectionBtn, 'click', async () => {
     renderCollections();
 });
 
+// ====== Save as Environment ======
+safeAddListener(dom.saveAsEnvBtn, 'click', async () => {
+    const name = prompt('Enter environment name:');
+    if (!name) return;
+    
+    const variables = {};
+    // Parse URL for variables
+    const url = dom.urlInput.value;
+    const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    urlParams.forEach((value, key) => {
+        variables[key] = value;
+    });
+    
+    // Add headers as variables
+    state.headers.forEach(h => {
+        if (h.key && h.value) {
+            variables[h.key] = h.value;
+        }
+    });
+    
+    await environmentsManager.create(name, variables);
+    renderEnvironments();
+    updateEnvAndCollectionSelects();
+    UIHelpers.showToast('Environment saved successfully!', 'success');
+});
+
 // ====== Fullscreen ======
 safeAddListener(dom.fullscreenBtn, 'click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
@@ -813,28 +1034,22 @@ safeAddListener(dom.licenseBtn, 'click', () => {
 
 // ====== Tab Navigation Initialization ======
 function initTabs() {
-    // Обработчики для основных вкладок (Request, Response, History, Collections, Environments)
+    // Обработчики для основных вкладок
     document.querySelectorAll('.tab').forEach(btn => {
         btn.addEventListener('click', function(e) {
             const tabId = this.dataset.tab;
-            console.log(`🖱️ Tab clicked: ${tabId}`); // Для диагностики
+            console.log(`🖱️ Tab clicked: ${tabId}`);
             
             // Проверяем Pro-функции
             const proTabs = ['collections', 'environments'];
             if (proTabs.includes(tabId)) {
-                // Если не Pro - показываем сообщение
                 if (!isPro) {
                     UIHelpers.showToast(`🌟 ${tabId} is a Pro feature. Enable Pro in settings.`, 'info');
-                    // Все равно переключаем, но с сообщением о Pro
-                    // Можно закомментировать return, чтобы показывать пустую вкладку
-                    // return; // Раскомментируйте, чтобы блокировать переключение
                 }
             }
             
-            // Переключаем вкладку
             switchTab(tabId);
             
-            // Рендерим контент для конкретной вкладки
             switch(tabId) {
                 case 'history':
                     renderHistory();
@@ -846,16 +1061,14 @@ function initTabs() {
                     renderEnvironments();
                     break;
                 case 'response':
-                    // Response обновляется автоматически
                     break;
                 case 'request':
-                    // Ничего не делаем
                     break;
             }
         });
     });
     
-    // Обработчики для подвкладок Request (Headers, Auth, Body, cURL)
+    // Обработчики для подвкладок Request
     document.querySelectorAll('.req-tab').forEach(btn => {
         btn.addEventListener('click', function() {
             const tabId = this.dataset.reqtab;
@@ -863,7 +1076,7 @@ function initTabs() {
         });
     });
     
-    // Обработчики для подвкладок Response (Body, Headers, Preview)
+    // Обработчики для подвкладок Response
     document.querySelectorAll('.resp-tab').forEach(btn => {
         btn.addEventListener('click', function() {
             const tabId = this.dataset.resptab;
@@ -874,11 +1087,11 @@ function initTabs() {
     console.log('✅ Tabs initialized');
 }
 
-// Вызовите в init()
+// ====== Инициализация ======
 async function init() {
     await historyManager.load();
     await updateEnvAndCollectionSelects();
-    initTabs(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+    initTabs();
     renderHeaders();
     renderHistory();
     renderCollections();
@@ -893,6 +1106,28 @@ async function init() {
         if (lastItem.bodyType) dom.bodyType.value = lastItem.bodyType;
         renderHeaders();
     }
+}
+
+function getHistoryItemById(id) {
+    // Пытаемся найти по новому ID
+    let item = historyManager.getById(id);
+    
+    // Если не нашли и ID похож на число - пробуем найти по старому ID
+    if (!item && /^\d+(\.\d+)?$/.test(id)) {
+        // Ищем по _oldId (если есть)
+        item = historyManager.getAll().find(h => String(h._oldId) === String(id));
+        
+        // Если все еще не нашли, пробуем найти по timestamp (для очень старых записей)
+        if (!item) {
+            const timestamp = Math.floor(Number(id));
+            item = historyManager.getAll().find(h => {
+                const hTimestamp = h.timestamp || parseInt(String(h.id).split('_')[0]);
+                return Math.abs(hTimestamp - timestamp) < 1000; // в пределах секунды
+            });
+        }
+    }
+    
+    return item;
 }
 
 init();

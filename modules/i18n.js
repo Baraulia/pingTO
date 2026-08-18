@@ -106,7 +106,7 @@ export function applyTranslations() {
   // Обновляем кнопку переключения языка
   const langBtn = document.getElementById('languageToggle');
   if (langBtn) {
-    langBtn.textContent = currentLang === 'en' ? '🇬🇧' : '🇷🇺';
+    langBtn.textContent = currentLang === 'en' ? 'en' : '🇷🇺';
     langBtn.title = currentLang === 'en' ? 'Switch to Russian' : 'Переключить на английский';
   }
 }

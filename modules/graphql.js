@@ -1,38 +1,28 @@
-// modules/graphql.js
 export class GraphQLManager {
-  static async execute(endpoint, query, variables = {}, headers = {}) {
-    const body = JSON.stringify({
-      query,
-      variables
-    });
+  static buildPayload(query, variables = {}) {
+    return JSON.stringify({ query, variables });
+  }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      body
-    });
-
-    const data = await response.json();
-    return data;
+  static parseVariables(raw) {
+    const text = (raw || '').trim();
+    if (!text) return {};
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('GraphQL variables must be a JSON object');
+    }
+    return parsed;
   }
 
   static formatQuery(query) {
-    // Простое форматирование для отображения
-    return query.trim();
+    return (query || '').trim();
   }
 
   static validateQuery(query) {
-    try {
-      // Проверка на наличие query или mutation
-      if (!query.includes('query') && !query.includes('mutation')) {
-        throw new Error('Query must contain "query" or "mutation"');
-      }
-      return true;
-    } catch (error) {
-      return error.message;
+    const text = (query || '').trim();
+    if (!text) return 'Query is empty';
+    if (!/\b(query|mutation|subscription|\{)/i.test(text)) {
+      return 'Query must contain an operation or a selection set';
     }
+    return true;
   }
 }

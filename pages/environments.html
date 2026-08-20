@@ -256,6 +256,14 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     async function loadEnvironments() {
       return new Promise((resolve) => {
         chrome.storage.local.get(['api_environments'], (result) => {
@@ -297,22 +305,22 @@
       }
 
       envList.innerHTML = environments.map(env => `
-        <div class="env-card" data-id="${env.id}">
+        <div class="env-card" data-id="${esc(env.id)}">
           <div class="env-header">
-            <span class="env-name">🌍 ${env.name}</span>
+            <span class="env-name">${esc(env.name)}</span>
             <div>
-              <span class="active-badge" id="activeBadge_${env.id}">${env.active ? '🟢 Active' : ''}</span>
-              <button class="btn btn-success btn-sm activate-env" data-id="${env.id}">▶ Activate</button>
-              <button class="btn btn-secondary btn-sm edit-env" data-id="${env.id}">✏️</button>
-              <button class="btn btn-danger btn-sm delete-env" data-id="${env.id}">🗑️</button>
+              <span class="active-badge" id="activeBadge_${esc(env.id)}">${env.active ? 'Active' : ''}</span>
+              <button class="btn btn-success btn-sm activate-env" data-id="${esc(env.id)}">Activate</button>
+              <button class="btn btn-secondary btn-sm edit-env" data-id="${esc(env.id)}">Edit</button>
+              <button class="btn btn-danger btn-sm delete-env" data-id="${esc(env.id)}">Delete</button>
             </div>
           </div>
           <div class="env-vars">
             ${Object.keys(env.variables || {}).length > 0 ? 
               Object.entries(env.variables).map(([key, value]) => `
                 <div class="var-row">
-                  <span class="var-key">{{${key}}}</span>
-                  <span class="var-value">${value}</span>
+                  <span class="var-key">{{${esc(key)}}}</span>
+                  <span class="var-value">${esc(value)}</span>
                 </div>
               `).join('') :
               '<div class="empty-state">No variables</div>'
@@ -336,9 +344,11 @@
             showToast(`Environment "${env.name}" activated`);
             
             // Отправляем в popup
-            chrome.runtime.sendMessage({
-              type: 'activateEnvironment',
-              data: env
+            chrome.storage.local.set({ active_environment_id: env.id }, () => {
+              chrome.runtime.sendMessage({
+                type: 'activateEnvironment',
+                data: env
+              });
             });
           }
         });
@@ -370,14 +380,7 @@
             envName.value = env.name;
             varsContainer.innerHTML = '';
             Object.entries(env.variables || {}).forEach(([key, value]) => {
-              const div = document.createElement('div');
-              div.className = 'var-group';
-              div.innerHTML = `
-                <input type="text" placeholder="Variable key" class="var-key-input" value="${key}">
-                <input type="text" placeholder="Variable value" class="var-value-input" value="${value}">
-                <button class="btn btn-danger btn-sm remove-var-btn">×</button>
-              `;
-              varsContainer.appendChild(div);
+              addVarGroup(key, value);
             });
             if (Object.keys(env.variables || {}).length === 0) {
               addDefaultVarGroup();
@@ -388,15 +391,28 @@
       });
     }
 
-    function addDefaultVarGroup() {
+    function addVarGroup(key = '', value = '') {
       const div = document.createElement('div');
       div.className = 'var-group';
-      div.innerHTML = `
-        <input type="text" placeholder="Variable key" class="var-key-input">
-        <input type="text" placeholder="Variable value" class="var-value-input">
-        <button class="btn btn-danger btn-sm remove-var-btn">×</button>
-      `;
+      const keyInput = document.createElement('input');
+      keyInput.type = 'text';
+      keyInput.placeholder = 'Variable key';
+      keyInput.className = 'var-key-input';
+      keyInput.value = key;
+      const valueInput = document.createElement('input');
+      valueInput.type = 'text';
+      valueInput.placeholder = 'Variable value';
+      valueInput.className = 'var-value-input';
+      valueInput.value = value;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-danger btn-sm remove-var-btn';
+      removeBtn.textContent = '×';
+      div.append(keyInput, valueInput, removeBtn);
       varsContainer.appendChild(div);
+    }
+
+    function addDefaultVarGroup() {
+      addVarGroup();
     }
 
     // Добавление переменной

@@ -227,6 +227,9 @@
   "enterUrl": {
     "message": "Enter URL"
   },
+  "invalidUrl": {
+    "message": "Enter a valid http(s) URL"
+  },
   "networkError": {
     "message": "Network Error"
   },

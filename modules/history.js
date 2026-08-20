@@ -9,6 +9,7 @@ export class HistoryManager {
 
   async load() {
     this.items = await this.storage.get(this.key, []);
+    if (!Array.isArray(this.items)) this.items = [];
     this.loaded = true;
     
     // Миграция старых ID (числа → строки)
@@ -59,26 +60,41 @@ export class HistoryManager {
     }
   }
 
-  async add(item) {
+  async add(item, maxItems = 50) {
     if (!this.loaded) await this.load();
-    
-    // Генерируем уникальный ID в формате "timestamp_random"
+
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 9);
     item.id = `${timestamp}_${random}`;
-    
-    // Сохраняем timestamp для сортировки
+
     if (!item.timestamp) {
       item.timestamp = timestamp;
     }
-    
+
     this.items.unshift(item);
+    const limit = Number(maxItems) > 0 ? Number(maxItems) : 50;
+    if (this.items.length > limit) {
+      this.items = this.items.slice(0, limit);
+    }
     await this.save();
     return item;
   }
 
   async save() {
-    await this.storage.set(this.key, this.items);
+    try {
+      await this.storage.set(this.key, this.items);
+    } catch (error) {
+      while (this.items.length > 10) {
+        this.items.pop();
+        try {
+          await this.storage.set(this.key, this.items);
+          return;
+        } catch {
+          // keep trimming
+        }
+      }
+      throw error;
+    }
   }
 
   getItems(limit = 50) {

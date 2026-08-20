@@ -1,4 +1,5 @@
-// modules/environments.js
+import { idsEqual } from './request-utils.js';
+
 export class EnvironmentsManager {
   constructor(storage) {
     this.storage = storage;
@@ -9,6 +10,7 @@ export class EnvironmentsManager {
 
   async load() {
     this.environments = await this.storage.get(this.key, []);
+    if (!Array.isArray(this.environments)) this.environments = [];
     this.loaded = true;
     return this.environments;
   }
@@ -24,7 +26,7 @@ export class EnvironmentsManager {
 
   async getById(id) {
     if (!this.loaded) await this.load();
-    return this.environments.find(e => e.id === id);
+    return this.environments.find((e) => idsEqual(e.id, id));
   }
 
   async create(name, variables = {}) {
@@ -33,7 +35,7 @@ export class EnvironmentsManager {
       id: Date.now(),
       name,
       variables,
-      created: new Date().toISOString()
+      created: new Date().toISOString(),
     };
     this.environments.push(env);
     await this.save();
@@ -42,13 +44,13 @@ export class EnvironmentsManager {
 
   async delete(id) {
     if (!this.loaded) await this.load();
-    this.environments = this.environments.filter(e => e.id !== id);
+    this.environments = this.environments.filter((e) => !idsEqual(e.id, id));
     await this.save();
   }
 
   async update(id, data) {
     if (!this.loaded) await this.load();
-    const env = this.environments.find(e => e.id === id);
+    const env = this.environments.find((e) => idsEqual(e.id, id));
     if (env) {
       Object.assign(env, data);
       await this.save();

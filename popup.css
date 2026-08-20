@@ -785,5 +785,21 @@ input:checked + .slider:before {
     max-width: 500px;
     width: 90%;
     border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-hover);
+}
+
+.settings-label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 12px 0 4px;
+}
+
+#settingsTimeout,
+#settingsHistoryMax {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
 }

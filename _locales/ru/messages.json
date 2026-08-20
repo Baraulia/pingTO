@@ -227,6 +227,9 @@
   "enterUrl": {
     "message": "Введите URL"
   },
+  "invalidUrl": {
+    "message": "Введите корректный http(s) URL"
+  },
   "networkError": {
     "message": "Ошибка сети"
   },

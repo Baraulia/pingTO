@@ -275,6 +275,14 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     // Загрузка коллекций
     async function loadCollections() {
       return new Promise((resolve) => {
@@ -306,23 +314,23 @@
       }
 
       grid.innerHTML = collections.map(coll => `
-        <div class="collection-card" data-id="${coll.id}">
+        <div class="collection-card" data-id="${esc(coll.id)}">
           <div class="card-header">
-            <span class="card-title">📁 ${coll.name}</span>
+            <span class="card-title">${esc(coll.name)}</span>
             <div class="card-actions">
-              <button class="btn btn-secondary btn-sm add-request-btn" data-id="${coll.id}">+</button>
-              <button class="btn btn-secondary btn-sm export-collection-btn" data-id="${coll.id}">📤</button>
-              <button class="btn btn-danger btn-sm delete-collection-btn" data-id="${coll.id}">🗑️</button>
+              <button class="btn btn-secondary btn-sm add-request-btn" data-id="${esc(coll.id)}">+</button>
+              <button class="btn btn-secondary btn-sm export-collection-btn" data-id="${esc(coll.id)}">Export</button>
+              <button class="btn btn-danger btn-sm delete-collection-btn" data-id="${esc(coll.id)}">Delete</button>
             </div>
           </div>
           <div class="requests-list">
             ${coll.requests && coll.requests.length > 0 ? coll.requests.map(req => `
-              <div class="request-item" data-coll-id="${coll.id}" data-req-id="${req.id}">
-                <span class="method">${req.method}</span>
-                <span class="url">${req.url}</span>
+              <div class="request-item" data-coll-id="${esc(coll.id)}" data-req-id="${esc(req.id)}">
+                <span class="method">${esc(req.method)}</span>
+                <span class="url">${esc(req.url)}</span>
                 <div>
-                  <button class="btn btn-secondary btn-sm edit-request-btn" data-coll-id="${coll.id}" data-req-id="${req.id}">✏️</button>
-                  <button class="btn btn-danger btn-sm delete-request-btn" data-coll-id="${coll.id}" data-req-id="${req.id}">×</button>
+                  <button class="btn btn-secondary btn-sm edit-request-btn" data-coll-id="${esc(coll.id)}" data-req-id="${esc(req.id)}">Edit</button>
+                  <button class="btn btn-danger btn-sm delete-request-btn" data-coll-id="${esc(coll.id)}" data-req-id="${esc(req.id)}">×</button>
                 </div>
               </div>
             `).join('') : `<div class="empty-state">No requests yet. Click + to add.</div>`}
@@ -399,10 +407,8 @@
           const coll = collections.find(c => c.id === collId);
           const req = coll?.requests?.find(r => r.id === reqId);
           if (req) {
-            // Отправляем сообщение в popup
-            chrome.runtime.sendMessage({
-              type: 'loadRequest',
-              data: req
+            chrome.storage.local.set({ pending_request: req }, () => {
+              chrome.runtime.sendMessage({ type: 'loadRequest', data: req });
             });
             showToast('Request loaded');
           }

@@ -124,17 +124,7 @@ export async function initI18n() {
   await loadTranslations(currentLang);
   isLoaded = true;
   
-  // Применяем переводы
   applyTranslations();
-  
-  // Добавляем обработчик для переключения языка
-  document.addEventListener('DOMContentLoaded', () => {
-    const langBtn = document.getElementById('languageToggle');
-    if (langBtn) {
-      langBtn.addEventListener('click', toggleLanguage);
-    }
-  });
-  
   return currentLang;
 }
 

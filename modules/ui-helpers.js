@@ -1,5 +1,13 @@
-// modules/ui-helpers.js
 export class UIHelpers {
+  static escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   static showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.textContent = message;
@@ -14,7 +22,6 @@ export class UIHelpers {
       font-size: 13px;
       z-index: 9999;
       animation: fadeIn 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       max-width: 90%;
       background: ${type === 'error' ? '#EF4444' : type === 'success' ? '#22C55E' : '#2563EB'};
       color: white;
@@ -36,5 +43,15 @@ export class UIHelpers {
     if (bytes < 1024) return `${bytes}B`;
     if (bytes < 1048576) return `${(bytes / 1024).toFixed(2)}KB`;
     return `${(bytes / 1048576).toFixed(2)}MB`;
+  }
+
+  static downloadText(filename, text, mime = 'text/plain') {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }

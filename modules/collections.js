@@ -1,4 +1,5 @@
-// modules/collections.js
+import { idsEqual, normalizeImportedCollections } from './request-utils.js';
+
 export class CollectionsManager {
   constructor(storage) {
     this.storage = storage;
@@ -9,6 +10,7 @@ export class CollectionsManager {
 
   async load() {
     this.collections = await this.storage.get(this.key, []);
+    if (!Array.isArray(this.collections)) this.collections = [];
     this.loaded = true;
     return this.collections;
   }
@@ -24,7 +26,7 @@ export class CollectionsManager {
 
   async getById(id) {
     if (!this.loaded) await this.load();
-    return this.collections.find(c => c.id === id);
+    return this.collections.find((c) => idsEqual(c.id, id));
   }
 
   async create(name) {
@@ -33,7 +35,7 @@ export class CollectionsManager {
       id: Date.now(),
       name,
       requests: [],
-      created: new Date().toISOString()
+      created: new Date().toISOString(),
     };
     this.collections.push(collection);
     await this.save();
@@ -42,36 +44,37 @@ export class CollectionsManager {
 
   async delete(id) {
     if (!this.loaded) await this.load();
-    this.collections = this.collections.filter(c => c.id !== id);
+    this.collections = this.collections.filter((c) => !idsEqual(c.id, id));
     await this.save();
   }
 
   async addRequest(collectionId, request) {
     if (!this.loaded) await this.load();
-    const collection = this.collections.find(c => c.id === collectionId);
-    if (collection) {
-      collection.requests.push(request);
-      await this.save();
-    }
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return false;
+    collection.requests.push(request);
+    await this.save();
+    return true;
   }
 
   async removeRequest(collectionId, requestId) {
     if (!this.loaded) await this.load();
-    const collection = this.collections.find(c => c.id === collectionId);
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
     if (collection) {
-      collection.requests = collection.requests.filter(r => r.id !== requestId);
+      collection.requests = collection.requests.filter((r) => !idsEqual(r.id, requestId));
       await this.save();
     }
   }
 
   async import(data) {
     if (!this.loaded) await this.load();
-    if (Array.isArray(data)) {
-      this.collections = [...this.collections, ...data];
-    } else {
-      this.collections.push(data);
+    const incoming = normalizeImportedCollections(data);
+    if (!incoming.length) {
+      throw new Error('Invalid collection file');
     }
+    this.collections = [...this.collections, ...incoming];
     await this.save();
+    return incoming.length;
   }
 
   async exportAll() {
@@ -81,6 +84,10 @@ export class CollectionsManager {
 
   async exportCollection(id) {
     if (!this.loaded) await this.load();
-    return this.collections.find(c => c.id === id);
+    return this.collections.find((c) => idsEqual(c.id, id));
+  }
+
+  async exportOne(id) {
+    return this.exportCollection(id);
   }
 }

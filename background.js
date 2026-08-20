@@ -1,5 +1,109 @@
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+const inflight = new Map();
+
+const APP_PATH = 'app.html';
+let appWindowId = null;
+
+function appUrl() {
+  return chrome.runtime.getURL(APP_PATH);
+}
+
+async function closeSidePanel(windowId) {
+  if (!chrome.sidePanel) return;
+  try {
+    if (typeof chrome.sidePanel.close === 'function') {
+      await chrome.sidePanel.close(windowId ? { windowId } : {});
+      return;
+    }
+  } catch {
+    /* older Chrome */
+  }
+  try {
+    await chrome.sidePanel.setOptions({ enabled: false, path: APP_PATH });
+    await chrome.sidePanel.setOptions({ enabled: true, path: `${APP_PATH}?mode=panel` });
+  } catch {
+    /* ignore */
+  }
+}
+
+async function openAppWindow() {
+  const [active] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (active?.windowId) await closeSidePanel(active.windowId);
+
+  if (appWindowId != null) {
+    try {
+      await chrome.windows.update(appWindowId, { focused: true });
+      return;
+    } catch {
+      appWindowId = null;
+    }
+  }
+
+  const existing = await chrome.tabs.query({ url: `${appUrl()}*` });
+  for (const tab of existing) {
+    try {
+      const win = await chrome.windows.get(tab.windowId);
+      if (win.type === 'popup') {
+        appWindowId = win.id;
+        await chrome.windows.update(win.id, { focused: true });
+        return;
+      }
+    } catch {
+      /* keep looking */
+    }
+  }
+
+  const created = await chrome.windows.create({
+    url: appUrl(),
+    type: 'popup',
+    width: 1280,
+    height: 860,
+    focused: true,
+  });
+  appWindowId = created.id ?? null;
+}
+
+async function openFullscreen(senderWindowId) {
+  await closeSidePanel(senderWindowId);
+
+  let senderWin = null;
+  if (senderWindowId) {
+    try {
+      senderWin = await chrome.windows.get(senderWindowId);
+    } catch {
+      senderWin = null;
+    }
+  }
+
+  if (senderWin?.type === 'popup') {
+    await chrome.windows.update(senderWindowId, { state: 'maximized', focused: true });
+    return;
+  }
+
+  await openAppWindow();
+  if (appWindowId != null) {
+    try {
+      await chrome.windows.update(appWindowId, { state: 'maximized', focused: true });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: false });
+});
+chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: false });
+chrome.sidePanel?.setOptions?.({ path: `${APP_PATH}?mode=panel` });
+
+chrome.action.onClicked.addListener(() => {
+  openAppWindow();
+});
+
+chrome.windows.onRemoved.addListener((id) => {
+  if (id === appWindowId) appWindowId = null;
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'sendRequest') {
@@ -18,6 +122,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     return true;
   }
+  if (message.type === 'cancelRequest') {
+    const controller = inflight.get(message.requestId);
+    if (controller) controller.abort();
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (message.type === 'getCookies') {
+    chrome.cookies.getAll({ url: message.url }, (cookies) => {
+      sendResponse({ cookies: cookies || [], error: chrome.runtime.lastError?.message });
+    });
+    return true;
+  }
+  if (message.type === 'setCookie') {
+    chrome.cookies.set(message.details, (cookie) => {
+      sendResponse({ cookie, error: chrome.runtime.lastError?.message });
+    });
+    return true;
+  }
+  if (message.type === 'removeCookie') {
+    chrome.cookies.remove({ url: message.url, name: message.name }, () => {
+      sendResponse({ ok: !chrome.runtime.lastError, error: chrome.runtime.lastError?.message });
+    });
+    return true;
+  }
+  if (message.type === 'launchOAuth') {
+    chrome.identity.launchWebAuthFlow(
+      { url: message.url, interactive: true },
+      (redirectUrl) => {
+        sendResponse({ redirectUrl, error: chrome.runtime.lastError?.message });
+      }
+    );
+    return true;
+  }
+  if (message.type === 'openWorkspace') {
+    openAppWindow().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === 'openFullscreen') {
+    openFullscreen(sender.tab?.windowId).then(() => sendResponse({ ok: true }));
+    return true;
+  }
 });
 
 async function handleRequest(data = {}) {
@@ -29,6 +174,9 @@ async function handleRequest(data = {}) {
     timeout = DEFAULT_TIMEOUT_MS,
     multipart = null,
     digest = null,
+    requestId = null,
+    followRedirects = true,
+    binaryBody = null,
   } = data;
 
   if (!url) {
@@ -45,6 +193,7 @@ async function handleRequest(data = {}) {
   }
 
   const controller = new AbortController();
+  if (requestId) inflight.set(requestId, controller);
   const timeoutMs = Number(timeout) > 0 ? Number(timeout) : DEFAULT_TIMEOUT_MS;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -58,44 +207,121 @@ async function handleRequest(data = {}) {
         multipart,
         digest,
         signal: controller.signal,
+        followRedirects,
+        binaryBody,
       });
     }
-    return await performFetch({ method, url, headers, body, multipart, signal: controller.signal });
+    return await performFetch({
+      method,
+      url,
+      headers,
+      body,
+      multipart,
+      signal: controller.signal,
+      followRedirects,
+      binaryBody,
+    });
   } catch (error) {
     if (error.name === 'AbortError') {
-      return errorResult('Request timeout', 'Timeout');
+      return errorResult('Request cancelled or timed out', 'Aborted');
     }
     return errorResult(error.message);
   } finally {
     clearTimeout(timeoutId);
+    if (requestId) inflight.delete(requestId);
   }
 }
 
-async function performFetch({ method, url, headers, body, multipart, signal, extraHeaders = {} }) {
-  const startTime = performance.now();
-  const fetchHeaders = { ...(headers || {}), ...extraHeaders };
+function buildBody({ method, headers, body, multipart, binaryBody }) {
+  const fetchHeaders = { ...headers };
+  if (method === 'GET' || method === 'HEAD') return { headers: fetchHeaders, body: undefined };
 
-  const fetchOptions = {
-    method,
-    headers: fetchHeaders,
-    signal,
-    redirect: 'follow',
-  };
-
-  if (multipart && Array.isArray(multipart) && method !== 'GET' && method !== 'HEAD') {
+  if (multipart && Array.isArray(multipart)) {
     const form = new FormData();
     multipart.forEach((field) => {
-      if (field?.name) form.append(field.name, field.value ?? '');
+      if (!field?.name) return;
+      if (field.fileBase64) {
+        const bytes = Uint8Array.from(atob(field.fileBase64), (c) => c.charCodeAt(0));
+        form.append(
+          field.name,
+          new Blob([bytes], { type: field.fileType || 'application/octet-stream' }),
+          field.fileName || 'file'
+        );
+      } else {
+        form.append(field.name, field.value ?? '');
+      }
     });
-    delete fetchOptions.headers['Content-Type'];
-    delete fetchOptions.headers['content-type'];
-    fetchOptions.body = form;
-  } else if (body && method !== 'GET' && method !== 'HEAD') {
-    fetchOptions.body = body;
+    delete fetchHeaders['Content-Type'];
+    delete fetchHeaders['content-type'];
+    return { headers: fetchHeaders, body: form };
   }
 
-  const response = await fetch(url, fetchOptions);
-  return formatResponse(response, startTime, method);
+  if (binaryBody?.base64) {
+    const bytes = Uint8Array.from(atob(binaryBody.base64), (c) => c.charCodeAt(0));
+    return { headers: fetchHeaders, body: bytes };
+  }
+
+  return { headers: fetchHeaders, body: body || undefined };
+}
+
+async function performFetch({
+  method,
+  url,
+  headers,
+  body,
+  multipart,
+  signal,
+  extraHeaders = {},
+  followRedirects = true,
+  binaryBody = null,
+}) {
+  const startTime = performance.now();
+  const ttfbStart = performance.now();
+  const redirects = [];
+  let currentUrl = url;
+  let currentMethod = method;
+  let currentBody = { body, multipart, binaryBody };
+
+  for (let hop = 0; hop < 10; hop++) {
+    const built = buildBody({
+      method: currentMethod,
+      headers: { ...(headers || {}), ...extraHeaders },
+      ...currentBody,
+    });
+    const response = await fetch(currentUrl, {
+      method: currentMethod,
+      headers: built.headers,
+      body: built.body,
+      signal,
+      redirect: 'manual',
+    });
+    const location = response.headers.get('location');
+    redirects.push({ url: currentUrl, status: response.status, location });
+
+    const isRedirect = [301, 302, 303, 307, 308].includes(response.status) && location;
+    if (isRedirect && followRedirects) {
+      await response.arrayBuffer().catch(() => {});
+      currentUrl = new URL(location, currentUrl).href;
+      if ([301, 302, 303].includes(response.status)) {
+        currentMethod = 'GET';
+        currentBody = { body: null, multipart: null, binaryBody: null };
+      }
+      continue;
+    }
+
+    const ttfb = Math.round(performance.now() - ttfbStart);
+    const formatted = await formatResponse(response, startTime, currentMethod);
+    formatted.redirects = redirects;
+    formatted.finalUrl = currentUrl;
+    formatted.timings = {
+      total: formatted.time,
+      ttfb,
+      download: Math.max(0, formatted.time - ttfb),
+    };
+    return formatted;
+  }
+
+  return errorResult('Too many redirects');
 }
 
 async function formatResponse(response, startTime, method = 'GET') {
@@ -125,12 +351,14 @@ async function formatResponse(response, startTime, method = 'GET') {
   let responseBody = new TextDecoder('utf-8', { fatal: false }).decode(slice);
 
   const contentType = response.headers.get('content-type') || '';
-  if (!truncated && contentType.includes('application/json') && responseBody.trim()) {
+  if (!truncated && contentType.includes('json') && responseBody.trim()) {
     try {
       responseBody = JSON.stringify(JSON.parse(responseBody), null, 2);
     } catch {
-      // keep raw text if JSON is invalid
+      /* keep raw */
     }
+  } else if (!truncated && /xml|html/.test(contentType)) {
+    responseBody = prettyXml(responseBody);
   }
 
   if (truncated) {
@@ -146,7 +374,26 @@ async function formatResponse(response, startTime, method = 'GET') {
     size,
     ok: response.ok,
     truncated,
+    contentType,
   };
+}
+
+function prettyXml(xml) {
+  try {
+    const padded = xml.replace(/>(\s*)</g, '>$1\n<');
+    const lines = padded.split('\n').map((l) => l.trim()).filter(Boolean);
+    let indent = 0;
+    return lines.map((line) => {
+      if (line.startsWith('</')) indent = Math.max(indent - 1, 0);
+      const out = `${'  '.repeat(indent)}${line}`;
+      if (line.startsWith('<') && !line.startsWith('</') && !line.startsWith('<?') && !line.endsWith('/>') && !line.includes('</')) {
+        indent += 1;
+      }
+      return out;
+    }).join('\n');
+  } catch {
+    return xml;
+  }
 }
 
 async function fetchWithDigest({ method, url, headers, body, multipart, digest, signal }) {

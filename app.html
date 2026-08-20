@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="appName">PingTo</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="app" class="workspace">
+    <aside class="sidebar">
+      <div class="brand">
+        <strong>PingTo</strong>
+        <label class="switch" title="Pro">
+          <input type="checkbox" id="proToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <input id="sidebarSearch" class="search" data-i18n-placeholder="searchCollections" placeholder="Search collections...">
+      <div class="side-section-title" data-pro="collections" data-i18n="tabCollections">Collections</div>
+      <p id="collectionHelp" class="empty-hint" data-i18n="collectionHelp">Create a collection, click it to select, then save the current request. Click a request in the tree to open it.</p>
+      <p id="collectionTarget" class="hint"></p>
+      <div id="collectionTree" class="tree"></div>
+      <div class="side-actions">
+        <input id="newCollectionName" data-pro="collections" data-i18n-placeholder="newCollectionNamePlaceholder" placeholder="Collection name">
+        <button id="newCollectionBtn" class="btn" data-pro="collections" data-i18n="newCollectionBtn">+ Collection</button>
+        <button id="newFolderBtn" class="btn" data-pro="collections" data-i18n="newFolderBtn">+ Folder</button>
+        <button id="importAnyBtn" class="btn" data-pro="importCollections" data-i18n="importAnyBtn">Import</button>
+        <button id="saveToCollectionBtn" class="btn primary" data-pro="collections" data-i18n="saveToCollectionBtn">Save request</button>
+      </div>
+      <div class="side-section-title" data-i18n="tabHistory">History</div>
+      <div id="historyList" class="tree history"></div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <button id="sidebarToggle" class="icon-btn" title="Toggle sidebar">☰</button>
+        <span class="with-pro" data-pro="environments">
+          <select id="environmentSelect"></select>
+        </span>
+        <button id="editEnvBtn" class="btn" data-pro="environments" data-i18n="editEnvBtn">+ Environment</button>
+        <button id="paletteBtn" class="btn grow" data-i18n="paletteBtn" data-i18n-title="paletteBtn">Search or jump — Ctrl+K</button>
+        <button id="themeToggle" class="icon-btn">🌙</button>
+        <button id="languageToggle" class="icon-btn">EN</button>
+        <button id="openTabBtn" class="icon-btn" title="Fullscreen">⛶</button>
+        <button id="settingsBtn" class="icon-btn" data-i18n-title="settingsBtn">⚙</button>
+        <button id="wsBtn" class="icon-btn" data-pro="websocket" data-i18n-title="websocketBtn">WS</button>
+      </header>
+
+      <div id="reqTabs" class="req-tabs"></div>
+
+      <div class="urlbar">
+        <select id="methodSelect">
+          <option>GET</option><option selected>POST</option><option>PUT</option>
+          <option>PATCH</option><option>DELETE</option><option>OPTIONS</option><option>HEAD</option>
+          <option value="WS" data-pro="websocket">WS</option>
+          <option value="SSE" data-pro="websocket">SSE</option>
+        </select>
+        <input id="urlInput" list="urlHistory" data-i18n-placeholder="urlPlaceholder" placeholder="{{base_url}}/users/:id" spellcheck="false">
+        <datalist id="urlHistory"></datalist>
+        <span id="httpActions" class="http-actions">
+          <label class="check"><input type="checkbox" id="followRedirects" checked> <span data-i18n="followRedirects">Follow redirects</span></label>
+          <button id="sendBtn" class="btn primary" data-i18n="sendBtn">Send</button>
+          <button id="cancelBtn" class="btn danger" hidden data-i18n="cancelBtn">Cancel</button>
+          <button id="repeatBtn" class="btn" data-i18n="repeatBtn">Repeat</button>
+        </span>
+        <span id="wsActions" class="ws-actions hidden">
+          <label class="check"><input type="checkbox" id="wsReconnect"> <span data-i18n="wsReconnect">Reconnect</span></label>
+          <button id="wsConnectBtn" class="btn primary" data-pro="websocket" data-i18n="wsConnectBtn">Connect</button>
+          <button id="wsDisconnectBtn" class="btn danger hidden" data-i18n="wsDisconnectBtn">Disconnect</button>
+        </span>
+      </div>
+      <div id="urlHint" class="hint"></div>
+
+      <div id="httpSplit" class="split">
+        <div class="pane">
+          <div class="subtabs" id="reqSubtabs">
+            <button data-pane="params" class="active" data-i18n="paramsTab">Params</button>
+            <button data-pane="headers" data-i18n="headersTab">Headers</button>
+            <button data-pane="body" data-i18n="bodyTab">Body</button>
+            <button data-pane="auth" data-i18n="authTab">Auth</button>
+            <button data-pane="scripts" data-pro="scripts" data-i18n="scriptsTab">Scripts</button>
+            <button data-pane="graphql" data-pro="graphql" data-i18n="graphqlTab">GraphQL</button>
+            <button data-pane="cookies" data-pro="cookies" data-i18n="cookiesTab">Cookies</button>
+            <button data-pane="docs" data-pro="docs" data-i18n="docsTab">Docs</button>
+            <button data-pane="curl" data-i18n="codeTab">Code</button>
+          </div>
+
+          <div id="pane-params" class="subpane active">
+            <h4 data-i18n="queryLabel">Query</h4>
+            <div id="queryList" class="kv"></div>
+            <button id="addQueryBtn" class="btn small" data-i18n="addQueryBtn">+ Query param</button>
+            <h4><span data-i18n="pathLabel">Path</span> <code>:id</code> / <code>{id}</code></h4>
+            <div id="pathList" class="kv"></div>
+            <button id="addPathBtn" class="btn small" data-i18n="addPathBtn">+ Path param</button>
+          </div>
+
+          <div id="pane-headers" class="subpane">
+            <div id="headersList" class="kv"></div>
+            <button id="addHeaderBtn" class="btn small" data-i18n="addHeaderBtn">+ Header</button>
+            <button id="addCommonHeadersBtn" class="btn small" data-i18n="commonHeadersBtn">Common</button>
+          </div>
+
+          <div id="pane-body" class="subpane">
+            <div class="row">
+              <select id="bodyType">
+                <option value="none" data-i18n="bodyTypeNone">No body</option>
+                <option value="json" data-i18n="bodyTypeJson">JSON</option>
+                <option value="form" data-i18n="bodyTypeForm">x-www-form-urlencoded</option>
+                <option value="multipart" data-pro="binary" data-i18n="bodyTypeMultipart">multipart</option>
+                <option value="text" data-i18n="bodyTypeText">Text</option>
+                <option value="binary" data-pro="binary" data-i18n="bodyTypeBinary">Binary file</option>
+                <option value="graphql" data-pro="graphql" data-i18n="bodyTypeGraphql">GraphQL JSON</option>
+              </select>
+              <button id="formatJsonBtn" class="btn small" data-i18n="formatJsonBtn">Format</button>
+              <button id="minifyJsonBtn" class="btn small" data-i18n="minifyJsonBtn">Minify</button>
+              <input type="file" id="binaryFile" hidden>
+              <button id="pickBinaryBtn" class="btn small" data-pro="binary" data-i18n="pickBinaryBtn">Choose file</button>
+            </div>
+            <div id="jsonError" class="error"></div>
+            <textarea id="bodyEditor" rows="12" spellcheck="false"></textarea>
+            <div id="multipartFiles" class="hint" data-i18n="multipartHint">multipart: lines key=value, or attach files below</div>
+            <input type="file" id="multiFiles" multiple data-pro="binary">
+          </div>
+
+          <div id="pane-auth" class="subpane">
+            <select id="authType">
+              <option value="none" data-i18n="authNone">No auth</option>
+              <option value="bearer" data-i18n="authBearer">Bearer</option>
+              <option value="basic" data-i18n="authBasic">Basic</option>
+              <option value="digest" data-pro="digest" data-i18n="authDigest">Digest</option>
+              <option value="apikey" data-pro="apikey" data-i18n="authApiKey">API Key</option>
+              <option value="oauth2" data-pro="oauth" data-i18n="authOauth2">OAuth 2.0</option>
+            </select>
+            <input id="authToken" data-i18n-placeholder="tokenPlaceholder" placeholder="Bearer token" class="hidden">
+            <div id="basicAuthFields" class="hidden">
+              <input id="basicUser" data-i18n-placeholder="usernamePlaceholder" placeholder="Username">
+              <input id="basicPass" type="password" data-i18n-placeholder="passwordPlaceholder" placeholder="Password">
+            </div>
+            <div id="apiKeyFields" class="hidden">
+              <input id="apiKeyName" data-i18n-placeholder="apiKeyNamePlaceholder" placeholder="Header or query name" value="X-API-Key">
+              <input id="apiKeyValue" data-i18n-placeholder="apiKeyValuePlaceholder" placeholder="Key value">
+              <select id="apiKeyIn">
+                <option value="header" data-i18n="apiKeyInHeader">Header</option>
+                <option value="query" data-i18n="apiKeyInQuery">Query</option>
+              </select>
+            </div>
+            <div id="oauth2Fields" class="hidden">
+              <select id="oauthGrant">
+                <option value="client_credentials" data-i18n="oauthClientCredentials">Client credentials</option>
+                <option value="authorization_code" data-i18n="oauthAuthCode">Authorization code + PKCE</option>
+              </select>
+              <input id="oauthAuthUrl" placeholder="Authorization URL">
+              <input id="oauthTokenUrl" placeholder="Token URL">
+              <input id="oauthClientId" placeholder="Client ID">
+              <input id="oauthClientSecret" type="password" placeholder="Client secret">
+              <input id="oauthScope" placeholder="Scope">
+              <button id="oauthLoginBtn" class="btn small" data-i18n="oauthLoginBtn">Login / Get token</button>
+              <input id="oauthRefresh" placeholder="Refresh token">
+            </div>
+          </div>
+
+          <div id="pane-scripts" class="subpane">
+            <h4 data-i18n="preRequestLabel">Pre-request</h4>
+            <textarea id="preRequest" rows="6" placeholder="pm.environment.set('token', 'abc')"></textarea>
+            <h4 data-i18n="testsLabel">Tests</h4>
+            <textarea id="tests" rows="6" placeholder="pm.test('ok', () => pm.expect(pm.response.code).toBe(200))"></textarea>
+          </div>
+
+          <div id="pane-graphql" class="subpane">
+            <textarea id="graphqlQuery" rows="8" placeholder="query { __typename }"></textarea>
+            <textarea id="graphqlVariables" rows="4" placeholder='{"id": 1}'></textarea>
+            <div class="row">
+              <button id="gqlPlayBtn" class="btn small" data-pro="graphql" data-i18n="gqlExecuteBtn">Execute</button>
+              <button id="gqlIntroBtn" class="btn small" data-pro="graphql" data-i18n="gqlIntroBtn">Introspect schema</button>
+            </div>
+            <div id="gqlSuggest" class="hint"></div>
+            <pre id="gqlSchema" class="schema"></pre>
+          </div>
+
+          <div id="pane-cookies" class="subpane">
+            <button id="loadCookiesBtn" class="btn small" data-pro="cookies" data-i18n="loadCookiesBtn">Load cookies for URL</button>
+            <div id="cookieList"></div>
+            <div class="row">
+              <input id="cookieName" placeholder="Name">
+              <input id="cookieValue" placeholder="Value">
+              <button id="setCookieBtn" class="btn small" data-pro="cookies" data-i18n="setCookieBtn">Set</button>
+            </div>
+          </div>
+
+          <div id="pane-docs" class="subpane">
+            <input id="reqName" data-i18n-placeholder="reqNamePlaceholder" placeholder="Request name">
+            <textarea id="docs" rows="10" data-i18n-placeholder="docsPlaceholder" placeholder="Markdown notes for this request"></textarea>
+          </div>
+
+          <div id="pane-curl" class="subpane">
+            <textarea id="curlInput" rows="4" data-i18n-placeholder="curlPlaceholder" placeholder="Paste cURL"></textarea>
+            <div class="row">
+              <button id="parseCurlBtn" class="btn small" data-i18n="importCurlBtn">Import cURL</button>
+              <button id="exportCurlBtn" class="btn small" data-i18n="exportCurlBtn">Copy cURL</button>
+            </div>
+            <div class="pro-block" data-pro="codegen">
+              <select id="codeLanguage"></select>
+              <pre id="codeOutput" class="code"></pre>
+              <button id="copyCodeBtn" class="btn small" data-i18n="copyCodeBtn">Copy code</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pane">
+          <div class="resp-meta">
+            <span id="responseStatus" class="badge">—</span>
+            <span id="responseTime">—</span>
+            <span id="responseSize">—</span>
+            <span id="responseTtfb"></span>
+            <button id="copyResponseBtn" class="btn small" data-i18n="copyBtn">Copy</button>
+            <button id="saveResponseBtn" class="btn small" data-i18n="saveResponseBtn">Save</button>
+            <button id="snapshotBtn" class="btn small" data-pro="snapshots" data-i18n="snapshotBtn">Snapshot</button>
+            <button id="copyAsCurlBtn" class="btn small" data-i18n="copyAsCurlBtn">Copy as cURL</button>
+          </div>
+          <div id="respHint" class="hint"></div>
+          <div class="subtabs" id="respSubtabs">
+            <button data-rpane="body" class="active" data-i18n="responseBodyTab">Body</button>
+            <button data-rpane="pretty" data-i18n="prettyTab">Pretty</button>
+            <button data-rpane="headers" data-i18n="responseHeadersTab">Headers</button>
+            <button data-rpane="preview" data-i18n="responsePreviewTab">Preview</button>
+            <button data-rpane="redirects" data-i18n="redirectsTab">Redirects</button>
+            <button data-rpane="tests" data-pro="testsResp" data-i18n="testsTab">Tests</button>
+            <button data-rpane="diff" data-pro="diff" data-i18n="diffTab">Diff</button>
+            <button data-rpane="filter" data-pro="jsonpath" data-i18n="jsonPathTab">JSONPath</button>
+          </div>
+          <pre id="responseBody" class="body"></pre>
+          <pre id="responsePretty" class="body hidden"></pre>
+          <pre id="responseHeaders" class="body hidden"></pre>
+          <iframe id="responsePreview" class="hidden preview" sandbox></iframe>
+          <pre id="responseRedirects" class="body hidden"></pre>
+          <div id="testResults" class="body hidden"></div>
+          <div id="diffView" class="body hidden"></div>
+          <div id="pane-filter" class="hidden">
+            <input id="jsonPath" placeholder="$.data.items[0]">
+            <pre id="jsonPathOut" class="body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="wsWorkspace" class="ws-workspace hidden">
+        <div id="wsStatus" class="ws-status offline" data-i18n="wsOffline">Offline</div>
+        <div id="wsMessages" class="ws-messages"></div>
+        <div class="row">
+          <textarea id="wsMessageInput" rows="3" data-i18n-placeholder="wsMessagePlaceholder" placeholder="Message to send"></textarea>
+          <button id="wsSendBtn" class="btn primary" data-i18n="wsSendBtn">Send</button>
+        </div>
+      </div>
+
+      <footer class="statusline">
+        <span data-i18n="sslHint">Local only · Chrome cannot ignore invalid SSL</span>
+        <span id="runStatus"></span>
+        <button id="duplicateBtn" class="btn small" data-pro="extraTabs" data-i18n="duplicateBtn">Duplicate</button>
+        <button id="runCollectionBtn" class="btn small" data-pro="collectionRun" data-i18n="runCollectionBtn">Run collection</button>
+        <button id="exportBruBtn" class="btn small" data-pro="bruno" data-i18n="exportBruBtn">Export Bruno</button>
+      </footer>
+    </section>
+  </div>
+
+  <div id="palette" class="palette hidden">
+    <input id="paletteInput" data-i18n-placeholder="palettePlaceholder" placeholder="Commands and requests">
+    <div id="paletteList"></div>
+  </div>
+
+  <div id="envModal" class="modal hidden">
+    <div class="modal-card">
+      <h3 data-i18n="tabEnvironments">Environments</h3>
+      <p class="hint" data-i18n="envHelp">Create an environment, add variables (for example base_url), select it in the top bar, then write {{base_url}} in the URL, headers or body.</p>
+      <div class="row">
+        <input id="newEnvName" data-i18n-placeholder="newEnvNamePlaceholder" placeholder="New environment name">
+        <button id="createEnvBtn" class="btn primary" data-i18n="createEnvBtn">Create</button>
+      </div>
+      <div id="envEditor"></div>
+      <button id="closeEnvBtn" class="btn" data-i18n="closeBtn">Close</button>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-card">
+      <h3 data-i18n="settingsBtn">Settings</h3>
+      <label data-i18n="timeoutLabel">Timeout (ms)</label>
+      <input id="settingsTimeout" type="number" value="30000">
+      <label data-i18n="historyLimitLabel">History limit</label>
+      <input id="settingsHistoryMax" type="number" value="50">
+      <p class="hint" data-i18n="sslSettingsHint">Invalid TLS certificates cannot be bypassed in Chrome extensions.</p>
+      <p class="hint" id="historyProHint" hidden data-i18n="proHistoryHint">History over 50 items is a Pro feature.</p>
+      <button id="saveSettingsBtn" class="btn primary" data-i18n="saveSettingsBtn">Save</button>
+      <button id="closeSettingsBtn" class="btn" data-i18n="closeBtn">Close</button>
+    </div>
+  </div>
+
+  <div id="proModal" class="modal hidden">
+    <div class="modal-card">
+      <h3 data-i18n="proModalTitle">Pro feature</h3>
+      <p id="proModalText" class="hint"></p>
+      <ul id="proModalList" class="pro-list"></ul>
+      <p class="hint" data-i18n="proModalHint">Turn on the Pro toggle in the sidebar to unlock. Later this will be a paid plan.</p>
+      <div class="row">
+        <button id="proEnableBtn" class="btn primary" data-i18n="proEnableBtn">Enable Pro (dev)</button>
+        <button id="closeProModal" class="btn" data-i18n="closeBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="runModal" class="modal hidden">
+    <div class="modal-card wide">
+      <h3 data-i18n="runTitle">Collection run</h3>
+      <label class="check"><input type="checkbox" id="stopOnFail" checked> <span data-i18n="stopOnFail">Stop on fail</span></label>
+      <div id="runReport"></div>
+      <button id="closeRunBtn" class="btn" data-i18n="closeBtn">Close</button>
+    </div>
+  </div>
+
+  <input type="file" id="importFile" accept=".json,.bru,.txt,application/json" hidden>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

@@ -151,25 +151,75 @@ export class CodeGenerator {
 
   static generate(method, url, headers, body, language = 'javascript') {
     const generators = {
-      javascript: this.generateJavaScript,
-      python: this.generatePython,
-      php: this.generatePHP,
-      go: this.generateGo,
+      curl: this.generateCurl,
+      typescript: this.generateTypeScript,
+      csharp: this.generateCSharp,
+      java: this.generateJava,
     };
     const generator = generators[language];
     return generator ? generator(method, url, headers, body) : 'Language not supported';
   }
 
+  static generateCurl(method, url, headers, body) {
+    const hdrs = asObject(headers);
+    let cmd = `curl -X ${method} ${JSON.stringify(url)}`;
+    Object.entries(hdrs).forEach(([key, value]) => {
+      cmd += ` \\\n  -H ${JSON.stringify(`${key}: ${value}`)}`;
+    });
+    if (body) cmd += ` \\\n  --data-raw ${JSON.stringify(body)}`;
+    return cmd;
+  }
+
+  static generateTypeScript(method, url, headers, body) {
+    const hdrs = asObject(headers);
+    return `const res = await fetch(${JSON.stringify(url)}, {
+  method: ${JSON.stringify(method)},
+  headers: ${JSON.stringify(hdrs, null, 2)},
+${body ? `  body: ${JSON.stringify(body)},\n` : ''}});
+const text = await res.text();
+console.log(res.status, text);`;
+  }
+
+  static generateCSharp(method, url, headers, body) {
+    const hdrs = asObject(headers);
+    let code = `using var client = new HttpClient();\n`;
+    Object.entries(hdrs).forEach(([key, value]) => {
+      code += `client.DefaultRequestHeaders.TryAddWithoutValidation(${JSON.stringify(key)}, ${JSON.stringify(value)});\n`;
+    });
+    if (body) {
+      code += `var content = new StringContent(${JSON.stringify(body)}, System.Text.Encoding.UTF8, "application/json");\n`;
+      code += `var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.${method[0] + method.slice(1).toLowerCase()}, ${JSON.stringify(url)}) { Content = content });\n`;
+    } else {
+      code += `var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.${method[0] + method.slice(1).toLowerCase()}, ${JSON.stringify(url)}));\n`;
+    }
+    code += `Console.WriteLine(await response.Content.ReadAsStringAsync());`;
+    return code;
+  }
+
+  static generateJava(method, url, headers, body) {
+    const hdrs = asObject(headers);
+    let code = `var client = HttpClient.newHttpClient();\nvar builder = HttpRequest.newBuilder()\n    .uri(URI.create(${JSON.stringify(url)}))\n    .method(${JSON.stringify(method)}, ${body ? `HttpRequest.BodyPublishers.ofString(${JSON.stringify(body)})` : 'HttpRequest.BodyPublishers.noBody()'});\n`;
+    Object.entries(hdrs).forEach(([key, value]) => {
+      code += `builder.header(${JSON.stringify(key)}, ${JSON.stringify(value)});\n`;
+    });
+    code += `var response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());\nSystem.out.println(response.body());`;
+    return code;
+  }
+
   static getLanguages() {
-    return ['javascript', 'python', 'php', 'go'];
+    return ['javascript', 'typescript', 'python', 'php', 'go', 'curl', 'csharp', 'java'];
   }
 
   static getLanguageLabel(lang) {
     const labels = {
       javascript: 'JavaScript (fetch)',
+      typescript: 'TypeScript',
       python: 'Python (requests)',
       php: 'PHP (cURL)',
       go: 'Go (net/http)',
+      curl: 'cURL',
+      csharp: 'C# (HttpClient)',
+      java: 'Java (HttpClient)',
     };
     return labels[lang] || lang;
   }

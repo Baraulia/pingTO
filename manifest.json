@@ -1,11 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "PingToAPI Client Pro",
-  "version": "2.0.1",
-  "description": "Ультралёгкий, приватный и быстрый API-клиент с Pro-функциями",
+  "name": "PingTo API Client",
+  "version": "1.0.0",
+  "description": "Local API client for developers: HTTP, GraphQL, WebSocket, collections, OpenAPI",
   "default_locale": "en",
   "permissions": [
-    "storage"
+    "storage",
+    "sidePanel",
+    "cookies",
+    "identity",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -14,12 +18,15 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_title": "PingTo",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "app.html?mode=panel"
   },
   "icons": {
     "16": "icons/icon16.png",

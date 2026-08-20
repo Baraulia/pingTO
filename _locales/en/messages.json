@@ -48,7 +48,7 @@
     "message": "HEAD"
   },
   "urlPlaceholder": {
-    "message": "https://api.example.com/endpoint"
+    "message": "{{base_url}}/users/:id"
   },
   "headersTab": {
     "message": "Headers"
@@ -253,5 +253,338 @@
   },
   "themeDark": {
     "message": "Dark"
+  },
+  "searchCollections": {
+    "message": "Search collections..."
+  },
+  "newFolderBtn": {
+    "message": "+ Folder"
+  },
+  "importAnyBtn": {
+    "message": "Import"
+  },
+  "editEnvBtn": {
+    "message": "+ Environment"
+  },
+  "paletteBtn": {
+    "message": "Search or jump — Ctrl+K"
+  },
+  "palettePlaceholder": {
+    "message": "Commands and requests"
+  },
+  "followRedirects": {
+    "message": "Follow redirects"
+  },
+  "cancelBtn": {
+    "message": "Cancel"
+  },
+  "repeatBtn": {
+    "message": "Repeat"
+  },
+  "paramsTab": {
+    "message": "Params"
+  },
+  "scriptsTab": {
+    "message": "Scripts"
+  },
+  "cookiesTab": {
+    "message": "Cookies"
+  },
+  "docsTab": {
+    "message": "Docs"
+  },
+  "codeTab": {
+    "message": "Code"
+  },
+  "queryLabel": {
+    "message": "Query"
+  },
+  "addQueryBtn": {
+    "message": "+ Query param"
+  },
+  "pathLabel": {
+    "message": "Path"
+  },
+  "addPathBtn": {
+    "message": "+ Path param"
+  },
+  "bodyTypeBinary": {
+    "message": "Binary file"
+  },
+  "formatJsonBtn": {
+    "message": "Format"
+  },
+  "minifyJsonBtn": {
+    "message": "Minify"
+  },
+  "pickBinaryBtn": {
+    "message": "Choose file"
+  },
+  "multipartHint": {
+    "message": "multipart: lines key=value, or attach files below"
+  },
+  "authApiKey": {
+    "message": "API Key"
+  },
+  "apiKeyNamePlaceholder": {
+    "message": "Header or query name"
+  },
+  "apiKeyValuePlaceholder": {
+    "message": "Key value"
+  },
+  "apiKeyInHeader": {
+    "message": "Header"
+  },
+  "apiKeyInQuery": {
+    "message": "Query"
+  },
+  "oauthClientCredentials": {
+    "message": "Client credentials"
+  },
+  "oauthAuthCode": {
+    "message": "Authorization code + PKCE"
+  },
+  "oauthLoginBtn": {
+    "message": "Login / Get token"
+  },
+  "preRequestLabel": {
+    "message": "Pre-request"
+  },
+  "testsLabel": {
+    "message": "Tests"
+  },
+  "gqlExecuteBtn": {
+    "message": "Execute"
+  },
+  "gqlIntroBtn": {
+    "message": "Introspect schema"
+  },
+  "loadCookiesBtn": {
+    "message": "Load cookies for URL"
+  },
+  "setCookieBtn": {
+    "message": "Set"
+  },
+  "reqNamePlaceholder": {
+    "message": "Request name"
+  },
+  "docsPlaceholder": {
+    "message": "Markdown notes for this request"
+  },
+  "copyCodeBtn": {
+    "message": "Copy code"
+  },
+  "copyBtn": {
+    "message": "Copy"
+  },
+  "snapshotBtn": {
+    "message": "Snapshot"
+  },
+  "copyAsCurlBtn": {
+    "message": "Copy as cURL"
+  },
+  "prettyTab": {
+    "message": "Pretty"
+  },
+  "redirectsTab": {
+    "message": "Redirects"
+  },
+  "testsTab": {
+    "message": "Tests"
+  },
+  "diffTab": {
+    "message": "Diff"
+  },
+  "jsonPathTab": {
+    "message": "JSONPath"
+  },
+  "sslHint": {
+    "message": "Local only · Chrome cannot ignore invalid SSL"
+  },
+  "sslSettingsHint": {
+    "message": "Invalid TLS certificates cannot be bypassed in Chrome extensions."
+  },
+  "duplicateBtn": {
+    "message": "Duplicate"
+  },
+  "runCollectionBtn": {
+    "message": "Run collection"
+  },
+  "exportBruBtn": {
+    "message": "Export Bruno"
+  },
+  "createEnvBtn": {
+    "message": "Create"
+  },
+  "closeBtn": {
+    "message": "Close"
+  },
+  "timeoutLabel": {
+    "message": "Timeout (ms)"
+  },
+  "historyLimitLabel": {
+    "message": "History limit"
+  },
+  "saveSettingsBtn": {
+    "message": "Save"
+  },
+  "runTitle": {
+    "message": "Collection run"
+  },
+  "stopOnFail": {
+    "message": "Stop on fail"
+  },
+  "newEnvNamePlaceholder": {
+    "message": "New environment name"
+  },
+  "cmdSend": {
+    "message": "Send request"
+  },
+  "cmdNewTab": {
+    "message": "New tab"
+  },
+  "cmdFormatJson": {
+    "message": "Format JSON"
+  },
+  "cmdOpenEnv": {
+    "message": "Open environments"
+  },
+  "cmdOpenSettings": {
+    "message": "Open settings"
+  },
+  "cmdWebsocket": {
+    "message": "WebSocket / SSE"
+  },
+  "proModalTitle": {
+    "message": "Pro feature"
+  },
+  "proModalText": {
+    "message": "“{name}” is available on the Pro plan."
+  },
+  "proModalHint": {
+    "message": "Turn on the Pro toggle in the sidebar to unlock. Later this will be a paid plan."
+  },
+  "proEnableBtn": {
+    "message": "Enable Pro (dev)"
+  },
+  "proHistoryHint": {
+    "message": "History over 50 items is a Pro feature."
+  },
+  "proFeatureListTitle": {
+    "message": "Included in Pro:"
+  },
+  "collectionHelp": {
+    "message": "Create a collection, click its name to select it, then Save request. Click a request in the list to open it."
+  },
+  "newCollectionNamePlaceholder": {
+    "message": "New collection name"
+  },
+  "defaultCollectionName": {
+    "message": "My collection"
+  },
+  "defaultFolderName": {
+    "message": "Folder"
+  },
+  "collectionSelectHint": {
+    "message": "Select this collection for saving"
+  },
+  "collectionOpenHint": {
+    "message": "Open this request"
+  },
+  "collectionOpened": {
+    "message": "Request opened from collection"
+  },
+  "collectionCreated": {
+    "message": "Collection created"
+  },
+  "collectionSelectFirst": {
+    "message": "Click a collection name first"
+  },
+  "collectionTargetNone": {
+    "message": "No collection selected — Save will create one"
+  },
+  "collectionTarget": {
+    "message": "Saving into: {name}{folder}"
+  },
+  "collectionTargetFolder": {
+    "message": " / folder"
+  },
+  "requestSaved": {
+    "message": "Request saved to collection"
+  },
+  "envHelp": {
+    "message": "Create an environment, add variables (for example base_url), select it in the top bar, then write {{base_url}} in the URL, headers or body."
+  },
+  "envHintSelect": {
+    "message": "Select or create an environment, then use {{variable}} in the URL."
+  },
+  "envHintUsing": {
+    "message": "Active variables: {vars}"
+  },
+  "envHintNoVars": {
+    "message": "No variables yet — open + Environment and add base_url"
+  },
+  "envKeyPlaceholder": {
+    "message": "Name (base_url)"
+  },
+  "envValuePlaceholder": {
+    "message": "Value"
+  },
+  "envSecret": {
+    "message": "secret"
+  },
+  "envAddVar": {
+    "message": "+ Variable"
+  },
+  "envUse": {
+    "message": "Use"
+  },
+  "envDelete": {
+    "message": "Delete"
+  },
+  "envSelected": {
+    "message": "Environment selected — use {{name}} in the URL"
+  },
+  "envNeedName": {
+    "message": "Enter an environment name"
+  },
+  "envCreated": {
+    "message": "Environment created with base_url. Use {{base_url}} in the URL."
+  },
+  "wsReconnect": {
+    "message": "Reconnect"
+  },
+  "wsConnectBtn": {
+    "message": "Connect"
+  },
+  "wsDisconnectBtn": {
+    "message": "Disconnect"
+  },
+  "wsOffline": {
+    "message": "Offline"
+  },
+  "wsOnline": {
+    "message": "Online"
+  },
+  "wsMessagePlaceholder": {
+    "message": "Message to send"
+  },
+  "wsSendBtn": {
+    "message": "Send"
+  },
+  "wsSseHttp": {
+    "message": "SSE needs an http(s) URL"
+  },
+  "wsNeedUrl": {
+    "message": "Enter a ws:// or wss:// URL"
+  },
+  "wsError": {
+    "message": "Connection error"
+  },
+  "wsSseReceiveOnly": {
+    "message": "SSE is receive-only"
+  },
+  "wsNotConnected": {
+    "message": "Not connected"
   }
 }

@@ -126,10 +126,15 @@
 <body>
   <div class="container">
     <button class="back-btn" id="backBtn">← Back</button>
-    <h1>🔌 WebSocket Client</h1>
+    <h1>WebSocket / SSE</h1>
     
     <div class="input-group">
+      <select id="proto" style="padding:10px;background:#1F2937;color:#E5E7EB;border:1px solid #374151;border-radius:6px;">
+        <option value="ws">WebSocket</option>
+        <option value="sse">SSE</option>
+      </select>
       <input type="text" id="wsUrl" placeholder="wss://echo.websocket.org" value="wss://echo.websocket.org">
+      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><input type="checkbox" id="reconnect"> Reconnect</label>
       <button id="connectBtn" class="btn-connect">Connect</button>
       <button id="disconnectBtn" class="btn-disconnect" style="display:none;">Disconnect</button>
     </div>
@@ -146,7 +151,17 @@
 
   <script>
     let ws = null;
+    let sse = null;
     let isConnected = false;
+    let manualClose = false;
+
+    const proto = document.getElementById('proto');
+    const reconnectEl = document.getElementById('reconnect');
+
+    chrome.storage.local.get(['isPro'], (stored) => {
+      if (stored.isPro) return;
+      document.querySelector('.container').innerHTML = '<h1>WebSocket / SSE</h1><p>This is a Pro feature. Enable Pro in PingTo, then open this page again.</p>';
+    });
 
     const messagesEl = document.getElementById('messages');
     const statusEl = document.getElementById('status');
@@ -194,13 +209,42 @@
       }
     }
 
-    connectBtn.addEventListener('click', () => {
+    function prettyMaybe(data) {
+      try {
+        return JSON.stringify(JSON.parse(data), null, 2);
+      } catch {
+        return String(data);
+      }
+    }
+
+    function connect() {
       const url = wsUrl.value.trim();
+      manualClose = false;
+      if (proto.value === 'sse') {
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('SSE needs http(s)');
+        } catch (e) {
+          addMessage('error', e.message || 'Invalid SSE URL');
+          return;
+        }
+        sse = new EventSource(url);
+        sse.onopen = () => {
+          updateStatus(true);
+          addMessage('sent', 'SSE connected ' + url);
+        };
+        sse.onmessage = (event) => addMessage('received', prettyMaybe(event.data));
+        sse.onerror = () => {
+          addMessage('error', 'SSE error');
+          if (!manualClose && reconnectEl.checked) setTimeout(connect, 1500);
+          else updateStatus(false);
+        };
+        return;
+      }
       if (!isWsUrl(url)) {
         addMessage('error', 'Enter a valid ws:// or wss:// URL');
         return;
       }
-
       try {
         if (ws) ws.close();
         ws = new WebSocket(url);
@@ -208,29 +252,32 @@
           updateStatus(true);
           addMessage('sent', 'Connected to ' + url);
         };
-        ws.onmessage = (event) => {
-          addMessage('received', event.data);
-        };
-        ws.onerror = (error) => {
-          addMessage('error', 'Error: ' + (error.message || 'Connection error'));
-        };
+        ws.onmessage = (event) => addMessage('received', prettyMaybe(event.data));
+        ws.onerror = () => addMessage('error', 'Connection error');
         ws.onclose = () => {
           updateStatus(false);
           addMessage('error', 'Disconnected');
+          if (!manualClose && reconnectEl.checked) setTimeout(connect, 1500);
         };
       } catch (error) {
         addMessage('error', 'Connection error: ' + error.message);
       }
-    });
+    }
+
+    connectBtn.addEventListener('click', connect);
 
     disconnectBtn.addEventListener('click', () => {
-      if (ws) {
-        ws.close();
-        updateStatus(false);
-      }
+      manualClose = true;
+      if (ws) ws.close();
+      if (sse) sse.close();
+      updateStatus(false);
     });
 
     sendBtn.addEventListener('click', () => {
+      if (proto.value === 'sse') {
+        addMessage('error', 'SSE is receive-only');
+        return;
+      }
       if (!isConnected) {
         addMessage('error', 'Not connected to WebSocket');
         return;
@@ -242,7 +289,7 @@
       }
       try {
         ws.send(message);
-        addMessage('sent', message);
+        addMessage('sent', prettyMaybe(message));
         messageInput.value = '';
       } catch (error) {
         addMessage('error', 'Send error: ' + error.message);

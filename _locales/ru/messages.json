@@ -48,7 +48,7 @@
     "message": "HEAD"
   },
   "urlPlaceholder": {
-    "message": "https://api.example.com/endpoint"
+    "message": "{{base_url}}/users/:id"
   },
   "headersTab": {
     "message": "Заголовки"
@@ -253,5 +253,338 @@
   },
   "themeDark": {
     "message": "Тёмная"
+  },
+  "searchCollections": {
+    "message": "Поиск по коллекциям..."
+  },
+  "newFolderBtn": {
+    "message": "+ Папка"
+  },
+  "importAnyBtn": {
+    "message": "Импорт"
+  },
+  "editEnvBtn": {
+    "message": "+ Окружение"
+  },
+  "paletteBtn": {
+    "message": "Поиск и команды — Ctrl+K"
+  },
+  "palettePlaceholder": {
+    "message": "Команды и запросы"
+  },
+  "followRedirects": {
+    "message": "Следовать редиректам"
+  },
+  "cancelBtn": {
+    "message": "Отмена"
+  },
+  "repeatBtn": {
+    "message": "Повтор"
+  },
+  "paramsTab": {
+    "message": "Параметры"
+  },
+  "scriptsTab": {
+    "message": "Скрипты"
+  },
+  "cookiesTab": {
+    "message": "Cookies"
+  },
+  "docsTab": {
+    "message": "Описание"
+  },
+  "codeTab": {
+    "message": "Код"
+  },
+  "queryLabel": {
+    "message": "Query"
+  },
+  "addQueryBtn": {
+    "message": "+ Query-параметр"
+  },
+  "pathLabel": {
+    "message": "Path"
+  },
+  "addPathBtn": {
+    "message": "+ Path-параметр"
+  },
+  "bodyTypeBinary": {
+    "message": "Бинарный файл"
+  },
+  "formatJsonBtn": {
+    "message": "Форматировать"
+  },
+  "minifyJsonBtn": {
+    "message": "Сжать"
+  },
+  "pickBinaryBtn": {
+    "message": "Выбрать файл"
+  },
+  "multipartHint": {
+    "message": "multipart: строки key=value или файлы ниже"
+  },
+  "authApiKey": {
+    "message": "API Key"
+  },
+  "apiKeyNamePlaceholder": {
+    "message": "Имя заголовка или query"
+  },
+  "apiKeyValuePlaceholder": {
+    "message": "Значение ключа"
+  },
+  "apiKeyInHeader": {
+    "message": "Заголовок"
+  },
+  "apiKeyInQuery": {
+    "message": "Query"
+  },
+  "oauthClientCredentials": {
+    "message": "Client credentials"
+  },
+  "oauthAuthCode": {
+    "message": "Authorization code + PKCE"
+  },
+  "oauthLoginBtn": {
+    "message": "Войти / получить токен"
+  },
+  "preRequestLabel": {
+    "message": "Pre-request"
+  },
+  "testsLabel": {
+    "message": "Тесты"
+  },
+  "gqlExecuteBtn": {
+    "message": "Выполнить"
+  },
+  "gqlIntroBtn": {
+    "message": "Загрузить схему"
+  },
+  "loadCookiesBtn": {
+    "message": "Загрузить cookies для URL"
+  },
+  "setCookieBtn": {
+    "message": "Задать"
+  },
+  "reqNamePlaceholder": {
+    "message": "Имя запроса"
+  },
+  "docsPlaceholder": {
+    "message": "Заметки по запросу (Markdown)"
+  },
+  "copyCodeBtn": {
+    "message": "Копировать код"
+  },
+  "copyBtn": {
+    "message": "Копировать"
+  },
+  "snapshotBtn": {
+    "message": "Снимок"
+  },
+  "copyAsCurlBtn": {
+    "message": "Копировать как cURL"
+  },
+  "prettyTab": {
+    "message": "Pretty"
+  },
+  "redirectsTab": {
+    "message": "Редиректы"
+  },
+  "testsTab": {
+    "message": "Тесты"
+  },
+  "diffTab": {
+    "message": "Diff"
+  },
+  "jsonPathTab": {
+    "message": "JSONPath"
+  },
+  "sslHint": {
+    "message": "Только локально · Chrome не умеет игнорировать невалидный SSL"
+  },
+  "sslSettingsHint": {
+    "message": "Невалидные TLS-сертификаты в Chrome-расширении обойти нельзя."
+  },
+  "duplicateBtn": {
+    "message": "Дублировать"
+  },
+  "runCollectionBtn": {
+    "message": "Запустить коллекцию"
+  },
+  "exportBruBtn": {
+    "message": "Экспорт Bruno"
+  },
+  "createEnvBtn": {
+    "message": "Создать"
+  },
+  "closeBtn": {
+    "message": "Закрыть"
+  },
+  "timeoutLabel": {
+    "message": "Таймаут (мс)"
+  },
+  "historyLimitLabel": {
+    "message": "Лимит истории"
+  },
+  "saveSettingsBtn": {
+    "message": "Сохранить"
+  },
+  "runTitle": {
+    "message": "Прогон коллекции"
+  },
+  "stopOnFail": {
+    "message": "Останавливать при ошибке"
+  },
+  "newEnvNamePlaceholder": {
+    "message": "Имя нового окружения"
+  },
+  "cmdSend": {
+    "message": "Отправить запрос"
+  },
+  "cmdNewTab": {
+    "message": "Новая вкладка"
+  },
+  "cmdFormatJson": {
+    "message": "Форматировать JSON"
+  },
+  "cmdOpenEnv": {
+    "message": "Открыть окружения"
+  },
+  "cmdOpenSettings": {
+    "message": "Открыть настройки"
+  },
+  "cmdWebsocket": {
+    "message": "WebSocket / SSE"
+  },
+  "proModalTitle": {
+    "message": "Функция Pro"
+  },
+  "proModalText": {
+    "message": "«{name}» доступна только в тарифе Pro."
+  },
+  "proModalHint": {
+    "message": "Чтобы открыть, включите тумблер Pro в сайдбаре. Позже здесь будет оплата."
+  },
+  "proEnableBtn": {
+    "message": "Включить Pro (dev)"
+  },
+  "proHistoryHint": {
+    "message": "История больше 50 записей — это функция Pro."
+  },
+  "proFeatureListTitle": {
+    "message": "Входит в Pro:"
+  },
+  "collectionHelp": {
+    "message": "Создайте коллекцию, кликните по её имени чтобы выбрать, затем «Сохранить запрос». Клик по запросу в списке открывает его."
+  },
+  "newCollectionNamePlaceholder": {
+    "message": "Имя коллекции"
+  },
+  "defaultCollectionName": {
+    "message": "Моя коллекция"
+  },
+  "defaultFolderName": {
+    "message": "Папка"
+  },
+  "collectionSelectHint": {
+    "message": "Выбрать эту коллекцию для сохранения"
+  },
+  "collectionOpenHint": {
+    "message": "Открыть этот запрос"
+  },
+  "collectionOpened": {
+    "message": "Запрос открыт из коллекции"
+  },
+  "collectionCreated": {
+    "message": "Коллекция создана"
+  },
+  "collectionSelectFirst": {
+    "message": "Сначала кликните имя коллекции"
+  },
+  "collectionTargetNone": {
+    "message": "Коллекция не выбрана — Save создаст новую"
+  },
+  "collectionTarget": {
+    "message": "Сохранение в: {name}{folder}"
+  },
+  "collectionTargetFolder": {
+    "message": " / папка"
+  },
+  "requestSaved": {
+    "message": "Запрос сохранён в коллекцию"
+  },
+  "envHelp": {
+    "message": "Создайте окружение, добавьте переменные (например base_url), выберите его сверху и пишите {{base_url}} в URL, заголовках или теле."
+  },
+  "envHintSelect": {
+    "message": "Выберите или создайте окружение, затем используйте {{variable}} в URL."
+  },
+  "envHintUsing": {
+    "message": "Активные переменные: {vars}"
+  },
+  "envHintNoVars": {
+    "message": "Пока нет переменных — откройте + Окружение и добавьте base_url"
+  },
+  "envKeyPlaceholder": {
+    "message": "Имя (base_url)"
+  },
+  "envValuePlaceholder": {
+    "message": "Значение"
+  },
+  "envSecret": {
+    "message": "секрет"
+  },
+  "envAddVar": {
+    "message": "+ Переменная"
+  },
+  "envUse": {
+    "message": "Выбрать"
+  },
+  "envDelete": {
+    "message": "Удалить"
+  },
+  "envSelected": {
+    "message": "Окружение выбрано — в URL пишите {{имя}}"
+  },
+  "envNeedName": {
+    "message": "Введите имя окружения"
+  },
+  "envCreated": {
+    "message": "Окружение создано с base_url. В URL пишите {{base_url}}."
+  },
+  "wsReconnect": {
+    "message": "Переподключать"
+  },
+  "wsConnectBtn": {
+    "message": "Подключить"
+  },
+  "wsDisconnectBtn": {
+    "message": "Отключить"
+  },
+  "wsOffline": {
+    "message": "Офлайн"
+  },
+  "wsOnline": {
+    "message": "Онлайн"
+  },
+  "wsMessagePlaceholder": {
+    "message": "Сообщение"
+  },
+  "wsSendBtn": {
+    "message": "Отправить"
+  },
+  "wsSseHttp": {
+    "message": "Для SSE нужен http(s) URL"
+  },
+  "wsNeedUrl": {
+    "message": "Укажите ws:// или wss:// URL"
+  },
+  "wsError": {
+    "message": "Ошибка соединения"
+  },
+  "wsSseReceiveOnly": {
+    "message": "SSE только принимает сообщения"
+  },
+  "wsNotConnected": {
+    "message": "Нет соединения"
   }
 }

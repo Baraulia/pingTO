@@ -1,4 +1,5 @@
-import { idsEqual, normalizeImportedCollections } from './request-utils.js';
+import { idsEqual } from './request-utils.js';
+import { normalizeCollection, addItem, removeItem, flattenRequests } from './collection-tree.js';
 
 export class CollectionsManager {
   constructor(storage) {
@@ -9,8 +10,8 @@ export class CollectionsManager {
   }
 
   async load() {
-    this.collections = await this.storage.get(this.key, []);
-    if (!Array.isArray(this.collections)) this.collections = [];
+    const raw = await this.storage.get(this.key, []);
+    this.collections = (Array.isArray(raw) ? raw : []).map((c) => normalizeCollection(c)).filter(Boolean);
     this.loaded = true;
     return this.collections;
   }
@@ -31,12 +32,12 @@ export class CollectionsManager {
 
   async create(name) {
     if (!this.loaded) await this.load();
-    const collection = {
+    const collection = normalizeCollection({
       id: Date.now(),
       name,
-      requests: [],
+      items: [],
       created: new Date().toISOString(),
-    };
+    });
     this.collections.push(collection);
     await this.save();
     return collection;
@@ -48,33 +49,49 @@ export class CollectionsManager {
     await this.save();
   }
 
-  async addRequest(collectionId, request) {
+  async addRequest(collectionId, request, folderId = null) {
     if (!this.loaded) await this.load();
     const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
     if (!collection) return false;
-    collection.requests.push(request);
+    collection.items = collection.items || [];
+    addItem(collection.items, folderId, { type: 'request', ...request });
     await this.save();
     return true;
   }
 
-  async removeRequest(collectionId, requestId) {
+  async addFolder(collectionId, name, parentId = null) {
     if (!this.loaded) await this.load();
     const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
-    if (collection) {
-      collection.requests = collection.requests.filter((r) => !idsEqual(r.id, requestId));
-      await this.save();
-    }
+    if (!collection) return false;
+    addItem(collection.items, parentId, { type: 'folder', id: Date.now(), name, items: [] });
+    await this.save();
+    return true;
   }
 
-  async import(data) {
+  async removeItem(collectionId, itemId) {
     if (!this.loaded) await this.load();
-    const incoming = normalizeImportedCollections(data);
-    if (!incoming.length) {
-      throw new Error('Invalid collection file');
-    }
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return;
+    removeItem(collection.items, itemId);
+    await this.save();
+  }
+
+  flatten(collectionId) {
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    return collection ? flattenRequests(collection.items) : [];
+  }
+
+  async importMany(list) {
+    if (!this.loaded) await this.load();
+    const incoming = (list || []).map((c) => normalizeCollection(c)).filter(Boolean);
+    if (!incoming.length) throw new Error('Nothing to import');
     this.collections = [...this.collections, ...incoming];
     await this.save();
     return incoming.length;
+  }
+
+  async import(data) {
+    return this.importMany(Array.isArray(data) ? data : [data]);
   }
 
   async exportAll() {

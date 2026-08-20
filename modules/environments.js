@@ -35,6 +35,7 @@ export class EnvironmentsManager {
       id: Date.now(),
       name,
       variables,
+      secrets: {},
       created: new Date().toISOString(),
     };
     this.environments.push(env);

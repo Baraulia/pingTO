@@ -65,49 +65,36 @@ export function getCurrentLanguage() {
 
 // Применение переводов к DOM
 export function applyTranslations() {
-  // Все элементы с data-i18n
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+  document.documentElement.lang = currentLang;
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
-    const translation = t(key);
-    if (translation) {
-      el.textContent = translation;
+    const pack = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+    if (pack && pack[key]?.message) {
+      el.textContent = pack[key].message;
     }
   });
 
-  // Плейсхолдеры
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     const key = el.getAttribute('data-i18n-placeholder');
-    const translation = t(key);
-    if (translation) {
-      el.placeholder = translation;
+    const pack = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+    if (pack && pack[key]?.message) {
+      el.placeholder = pack[key].message;
     }
   });
 
-  // Title
-  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
     const key = el.getAttribute('data-i18n-title');
-    const translation = t(key);
-    if (translation) {
-      el.title = translation;
+    const pack = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+    if (pack && pack[key]?.message) {
+      el.title = pack[key].message;
     }
   });
 
-  // Option элементы в select
-  document.querySelectorAll('select').forEach(select => {
-    select.querySelectorAll('option[data-i18n]').forEach(opt => {
-      const key = opt.getAttribute('data-i18n');
-      const translation = t(key);
-      if (translation) {
-        opt.textContent = translation;
-      }
-    });
-  });
-
-  // Обновляем кнопку переключения языка
   const langBtn = document.getElementById('languageToggle');
   if (langBtn) {
-    langBtn.textContent = currentLang === 'en' ? 'en' : '🇷🇺';
-    langBtn.title = currentLang === 'en' ? 'Switch to Russian' : 'Переключить на английский';
+    langBtn.textContent = currentLang === 'en' ? 'EN' : 'RU';
+    langBtn.title = currentLang === 'en' ? t('languageRu') : t('languageEn');
   }
 }
 
@@ -121,9 +108,8 @@ export async function initI18n() {
   });
   
   currentLang = saved;
-  await loadTranslations(currentLang);
+  await Promise.all([loadTranslations('en'), loadTranslations(currentLang)]);
   isLoaded = true;
-  
   applyTranslations();
   return currentLang;
 }

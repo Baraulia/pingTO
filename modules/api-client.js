@@ -4,24 +4,24 @@ export class ApiClient {
     this.timeout = 30000;
   }
 
-  async sendRequest({ method, url, headers = {}, body = null, timeout = this.timeout, multipart = null, digest = null }) {
+  async sendRequest(payload) {
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'sendRequest',
         data: {
-          method,
-          url,
-          headers: { ...this.defaultHeaders, ...headers },
-          body,
-          timeout,
-          multipart,
-          digest,
+          timeout: this.timeout,
+          ...payload,
+          headers: { ...this.defaultHeaders, ...(payload.headers || {}) },
         },
       });
       return response || this.formatError('Empty response from background', 'Error');
     } catch (error) {
       return this.formatError(error.message, 'Network Error');
     }
+  }
+
+  async cancel(requestId) {
+    return chrome.runtime.sendMessage({ type: 'cancelRequest', requestId });
   }
 
   formatError(message, statusText = 'Error') {
@@ -35,15 +35,6 @@ export class ApiClient {
       size: 0,
       error: message,
     };
-  }
-
-  validateUrl(url) {
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch {
-      return false;
-    }
   }
 }
 

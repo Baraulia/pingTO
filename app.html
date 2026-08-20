@@ -26,8 +26,10 @@
         <button id="newCollectionBtn" class="btn" data-pro="collections" data-i18n="newCollectionBtn">+ Collection</button>
         <button id="newFolderBtn" class="btn" data-pro="collections" data-i18n="newFolderBtn">+ Folder</button>
         <button id="importAnyBtn" class="btn" data-pro="importCollections" data-i18n="importAnyBtn">Import</button>
+        <button id="exportCollectionBtn" class="btn" data-pro="importCollections" data-i18n="exportCollectionBtn">Export</button>
         <button id="saveToCollectionBtn" class="btn primary" data-pro="collections" data-i18n="saveToCollectionBtn">Save request</button>
       </div>
+      <p class="empty-hint" data-i18n="importExportHint">Import/Export: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Double-click a collection to rename or delete.</p>
       <div class="side-section-title" data-i18n="tabHistory">History</div>
       <div id="historyList" class="tree history"></div>
     </aside>
@@ -47,7 +49,10 @@
         <button id="wsBtn" class="icon-btn" data-pro="websocket" data-i18n-title="websocketBtn">WS</button>
       </header>
 
-      <div id="reqTabs" class="req-tabs"></div>
+      <div class="req-tabs-row">
+        <input id="reqName" class="tab-name-input" data-i18n-placeholder="reqNamePlaceholder" placeholder="Request name" spellcheck="false">
+        <div id="reqTabs" class="req-tabs"></div>
+      </div>
 
       <div class="urlbar">
         <select id="methodSelect">
@@ -189,7 +194,7 @@
           </div>
 
           <div id="pane-docs" class="subpane">
-            <input id="reqName" data-i18n-placeholder="reqNamePlaceholder" placeholder="Request name">
+            <p class="hint" data-i18n="docsNameHint">The request name is in the tab bar above.</p>
             <textarea id="docs" rows="10" data-i18n-placeholder="docsPlaceholder" placeholder="Markdown notes for this request"></textarea>
           </div>
 
@@ -316,6 +321,10 @@
     </div>
   </div>
 
+  <div id="treeMenu" class="tree-menu hidden">
+    <button id="treeMenuRename" type="button" data-i18n="renameBtn">Rename</button>
+    <button id="treeMenuDelete" type="button" class="danger" data-i18n="deleteBtn">Delete</button>
+  </div>
   <input type="file" id="importFile" accept=".json,.bru,.txt,application/json" hidden>
   <script src="app.js" type="module"></script>
 </body>

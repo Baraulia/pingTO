@@ -263,6 +263,9 @@
   "importAnyBtn": {
     "message": "Импорт"
   },
+  "exportCollectionBtn": {
+    "message": "Экспорт"
+  },
   "editEnvBtn": {
     "message": "+ Окружение"
   },
@@ -367,6 +370,15 @@
   },
   "reqNamePlaceholder": {
     "message": "Имя запроса"
+  },
+  "defaultRequestName": {
+    "message": "Новый запрос"
+  },
+  "renameRequestHint": {
+    "message": "Двойной клик — переименовать"
+  },
+  "docsNameHint": {
+    "message": "Имя запроса меняется в поле рядом со вкладками."
   },
   "docsPlaceholder": {
     "message": "Заметки по запросу (Markdown)"
@@ -474,7 +486,7 @@
     "message": "Входит в Pro:"
   },
   "collectionHelp": {
-    "message": "Создайте коллекцию, кликните по её имени чтобы выбрать, затем «Сохранить запрос». Клик по запросу в списке открывает его."
+    "message": "Создайте коллекцию, кликните по имени чтобы выбрать, затем «Сохранить запрос». Клик по запросу открывает его. Двойной клик по коллекции — переименовать или удалить."
   },
   "newCollectionNamePlaceholder": {
     "message": "Имя коллекции"
@@ -490,6 +502,27 @@
   },
   "collectionOpenHint": {
     "message": "Открыть этот запрос"
+  },
+  "collectionDblHint": {
+    "message": "Двойной клик — переименовать или удалить"
+  },
+  "renameBtn": {
+    "message": "Переименовать"
+  },
+  "deleteBtn": {
+    "message": "Удалить"
+  },
+  "confirmDelete": {
+    "message": "Удалить «{name}»?"
+  },
+  "importedOk": {
+    "message": "Импортировано"
+  },
+  "importFailed": {
+    "message": "Неизвестный формат. Нужен PingTo JSON, Postman v2, Insomnia, OpenAPI или Bruno."
+  },
+  "importExportHint": {
+    "message": "Импорт и экспорт: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Экспорт пишет PingTo JSON."
   },
   "collectionOpened": {
     "message": "Запрос открыт из коллекции"
@@ -536,11 +569,11 @@
   "envAddVar": {
     "message": "+ Переменная"
   },
-  "envUse": {
-    "message": "Выбрать"
+  "envDeleteVar": {
+    "message": "Удалить переменную"
   },
-  "envDelete": {
-    "message": "Удалить"
+  "envDeleteEnv": {
+    "message": "Удалить окружение"
   },
   "envSelected": {
     "message": "Окружение выбрано — в URL пишите {{имя}}"

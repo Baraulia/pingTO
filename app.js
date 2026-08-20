@@ -69,6 +69,7 @@ const state = {
   lastRequest: null,
   selectedCollectionId: null,
   selectedFolderId: null,
+  treeMenuTarget: null,
 };
 
 const socketSession = { ws: null, sse: null, reconnectTimer: null, manualClose: false };
@@ -198,6 +199,8 @@ function tabFromDraft(partial = {}) {
     response: null,
     snapshot: null,
     testResults: [],
+    collectionId: partial.collectionId || null,
+    collectionItemId: partial.collectionItemId || null,
   };
 }
 
@@ -206,6 +209,47 @@ async function persistWorkspace() {
     tabs: state.tabs.map(({ files, binary, ...rest }) => rest),
     activeId: state.activeId,
   });
+  scheduleCollectionSync();
+}
+
+function collectionRequestPayload(tab) {
+  return {
+    type: 'request',
+    id: tab.collectionItemId,
+    name: tab.name,
+    method: tab.method,
+    url: tab.url,
+    headers: tab.headers,
+    params: tab.params,
+    pathParams: tab.pathParams,
+    bodyType: tab.bodyType,
+    body: tab.body,
+    authType: tab.authType,
+    auth: tab.auth,
+    preRequest: tab.preRequest,
+    tests: tab.tests,
+    docs: tab.docs,
+    graphqlQuery: tab.graphqlQuery,
+    graphqlVariables: tab.graphqlVariables,
+    followRedirects: tab.followRedirects,
+  };
+}
+
+async function syncOpenTabToCollection() {
+  if (!state.isPro) return;
+  const tab = current();
+  if (!tab?.collectionId || !tab.collectionItemId) return;
+  await collectionsManager.updateRequest(tab.collectionId, tab.collectionItemId, collectionRequestPayload(tab));
+}
+
+const scheduleCollectionSync = debounce(() => {
+  syncOpenTabToCollection();
+}, 500);
+
+function findOpenCollectionTab(collectionId, itemId) {
+  return state.tabs.find(
+    (t) => String(t.collectionId) === String(collectionId) && String(t.collectionItemId) === String(itemId)
+  );
 }
 
 function bindKv(container, list, fields, onChange) {
@@ -268,7 +312,7 @@ function readFormIntoTab() {
   tab.preRequest = $('preRequest').value;
   tab.tests = $('tests').value;
   tab.docs = $('docs').value;
-  tab.name = $('reqName').value || tab.name;
+  tab.name = $('reqName').value.trim() || tab.name;
   tab.graphqlQuery = $('graphqlQuery').value;
   tab.graphqlVariables = $('graphqlVariables').value;
   tab.followRedirects = $('followRedirects').checked;
@@ -315,9 +359,10 @@ function renderKvs() {
   bindKv($('queryList'), tab.params, ['key', 'value'], () => {
     tab.url = applyParamsToUrl(tab.url.split('?')[0], tab.params);
     $('urlInput').value = tab.url;
+    scheduleCollectionSync();
   });
-  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => {});
-  bindKv($('headersList'), tab.headers, ['key', 'value'], () => {});
+  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => scheduleCollectionSync());
+  bindKv($('headersList'), tab.headers, ['key', 'value'], () => scheduleCollectionSync());
 }
 
 function renderTabs() {
@@ -330,7 +375,17 @@ function renderTabs() {
     m.className = `method ${tab.method}`;
     m.textContent = tab.method;
     const name = document.createElement('span');
-    name.textContent = tab.name || 'Request';
+    name.className = 'tab-chip-name';
+    name.textContent = tab.name || I18nManager.t('defaultRequestName');
+    name.title = I18nManager.t('renameRequestHint');
+    name.ondblclick = (e) => {
+      e.stopPropagation();
+      state.activeId = tab.id;
+      writeTabToForm();
+      const input = $('reqName');
+      input.focus();
+      input.select();
+    };
     const close = document.createElement('span');
     close.textContent = '×';
     close.onclick = (e) => {
@@ -369,6 +424,18 @@ function replaceActiveTab(partial) {
 }
 
 function openTab(partial) {
+  if (partial?.collectionId && partial?.collectionItemId) {
+    const existing = findOpenCollectionTab(partial.collectionId, partial.collectionItemId);
+    if (existing) {
+      if (state.tabs.length && existing.id !== state.activeId) readFormIntoTab();
+      if (existing.id !== state.activeId) {
+        closeSocket(true);
+        state.activeId = existing.id;
+        writeTabToForm();
+      }
+      return existing;
+    }
+  }
   if (!state.isPro) {
     if (partial) {
       replaceActiveTab(partial);
@@ -844,6 +911,28 @@ function showResp(name) {
   document.querySelectorAll('#respSubtabs button').forEach((b) => b.classList.toggle('active', b.dataset.rpane === name));
 }
 
+function hideTreeMenu() {
+  $('treeMenu')?.classList.add('hidden');
+  state.treeMenuTarget = null;
+}
+
+function showTreeMenu(event, target) {
+  const menu = $('treeMenu');
+  if (!menu) return;
+  event.preventDefault();
+  event.stopPropagation();
+  state.treeMenuTarget = target;
+  menu.classList.remove('hidden');
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - 170)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
+}
+
+function markTreeSelection(el) {
+  document.querySelectorAll('#collectionTree .tree-item.selected').forEach((node) => node.classList.remove('selected'));
+  el?.classList.add('selected');
+  updateCollectionTarget();
+}
+
 function renderCollections() {
   const tree = $('collectionTree');
   tree.replaceChildren();
@@ -861,12 +950,13 @@ function renderCollections() {
     const title = document.createElement('div');
     title.className = `tree-item${String(state.selectedCollectionId) === String(coll.id) && !state.selectedFolderId ? ' selected' : ''}`;
     title.textContent = coll.name;
-    title.title = I18nManager.t('collectionSelectHint');
+    title.title = I18nManager.t('collectionDblHint');
     title.onclick = () => {
       state.selectedCollectionId = coll.id;
       state.selectedFolderId = null;
-      renderCollections();
+      markTreeSelection(title);
     };
+    title.ondblclick = (e) => showTreeMenu(e, { kind: 'collection', coll });
     wrap.appendChild(title);
     const draw = (items, pad) => {
       (items || []).forEach((item) => {
@@ -875,16 +965,19 @@ function renderCollections() {
           f.className = `tree-item${String(state.selectedFolderId) === String(item.id) ? ' selected' : ''}`;
           f.style.paddingLeft = `${pad}px`;
           f.textContent = `▸ ${item.name}`;
+          f.title = I18nManager.t('collectionDblHint');
           f.onclick = () => {
             state.selectedCollectionId = coll.id;
             state.selectedFolderId = item.id;
-            renderCollections();
+            markTreeSelection(f);
           };
+          f.ondblclick = (e) => showTreeMenu(e, { kind: 'folder', coll, item });
           wrap.appendChild(f);
           draw(item.items, pad + 12);
         } else if (!q || `${item.name} ${item.url}`.toLowerCase().includes(q)) {
           const r = document.createElement('div');
-          r.className = 'tree-item';
+          const isOpen = Boolean(findOpenCollectionTab(coll.id, item.id));
+          r.className = `tree-item${isOpen ? ' open-req' : ''}`;
           r.style.paddingLeft = `${pad}px`;
           r.title = I18nManager.t('collectionOpenHint');
           const m = document.createElement('span');
@@ -893,8 +986,7 @@ function renderCollections() {
           r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
             state.selectedCollectionId = coll.id;
-            openTab(item);
-            UIHelpers.showToast(I18nManager.t('collectionOpened'), 'success');
+            openTab({ ...item, collectionId: coll.id, collectionItemId: item.id });
           };
           wrap.appendChild(r);
         }
@@ -948,6 +1040,18 @@ async function renderEnvs() {
   await updateEnvHint();
 }
 
+function collectEnvCard(card) {
+  const variables = {};
+  const secrets = {};
+  [...card.querySelectorAll('.kv-row')].forEach((row) => {
+    const key = row.querySelector('.env-key')?.value.trim();
+    if (!key) return;
+    variables[key] = row.querySelector('.env-val')?.value || '';
+    if (row.querySelector('.env-secret')?.checked) secrets[key] = true;
+  });
+  return { variables, secrets };
+}
+
 function renderEnvEditor() {
   const box = $('envEditor');
   box.replaceChildren();
@@ -961,9 +1065,25 @@ function renderEnvEditor() {
   environmentsManager.environments.forEach((env) => {
     const card = document.createElement('div');
     card.className = 'env-card';
+    const head = document.createElement('div');
+    head.className = 'row env-card-head';
     const h = document.createElement('h4');
     h.textContent = env.name;
-    card.appendChild(h);
+    const delEnv = document.createElement('button');
+    delEnv.className = 'btn small danger';
+    delEnv.textContent = I18nManager.t('envDeleteEnv');
+    delEnv.onclick = async () => {
+      await environmentsManager.delete(env.id);
+      if ($('environmentSelect').value === String(env.id)) {
+        $('environmentSelect').value = '';
+        await storage.set('active_env_id', null);
+      }
+      await renderEnvs();
+      renderEnvEditor();
+    };
+    head.append(h, delEnv);
+    card.appendChild(head);
+
     const vars = Object.entries(env.variables || {});
     if (!vars.length) {
       const none = document.createElement('p');
@@ -971,13 +1091,21 @@ function renderEnvEditor() {
       none.textContent = I18nManager.t('envHintNoVars');
       card.appendChild(none);
     }
+
+    const persist = () => {
+      Object.assign(env, collectEnvCard(card));
+      environmentsManager.update(env.id, env).then(updateEnvHint);
+    };
+
     vars.forEach(([key, value]) => {
       const row = document.createElement('div');
       row.className = 'kv-row';
       const k = document.createElement('input');
+      k.className = 'env-key';
       k.placeholder = I18nManager.t('envKeyPlaceholder');
       k.value = key;
       const v = document.createElement('input');
+      v.className = 'env-val';
       v.placeholder = I18nManager.t('envValuePlaceholder');
       v.type = env.secrets?.[key] ? 'password' : 'text';
       v.value = value;
@@ -985,59 +1113,42 @@ function renderEnvEditor() {
       secWrap.className = 'secret-lab';
       const sec = document.createElement('input');
       sec.type = 'checkbox';
+      sec.className = 'env-secret';
       sec.checked = Boolean(env.secrets?.[key]);
       secWrap.append(sec, document.createTextNode(I18nManager.t('envSecret')));
-      const save = () => {
-        const next = {};
-        [...card.querySelectorAll('.kv-row')].forEach((r) => {
-          const inputs = [...r.querySelectorAll('input')].filter((i) => i.type !== 'checkbox');
-          if (inputs[0]?.value) next[inputs[0].value] = inputs[1]?.value || '';
-        });
-        env.variables = next;
-        environmentsManager.update(env.id, env).then(updateEnvHint);
+      const delVar = document.createElement('button');
+      delVar.className = 'btn small';
+      delVar.type = 'button';
+      delVar.title = I18nManager.t('envDeleteVar');
+      delVar.setAttribute('aria-label', I18nManager.t('envDeleteVar'));
+      delVar.textContent = '×';
+      delVar.onclick = () => {
+        row.remove();
+        persist();
+        renderEnvEditor();
       };
-      k.onchange = save;
-      v.onchange = save;
+      k.onchange = persist;
+      v.onchange = persist;
       sec.onchange = () => {
-        env.secrets = env.secrets || {};
-        env.secrets[key] = sec.checked;
-        environmentsManager.update(env.id, env);
         v.type = sec.checked ? 'password' : 'text';
+        persist();
       };
-      row.append(k, v, secWrap);
+      row.append(k, v, secWrap, delVar);
       card.appendChild(row);
     });
-    const actions = document.createElement('div');
-    actions.className = 'row';
+
     const add = document.createElement('button');
     add.className = 'btn small';
     add.textContent = I18nManager.t('envAddVar');
     add.onclick = () => {
+      Object.assign(env, collectEnvCard(card));
       env.variables = env.variables || {};
-      env.variables[`key${Object.keys(env.variables).length + 1}`] = '';
+      let n = 1;
+      while (Object.prototype.hasOwnProperty.call(env.variables, `key${n}`)) n += 1;
+      env.variables[`key${n}`] = '';
       environmentsManager.update(env.id, env).then(renderEnvEditor);
     };
-    const use = document.createElement('button');
-    use.className = 'btn small primary';
-    use.textContent = I18nManager.t('envUse');
-    use.onclick = async () => {
-      $('environmentSelect').value = String(env.id);
-      await storage.set('active_env_id', env.id);
-      $('envModal').classList.add('hidden');
-      await updateEnvHint();
-      UIHelpers.showToast(I18nManager.t('envSelected'), 'success');
-    };
-    const del = document.createElement('button');
-    del.className = 'btn small danger';
-    del.textContent = I18nManager.t('envDelete');
-    del.onclick = async () => {
-      await environmentsManager.delete(env.id);
-      if ($('environmentSelect').value === String(env.id)) $('environmentSelect').value = '';
-      await renderEnvs();
-      renderEnvEditor();
-    };
-    actions.append(add, use, del);
-    card.appendChild(actions);
+    card.appendChild(add);
     box.appendChild(card);
   });
 }
@@ -1065,7 +1176,7 @@ function paletteItems() {
       label: `${hit.request.method} ${hit.request.name || hit.request.url}`,
       run: () => {
         if (!requirePro('collections')) return;
-        openTab(hit.request);
+        openTab({ ...hit.request, collectionId: hit.collection.id, collectionItemId: hit.request.id });
       },
     });
   });
@@ -1116,7 +1227,7 @@ async function runCollection() {
   const report = $('runReport');
   report.replaceChildren();
   for (const req of reqs) {
-    openTab(req);
+    openTab({ ...req, collectionId: id, collectionItemId: req.id });
     writeTabToForm();
     await sendCurrent();
     const tab = current();
@@ -1190,6 +1301,31 @@ async function init() {
 $('sendBtn').onclick = sendCurrent;
 $('cancelBtn').onclick = () => apiClient.cancel(state.sendingId);
 $('repeatBtn').onclick = sendCurrent;
+$('reqName').oninput = () => {
+  const tab = current();
+  if (!tab) return;
+  tab.name = $('reqName').value.trim();
+  const chip = document.querySelector('.tab-chip.active .tab-chip-name');
+  if (chip) chip.textContent = tab.name || I18nManager.t('defaultRequestName');
+  scheduleCollectionSync();
+};
+$('reqName').onblur = () => {
+  const tab = current();
+  if (!tab) return;
+  if (!tab.name) {
+    tab.name = I18nManager.t('defaultRequestName');
+    $('reqName').value = tab.name;
+    const chip = document.querySelector('.tab-chip.active .tab-chip-name');
+    if (chip) chip.textContent = tab.name;
+  }
+  persistWorkspace();
+};
+$('reqName').onkeydown = (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('reqName').blur();
+  }
+};
 $('authType').onchange = () => {
   const type = $('authType').value;
   if (!FREE_AUTH.has(type) && !requirePro(authFeatureId(type))) {
@@ -1220,6 +1356,7 @@ $('methodSelect').onchange = () => {
   if (current()) current().method = method;
   closeSocket(true);
   syncWorkspaceMode();
+  scheduleCollectionSync();
 };
 $('addQueryBtn').onclick = () => {
   current().params.push({ key: '', value: '', enabled: true });
@@ -1245,9 +1382,13 @@ $('urlInput').oninput = debounce(() => {
   tab.params = parseUrlParams(tab.url);
   renderKvs();
   updateEnvHint();
+  scheduleCollectionSync();
 }, 200);
 $('bodyEditor').oninput = () => {
   if ($('bodyType').value === 'json') $('jsonError').textContent = jsonError($('bodyEditor').value) || '';
+  const tab = current();
+  if (tab) tab.body = $('bodyEditor').value;
+  scheduleCollectionSync();
 };
 $('formatJsonBtn').onclick = formatBody;
 $('minifyJsonBtn').onclick = () => {
@@ -1381,27 +1522,61 @@ $('importAnyBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
-  const imported = detectAndImport(text);
-  await collectionsManager.importMany(imported);
-  renderCollections();
-  UIHelpers.showToast('Imported', 'success');
+  try {
+    const text = await file.text();
+    const imported = detectAndImport(text);
+    await collectionsManager.importMany(imported);
+    renderCollections();
+    UIHelpers.showToast(I18nManager.t('importedOk'), 'success');
+  } catch (err) {
+    UIHelpers.showToast(err.message || I18nManager.t('importFailed'), 'error');
+  }
+  e.target.value = '';
+};
+$('exportCollectionBtn').onclick = async () => {
+  if (!requirePro('importCollections')) return;
+  const selected = state.selectedCollectionId
+    ? await collectionsManager.exportCollection(state.selectedCollectionId)
+    : null;
+  const payload = selected
+    ? { format: 'pingto', version: 1, collections: [selected] }
+    : { format: 'pingto', version: 1, collections: await collectionsManager.exportAll() };
+  const filename = selected ? `${selected.name || 'collection'}.json` : 'pingto-collections.json';
+  UIHelpers.downloadText(filename, JSON.stringify(payload, null, 2), 'application/json');
 };
 $('saveToCollectionBtn').onclick = async () => {
   if (!requirePro('collections')) return;
   readFormIntoTab();
+  const tab = current();
   if (!state.selectedCollectionId) {
     const created = await collectionsManager.create($('newCollectionName').value.trim() || I18nManager.t('defaultCollectionName'));
     state.selectedCollectionId = created.id;
     $('newCollectionName').value = '';
   }
-  await collectionsManager.addRequest(state.selectedCollectionId, { ...current(), files: undefined, binary: undefined, response: undefined }, state.selectedFolderId);
+  if (tab.collectionId && tab.collectionItemId && String(tab.collectionId) === String(state.selectedCollectionId)) {
+    await collectionsManager.updateRequest(tab.collectionId, tab.collectionItemId, collectionRequestPayload(tab));
+  } else {
+    const saved = await collectionsManager.addRequest(
+      state.selectedCollectionId,
+      collectionRequestPayload({ ...tab, collectionItemId: tab.collectionItemId || newId() }),
+      state.selectedFolderId
+    );
+    tab.collectionId = state.selectedCollectionId;
+    tab.collectionItemId = saved.id;
+  }
+  persistWorkspace();
   renderCollections();
   UIHelpers.showToast(I18nManager.t('requestSaved'), 'success');
 };
 $('duplicateBtn').onclick = () => {
   readFormIntoTab();
-  openTab({ ...current(), name: `${current().name} copy` });
+  openTab({
+    ...current(),
+    name: `${current().name} copy`,
+    id: undefined,
+    collectionId: null,
+    collectionItemId: null,
+  });
 };
 $('runCollectionBtn').onclick = runCollection;
 $('exportBruBtn').onclick = async () => {
@@ -1524,8 +1699,55 @@ document.addEventListener('keydown', (e) => {
     $('envModal').classList.add('hidden');
     $('settingsModal').classList.add('hidden');
     $('proModal').classList.add('hidden');
+    hideTreeMenu();
   }
 });
+document.addEventListener('click', (e) => {
+  if (!$('treeMenu') || $('treeMenu').classList.contains('hidden')) return;
+  if (e.target.closest('#treeMenu')) return;
+  hideTreeMenu();
+});
+$('treeMenuRename').onclick = async () => {
+  const target = state.treeMenuTarget;
+  hideTreeMenu();
+  if (!target) return;
+  const currentName = target.kind === 'collection' ? target.coll.name : target.item.name;
+  const name = prompt(I18nManager.t('renameBtn'), currentName);
+  if (!name || !name.trim()) return;
+  if (target.kind === 'collection') await collectionsManager.rename(target.coll.id, name.trim());
+  else await collectionsManager.renameItem(target.coll.id, target.item.id, name.trim());
+  renderCollections();
+};
+$('treeMenuDelete').onclick = async () => {
+  const target = state.treeMenuTarget;
+  hideTreeMenu();
+  if (!target) return;
+  const label = target.kind === 'collection' ? target.coll.name : target.item.name;
+  if (!confirm(I18nManager.t('confirmDelete').replace('{name}', label))) return;
+  if (target.kind === 'collection') {
+    await collectionsManager.delete(target.coll.id);
+    state.tabs.forEach((tab) => {
+      if (String(tab.collectionId) === String(target.coll.id)) {
+        tab.collectionId = null;
+        tab.collectionItemId = null;
+      }
+    });
+    if (String(state.selectedCollectionId) === String(target.coll.id)) {
+      state.selectedCollectionId = null;
+      state.selectedFolderId = null;
+    }
+  } else {
+    await collectionsManager.removeItem(target.coll.id, target.item.id);
+    state.tabs.forEach((tab) => {
+      if (String(tab.collectionItemId) === String(target.item.id)) {
+        tab.collectionId = null;
+        tab.collectionItemId = null;
+      }
+    });
+  }
+  persistWorkspace();
+  renderCollections();
+};
 
 chrome.commands?.onCommand.addListener((c) => {
   if (c === 'send-request') sendCurrent();

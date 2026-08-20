@@ -1,5 +1,5 @@
 import { idsEqual } from './request-utils.js';
-import { normalizeCollection, addItem, removeItem, flattenRequests } from './collection-tree.js';
+import { normalizeCollection, addItem, removeItem, flattenRequests, findItem, emptyRequest, newId } from './collection-tree.js';
 
 export class CollectionsManager {
   constructor(storage) {
@@ -52,9 +52,62 @@ export class CollectionsManager {
   async addRequest(collectionId, request, folderId = null) {
     if (!this.loaded) await this.load();
     const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
-    if (!collection) return false;
+    if (!collection) return null;
     collection.items = collection.items || [];
-    addItem(collection.items, folderId, { type: 'request', ...request });
+    const stored = {
+      type: 'request',
+      ...emptyRequest(request),
+      ...request,
+      id: request.id || newId(),
+      type: 'request',
+    };
+    delete stored.collectionId;
+    delete stored.collectionItemId;
+    delete stored.files;
+    delete stored.binary;
+    delete stored.response;
+    delete stored.testResults;
+    delete stored.snapshot;
+    addItem(collection.items, folderId, stored);
+    await this.save();
+    return stored;
+  }
+
+  async updateRequest(collectionId, requestId, request) {
+    if (!this.loaded) await this.load();
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return false;
+    const item = findItem(collection.items, requestId);
+    if (!item || item.type === 'folder') return false;
+    const next = { ...request };
+    delete next.collectionId;
+    delete next.collectionItemId;
+    delete next.files;
+    delete next.binary;
+    delete next.response;
+    delete next.testResults;
+    delete next.snapshot;
+    Object.assign(item, next, { type: 'request', id: requestId });
+    await this.save();
+    return true;
+  }
+
+  async rename(id, name) {
+    if (!this.loaded) await this.load();
+    const collection = this.collections.find((c) => idsEqual(c.id, id));
+    if (!collection) return false;
+    collection.name = String(name || '').trim() || collection.name;
+    await this.save();
+    return true;
+  }
+
+  async renameItem(collectionId, itemId, name) {
+    if (!this.loaded) await this.load();
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return false;
+    const item = findItem(collection.items, itemId);
+    if (!item) return false;
+    item.name = String(name || '').trim() || item.name;
     await this.save();
     return true;
   }

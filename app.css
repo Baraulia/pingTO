@@ -65,10 +65,12 @@ textarea { font-family: ui-monospace, monospace; resize: vertical; }
 .method.PATCH { color: var(--patch); }
 .method.DELETE { color: var(--delete); }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.topbar, .urlbar, .statusline, .resp-meta, .row, .req-tabs {
+.topbar, .urlbar, .statusline, .resp-meta, .row, .req-tabs-row {
   display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
+.req-tabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; padding: 0; border: 0; }
+.tab-name-input { width: 220px; max-width: 40vw; font-weight: 600; }
 .subtabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); overflow-x: auto; }
 .grow { flex: 1; text-align: left; }
 .btn, .icon-btn {
@@ -168,9 +170,33 @@ body.is-free .pro-block { opacity: 0.72; }
 .ws-status { width: fit-content; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
 .ws-status.online { background: #22c55e22; color: var(--ok); }
 .ws-status.offline { background: #ef444422; color: var(--err); }
-.tree-item.selected { background: var(--bg3); outline: 1px solid var(--accent); }
+.tree-menu {
+  position: fixed;
+  z-index: 40;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tree-menu button {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tree-menu button:hover { background: var(--bg3); }
+.tree-menu button.danger { color: var(--err); }
+.tree-item.open-req { outline: 1px dashed var(--accent); }
 .empty-hint { color: var(--muted); font-size: 12px; padding: 4px 2px; line-height: 1.45; }
-.env-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+.env-card-head { justify-content: space-between; padding: 0; border: 0; }
+.env-card-head h4 { margin: 0; }
 .secret-lab { display: flex; gap: 4px; align-items: center; font-size: 11px; color: var(--muted); white-space: nowrap; }
 #collectionTarget { font-size: 11px; padding: 0 2px; }
 #app { max-height: none; height: 100%; }

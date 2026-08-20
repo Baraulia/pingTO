@@ -263,6 +263,9 @@
   "importAnyBtn": {
     "message": "Import"
   },
+  "exportCollectionBtn": {
+    "message": "Export"
+  },
   "editEnvBtn": {
     "message": "+ Environment"
   },
@@ -367,6 +370,15 @@
   },
   "reqNamePlaceholder": {
     "message": "Request name"
+  },
+  "defaultRequestName": {
+    "message": "New request"
+  },
+  "renameRequestHint": {
+    "message": "Double-click to rename"
+  },
+  "docsNameHint": {
+    "message": "Rename the request in the field next to the tabs."
   },
   "docsPlaceholder": {
     "message": "Markdown notes for this request"
@@ -474,7 +486,7 @@
     "message": "Included in Pro:"
   },
   "collectionHelp": {
-    "message": "Create a collection, click its name to select it, then Save request. Click a request in the list to open it."
+    "message": "Create a collection, click its name to select it, then Save request. Click a request to open it. Double-click a collection to rename or delete."
   },
   "newCollectionNamePlaceholder": {
     "message": "New collection name"
@@ -490,6 +502,27 @@
   },
   "collectionOpenHint": {
     "message": "Open this request"
+  },
+  "collectionDblHint": {
+    "message": "Double-click to rename or delete"
+  },
+  "renameBtn": {
+    "message": "Rename"
+  },
+  "deleteBtn": {
+    "message": "Delete"
+  },
+  "confirmDelete": {
+    "message": "Delete “{name}”?"
+  },
+  "importedOk": {
+    "message": "Imported"
+  },
+  "importFailed": {
+    "message": "Unknown format. Use PingTo JSON, Postman v2, Insomnia, OpenAPI or Bruno."
+  },
+  "importExportHint": {
+    "message": "Import and Export: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Export writes PingTo JSON."
   },
   "collectionOpened": {
     "message": "Request opened from collection"
@@ -536,11 +569,11 @@
   "envAddVar": {
     "message": "+ Variable"
   },
-  "envUse": {
-    "message": "Use"
+  "envDeleteVar": {
+    "message": "Delete variable"
   },
-  "envDelete": {
-    "message": "Delete"
+  "envDeleteEnv": {
+    "message": "Delete environment"
   },
   "envSelected": {
     "message": "Environment selected — use {{name}} in the URL"

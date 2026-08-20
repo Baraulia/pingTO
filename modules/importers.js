@@ -192,6 +192,7 @@ export function detectAndImport(raw) {
     data = JSON.parse(raw);
   }
   if (data.openapi || data.swagger) return importOpenApi(data);
+  if (data.format === 'pingto' && Array.isArray(data.collections)) return data.collections;
   if (data.info && data.item) return importPostman(data);
   if (data.__export_format || data.resources || data._type === 'export') return importInsomnia(data);
   if (Array.isArray(data)) return data;

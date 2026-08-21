@@ -126,7 +126,10 @@
     "message": "💻 Генерация кода"
   },
   "saveToCollectionBtn": {
-    "message": "💾 Сохранить в коллекцию"
+    "message": "Сохранить в коллекцию"
+  },
+  "saveRequestBtn": {
+    "message": "Сохранить"
   },
   "saveAsEnvBtn": {
     "message": "🔑 Сохранить как переменную"
@@ -540,7 +543,7 @@
     "message": "Сохранение в: {name}{folder}"
   },
   "collectionTargetFolder": {
-    "message": " / папка"
+    "message": " / {folder}"
   },
   "requestSaved": {
     "message": "Запрос сохранён в коллекцию"

@@ -79,6 +79,30 @@ export function addItem(items, parentId, item) {
   }
 }
 
+export function findParentId(items, childId, parentId = null) {
+  for (const item of items || []) {
+    if (String(item.id) === String(childId)) return parentId;
+    if (item.type === 'folder') {
+      const found = findParentId(item.items, childId, item.id);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+export function moveItem(items, itemId, targetFolderId = null) {
+  const item = findItem(items, itemId);
+  if (!item) return false;
+  if (targetFolderId && String(itemId) === String(targetFolderId)) return false;
+  if (item.type === 'folder' && targetFolderId && findItem(item.items, targetFolderId)) return false;
+  const currentParent = findParentId(items, itemId);
+  if (currentParent === undefined) return false;
+  if (String(currentParent ?? '') === String(targetFolderId ?? '')) return true;
+  if (!removeItem(items, itemId)) return false;
+  addItem(items, targetFolderId, item);
+  return true;
+}
+
 export function normalizeCollection(coll) {
   if (!coll || typeof coll !== 'object') return null;
   const items = Array.isArray(coll.items)

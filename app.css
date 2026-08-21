@@ -193,7 +193,10 @@ body.is-free .pro-block { opacity: 0.72; }
 }
 .tree-menu button:hover { background: var(--bg3); }
 .tree-menu button.danger { color: var(--err); }
-.tree-item.open-req { outline: 1px dashed var(--accent); }
+.tree-item.drag-over { outline: 2px dashed var(--accent); background: var(--bg3); }
+.history-item { justify-content: flex-start; }
+.history-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-time { margin-left: auto; font-size: 10px; color: var(--muted); white-space: nowrap; }
 .empty-hint { color: var(--muted); font-size: 12px; padding: 4px 2px; line-height: 1.45; }
 .env-card-head { justify-content: space-between; padding: 0; border: 0; }
 .env-card-head h4 { margin: 0; }

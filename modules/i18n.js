@@ -93,7 +93,7 @@ export function applyTranslations() {
 
   const langBtn = document.getElementById('languageToggle');
   if (langBtn) {
-    langBtn.textContent = currentLang === 'en' ? 'EN' : 'RU';
+    langBtn.textContent = currentLang === 'en' ? 'RU' : 'EN';
     langBtn.title = currentLang === 'en' ? t('languageRu') : t('languageEn');
   }
 }

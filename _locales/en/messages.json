@@ -126,7 +126,10 @@
     "message": "💻 Generate Code"
   },
   "saveToCollectionBtn": {
-    "message": "💾 Save to Collection"
+    "message": "Save to collection"
+  },
+  "saveRequestBtn": {
+    "message": "Save"
   },
   "saveAsEnvBtn": {
     "message": "🔑 Save as Variable"
@@ -540,7 +543,7 @@
     "message": "Saving into: {name}{folder}"
   },
   "collectionTargetFolder": {
-    "message": " / folder"
+    "message": " / {folder}"
   },
   "requestSaved": {
     "message": "Request saved to collection"

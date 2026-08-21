@@ -36,6 +36,8 @@ import { exchangeCode, launchAuthCode, refreshToken } from './modules/oauth.js';
 import { runPreRequest, runTests } from './modules/sandbox.js';
 import {
   emptyRequest,
+  findItem,
+  findParentId,
   newId,
   searchRequests,
 } from './modules/collection-tree.js';
@@ -209,7 +211,6 @@ async function persistWorkspace() {
     tabs: state.tabs.map(({ files, binary, ...rest }) => rest),
     activeId: state.activeId,
   });
-  scheduleCollectionSync();
 }
 
 function collectionRequestPayload(tab) {
@@ -235,16 +236,36 @@ function collectionRequestPayload(tab) {
   };
 }
 
-async function syncOpenTabToCollection() {
-  if (!state.isPro) return;
+async function saveCurrentRequest() {
+  if (!requirePro('collections')) return;
+  readFormIntoTab();
   const tab = current();
-  if (!tab?.collectionId || !tab.collectionItemId) return;
-  await collectionsManager.updateRequest(tab.collectionId, tab.collectionItemId, collectionRequestPayload(tab));
+  if (!tab) return;
+  if (!state.selectedCollectionId && !tab.collectionId) {
+    const created = await collectionsManager.create($('newCollectionName').value.trim() || I18nManager.t('defaultCollectionName'));
+    state.selectedCollectionId = created.id;
+    $('newCollectionName').value = '';
+  }
+  const collectionId = tab.collectionId && (!state.selectedCollectionId || String(tab.collectionId) === String(state.selectedCollectionId))
+    ? tab.collectionId
+    : (state.selectedCollectionId || tab.collectionId);
+  const folderId = String(collectionId) === String(state.selectedCollectionId) ? state.selectedFolderId : null;
+  if (tab.collectionItemId && tab.collectionId && String(tab.collectionId) === String(collectionId)) {
+    await collectionsManager.updateRequest(collectionId, tab.collectionItemId, collectionRequestPayload(tab));
+    await collectionsManager.moveItem(collectionId, tab.collectionItemId, folderId);
+  } else {
+    const saved = await collectionsManager.addRequest(
+      collectionId,
+      collectionRequestPayload({ ...tab, collectionItemId: newId() }),
+      folderId
+    );
+    tab.collectionId = collectionId;
+    tab.collectionItemId = saved.id;
+  }
+  persistWorkspace();
+  renderCollections();
+  UIHelpers.showToast(I18nManager.t('requestSaved'), 'success');
 }
-
-const scheduleCollectionSync = debounce(() => {
-  syncOpenTabToCollection();
-}, 500);
 
 function findOpenCollectionTab(collectionId, itemId) {
   return state.tabs.find(
@@ -359,10 +380,9 @@ function renderKvs() {
   bindKv($('queryList'), tab.params, ['key', 'value'], () => {
     tab.url = applyParamsToUrl(tab.url.split('?')[0], tab.params);
     $('urlInput').value = tab.url;
-    scheduleCollectionSync();
   });
-  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => scheduleCollectionSync());
-  bindKv($('headersList'), tab.headers, ['key', 'value'], () => scheduleCollectionSync());
+  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => {});
+  bindKv($('headersList'), tab.headers, ['key', 'value'], () => {});
 }
 
 function renderTabs() {
@@ -637,10 +657,12 @@ function updateCollectionTarget() {
     return;
   }
   const coll = collectionsManager.collections.find((c) => String(c.id) === String(state.selectedCollectionId));
-  el.textContent = I18nManager.t('collectionTarget').replace('{name}', coll?.name || '').replace(
-    '{folder}',
-    state.selectedFolderId ? I18nManager.t('collectionTargetFolder') : ''
-  );
+  let folderPart = '';
+  if (state.selectedFolderId && coll) {
+    const folder = findItem(coll.items, state.selectedFolderId);
+    folderPart = I18nManager.t('collectionTargetFolder').replace('{folder}', folder?.name || '');
+  }
+  el.textContent = I18nManager.t('collectionTarget').replace('{name}', coll?.name || '').replace('{folder}', folderPart);
 }
 
 async function envVars() {
@@ -957,6 +979,7 @@ function renderCollections() {
       markTreeSelection(title);
     };
     title.ondblclick = (e) => showTreeMenu(e, { kind: 'collection', coll });
+    makeDropTarget(title, coll.id, null);
     wrap.appendChild(title);
     const draw = (items, pad) => {
       (items || []).forEach((item) => {
@@ -972,6 +995,7 @@ function renderCollections() {
             markTreeSelection(f);
           };
           f.ondblclick = (e) => showTreeMenu(e, { kind: 'folder', coll, item });
+          makeDropTarget(f, coll.id, item.id);
           wrap.appendChild(f);
           draw(item.items, pad + 12);
         } else if (!q || `${item.name} ${item.url}`.toLowerCase().includes(q)) {
@@ -986,8 +1010,15 @@ function renderCollections() {
           r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
             state.selectedCollectionId = coll.id;
+            state.selectedFolderId = findParentId(coll.items, item.id) || null;
             openTab({ ...item, collectionId: coll.id, collectionItemId: item.id });
+            updateCollectionTarget();
           };
+          r.draggable = true;
+          r.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ collectionId: coll.id, itemId: item.id }));
+            e.dataTransfer.effectAllowed = 'move';
+          });
           wrap.appendChild(r);
         }
       });
@@ -996,6 +1027,47 @@ function renderCollections() {
     tree.appendChild(wrap);
   });
   updateCollectionTarget();
+}
+
+function makeDropTarget(el, collectionId, folderId) {
+  el.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    el.classList.add('drag-over');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    if (!requirePro('collections')) return;
+    let payload;
+    try {
+      payload = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+    } catch {
+      return;
+    }
+    if (!payload.itemId || String(payload.collectionId) !== String(collectionId)) return;
+    const ok = await collectionsManager.moveItem(collectionId, payload.itemId, folderId);
+    if (ok) {
+      state.selectedCollectionId = collectionId;
+      state.selectedFolderId = folderId;
+      renderCollections();
+    }
+  });
+}
+
+function formatHistoryTime(ts) {
+  const d = new Date(Number(ts));
+  if (!ts || Number.isNaN(d.getTime())) return '';
+  const locale = I18nManager.getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
+  return d.toLocaleString(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 function renderHistory() {
@@ -1007,7 +1079,13 @@ function renderHistory() {
     const m = document.createElement('span');
     m.className = `method ${item.method}`;
     m.textContent = item.method;
-    div.append(m, document.createTextNode(item.url || ''));
+    const url = document.createElement('span');
+    url.className = 'history-url';
+    url.textContent = item.url || '';
+    const time = document.createElement('span');
+    time.className = 'history-time';
+    time.textContent = formatHistoryTime(item.timestamp);
+    div.append(m, url, time);
     div.onclick = () => openTab(item);
     box.appendChild(div);
   });
@@ -1307,7 +1385,6 @@ $('reqName').oninput = () => {
   tab.name = $('reqName').value.trim();
   const chip = document.querySelector('.tab-chip.active .tab-chip-name');
   if (chip) chip.textContent = tab.name || I18nManager.t('defaultRequestName');
-  scheduleCollectionSync();
 };
 $('reqName').onblur = () => {
   const tab = current();
@@ -1356,7 +1433,6 @@ $('methodSelect').onchange = () => {
   if (current()) current().method = method;
   closeSocket(true);
   syncWorkspaceMode();
-  scheduleCollectionSync();
 };
 $('addQueryBtn').onclick = () => {
   current().params.push({ key: '', value: '', enabled: true });
@@ -1382,13 +1458,11 @@ $('urlInput').oninput = debounce(() => {
   tab.params = parseUrlParams(tab.url);
   renderKvs();
   updateEnvHint();
-  scheduleCollectionSync();
 }, 200);
 $('bodyEditor').oninput = () => {
   if ($('bodyType').value === 'json') $('jsonError').textContent = jsonError($('bodyEditor').value) || '';
   const tab = current();
   if (tab) tab.body = $('bodyEditor').value;
-  scheduleCollectionSync();
 };
 $('formatJsonBtn').onclick = formatBody;
 $('minifyJsonBtn').onclick = () => {
@@ -1544,30 +1618,8 @@ $('exportCollectionBtn').onclick = async () => {
   const filename = selected ? `${selected.name || 'collection'}.json` : 'pingto-collections.json';
   UIHelpers.downloadText(filename, JSON.stringify(payload, null, 2), 'application/json');
 };
-$('saveToCollectionBtn').onclick = async () => {
-  if (!requirePro('collections')) return;
-  readFormIntoTab();
-  const tab = current();
-  if (!state.selectedCollectionId) {
-    const created = await collectionsManager.create($('newCollectionName').value.trim() || I18nManager.t('defaultCollectionName'));
-    state.selectedCollectionId = created.id;
-    $('newCollectionName').value = '';
-  }
-  if (tab.collectionId && tab.collectionItemId && String(tab.collectionId) === String(state.selectedCollectionId)) {
-    await collectionsManager.updateRequest(tab.collectionId, tab.collectionItemId, collectionRequestPayload(tab));
-  } else {
-    const saved = await collectionsManager.addRequest(
-      state.selectedCollectionId,
-      collectionRequestPayload({ ...tab, collectionItemId: tab.collectionItemId || newId() }),
-      state.selectedFolderId
-    );
-    tab.collectionId = state.selectedCollectionId;
-    tab.collectionItemId = saved.id;
-  }
-  persistWorkspace();
-  renderCollections();
-  UIHelpers.showToast(I18nManager.t('requestSaved'), 'success');
-};
+$('saveRequestBtn').onclick = saveCurrentRequest;
+$('saveToCollectionBtn').onclick = saveCurrentRequest;
 $('duplicateBtn').onclick = () => {
   readFormIntoTab();
   openTab({
@@ -1634,6 +1686,8 @@ document.addEventListener('languageChanged', async () => {
   I18nManager.apply();
   applyProUi();
   await renderEnvs();
+  renderHistory();
+  renderCollections();
 });
 $('openTabBtn').onclick = () => chrome.runtime.sendMessage({ type: 'openFullscreen' });
 $('sidebarToggle').onclick = () => document.body.classList.toggle('sidebar-collapsed');

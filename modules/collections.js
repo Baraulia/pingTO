@@ -1,5 +1,5 @@
 import { idsEqual } from './request-utils.js';
-import { normalizeCollection, addItem, removeItem, flattenRequests, findItem, emptyRequest, newId } from './collection-tree.js';
+import { normalizeCollection, addItem, removeItem, flattenRequests, findItem, emptyRequest, newId, moveItem } from './collection-tree.js';
 
 export class CollectionsManager {
   constructor(storage) {
@@ -110,6 +110,15 @@ export class CollectionsManager {
     item.name = String(name || '').trim() || item.name;
     await this.save();
     return true;
+  }
+
+  async moveItem(collectionId, itemId, targetFolderId = null) {
+    if (!this.loaded) await this.load();
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return false;
+    const ok = moveItem(collection.items, itemId, targetFolderId || null);
+    if (ok) await this.save();
+    return ok;
   }
 
   async addFolder(collectionId, name, parentId = null) {

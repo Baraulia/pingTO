@@ -24,8 +24,9 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
-.env
+# Go binaries built in testd/
+testd/testd
+testd/testd.exe
 
 # Editor/IDE
 # .idea/

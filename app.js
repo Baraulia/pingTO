@@ -736,6 +736,9 @@ async function sendCurrent() {
     } else headers[tab.auth.apiKeyName] = value;
   } else if (tab.authType === 'oauth2') {
     headers.Authorization = `Bearer ${await resolveOAuth(tab, ctx.variables)}`;
+  } else if (tab.authType === 'digest') {
+    headers['X-Digest-User'] = applyEnvVars(tab.auth.user || '', ctx.variables);
+    headers['X-Digest-Pass'] = applyEnvVars(tab.auth.pass || '', ctx.variables);
   }
 
   let body = applyEnvVars(tab.body, ctx.variables);
@@ -782,7 +785,11 @@ async function sendCurrent() {
   $('sendBtn').hidden = false;
   $('cancelBtn').hidden = true;
   tab.response = response;
-  tab.testResults = state.isPro ? runTests(tab.tests, response, ctx) : [];
+  try {
+    tab.testResults = state.isPro ? runTests(tab.tests, response, ctx) : [];
+  } catch (error) {
+    tab.testResults = [{ name: 'tests', pass: false, error: error.message }];
+  }
   state.lastRequest = payload;
   renderResponse(tab);
   try {
@@ -971,6 +978,8 @@ function renderCollections() {
     const wrap = document.createElement('div');
     const title = document.createElement('div');
     title.className = `tree-item${String(state.selectedCollectionId) === String(coll.id) && !state.selectedFolderId ? ' selected' : ''}`;
+    title.dataset.testid = 'tree-collection';
+    title.dataset.collectionId = String(coll.id);
     title.textContent = coll.name;
     title.title = I18nManager.t('collectionDblHint');
     title.onclick = () => {
@@ -986,6 +995,8 @@ function renderCollections() {
         if (item.type === 'folder') {
           const f = document.createElement('div');
           f.className = `tree-item${String(state.selectedFolderId) === String(item.id) ? ' selected' : ''}`;
+          f.dataset.testid = 'tree-folder';
+          f.dataset.folderId = String(item.id);
           f.style.paddingLeft = `${pad}px`;
           f.textContent = `▸ ${item.name}`;
           f.title = I18nManager.t('collectionDblHint');
@@ -1002,6 +1013,9 @@ function renderCollections() {
           const r = document.createElement('div');
           const isOpen = Boolean(findOpenCollectionTab(coll.id, item.id));
           r.className = `tree-item${isOpen ? ' open-req' : ''}`;
+          r.dataset.testid = 'tree-request';
+          r.dataset.requestId = String(item.id);
+          r.dataset.requestName = item.name || item.url || 'request';
           r.style.paddingLeft = `${pad}px`;
           r.title = I18nManager.t('collectionOpenHint');
           const m = document.createElement('span');
@@ -1323,7 +1337,13 @@ function fileToBase64(file) {
     const reader = new FileReader();
     reader.onload = () => {
       const data = reader.result.split(',')[1];
-      resolve({ fileName: file.name, fileType: file.type, fileBase64: data, name: file.name });
+      resolve({
+        fileName: file.name,
+        fileType: file.type,
+        fileBase64: data,
+        base64: data,
+        name: file.name,
+      });
     };
     reader.readAsDataURL(file);
   });

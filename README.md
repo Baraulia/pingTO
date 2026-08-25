@@ -177,9 +177,32 @@ All data is stored locally in `chrome.storage.local`:
 ## 👨‍💻 Development
 
 ### Prerequisites
-- Chrome browser (version 88+)
-- Node.js (for development tools)
-- Basic JavaScript knowledge
+- Chrome / Chromium
+- Go 1.22+ (local testd server)
+- Node.js 20+ (autotests)
+
+### testd
+```bash
+go run -C testd .
+```
+Base URL: `http://127.0.0.1:8787`. Catalog and credentials: `GET /`. Request list: `testd/REQUESTS.md`. Importable collection: `testd/pingto-testd-collection.json`.
+
+### Automated tests
+```bash
+npm install
+npx playwright install chromium
+npm test
+```
+
+`npm test` runs three layers:
+
+1. **`npm run test:unit`** — Vitest, no browser (URL/env, import, sandbox, curl, codegen, …).
+2. **`npm run test:testd`** — Go tests for every testd handler (HTTP, auth, GraphQL, SSE, WebSocket).
+3. **`npm run test:e2e`** — Playwright loads the unpacked MV3 extension, talks to testd, covers Free/Pro UI, import, HTTP, auth, GraphQL, WS/SSE, environments.
+
+Playwright `globalSetup` starts testd (`go run` in `testd/`) and `globalTeardown` stops it. Headed Chrome: `npm run test:e2e:headed` or `PINGTO_E2E_HEADED=1`.
+
+OAuth authorization-code + `chrome.identity` (browser login popup) is not in e2e; client-credentials and the testd authorize redirect are covered in Go tests and the Login button path.
 
 ## 📄 License
 

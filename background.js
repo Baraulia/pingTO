@@ -198,11 +198,14 @@ async function handleRequest(data = {}) {
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const requestHeaders = { ...(headers || {}) };
     if (digest?.username) {
+      requestHeaders['X-Digest-User'] = digest.username;
+      requestHeaders['X-Digest-Pass'] = digest.password || '';
       return await fetchWithDigest({
         method,
         url,
-        headers,
+        headers: requestHeaders,
         body,
         multipart,
         digest,
@@ -214,7 +217,7 @@ async function handleRequest(data = {}) {
     return await performFetch({
       method,
       url,
-      headers,
+      headers: requestHeaders,
       body,
       multipart,
       signal: controller.signal,
@@ -256,8 +259,9 @@ function buildBody({ method, headers, body, multipart, binaryBody }) {
     return { headers: fetchHeaders, body: form };
   }
 
-  if (binaryBody?.base64) {
-    const bytes = Uint8Array.from(atob(binaryBody.base64), (c) => c.charCodeAt(0));
+  if (binaryBody?.base64 || binaryBody?.fileBase64) {
+    const raw = binaryBody.base64 || binaryBody.fileBase64;
+    const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
     return { headers: fetchHeaders, body: bytes };
   }
 
@@ -296,7 +300,28 @@ async function performFetch({
       redirect: 'manual',
     });
     const location = response.headers.get('location');
-    redirects.push({ url: currentUrl, status: response.status, location });
+    const opaque = response.type === 'opaqueredirect' || response.status === 0;
+    redirects.push({ url: currentUrl, status: response.status, location: location || response.url || null });
+
+    if (followRedirects && opaque) {
+      const followed = await fetch(currentUrl, {
+        method: currentMethod,
+        headers: built.headers,
+        body: built.body,
+        signal,
+        redirect: 'follow',
+      });
+      const ttfb = Math.round(performance.now() - ttfbStart);
+      const formatted = await formatResponse(followed, startTime, followed.redirected ? 'GET' : currentMethod);
+      formatted.redirects = redirects;
+      formatted.finalUrl = followed.url;
+      formatted.timings = {
+        total: formatted.time,
+        ttfb,
+        download: Math.max(0, formatted.time - ttfb),
+      };
+      return formatted;
+    }
 
     const isRedirect = [301, 302, 303, 307, 308].includes(response.status) && location;
     if (isRedirect && followRedirects) {
@@ -396,23 +421,21 @@ function prettyXml(xml) {
   }
 }
 
-async function fetchWithDigest({ method, url, headers, body, multipart, digest, signal }) {
+async function fetchWithDigest({ method, url, headers, body, multipart, digest, signal, followRedirects, binaryBody }) {
   const startTime = performance.now();
   const first = await fetch(url, {
     method,
     headers: { ...(headers || {}) },
     body: method !== 'GET' && method !== 'HEAD' ? body : undefined,
     signal,
-    redirect: 'follow',
+    redirect: 'manual',
   });
-
-  const authHeader = first.headers.get('www-authenticate') || '';
-  if (first.status !== 401 || !/digest/i.test(authHeader)) {
-    return formatResponse(first, startTime, method);
+  const raw = await first.text();
+  const challenge = digestChallengeFrom(first.headers, raw);
+  if (first.status !== 401 || !challenge?.nonce) {
+    return formatRawResponse(first, raw, startTime);
   }
-  await first.arrayBuffer().catch(() => {});
 
-  const challenge = parseDigestChallenge(authHeader);
   const uri = new URL(url).pathname + new URL(url).search;
   const authorization = buildDigestHeader({
     challenge,
@@ -429,19 +452,73 @@ async function fetchWithDigest({ method, url, headers, body, multipart, digest, 
     body,
     multipart,
     signal,
-    extraHeaders: { Authorization: authorization },
+    extraHeaders: { 'X-Digest-Authorization': authorization },
+    followRedirects,
+    binaryBody,
   });
 }
 
+function digestChallengeFrom(headers, raw) {
+  const discrete = {
+    realm: headers.get('x-digest-realm'),
+    nonce: headers.get('x-digest-nonce'),
+    opaque: headers.get('x-digest-opaque'),
+    qop: headers.get('x-digest-qop') || 'auth',
+    algorithm: 'MD5',
+  };
+  if (discrete.nonce && discrete.realm) return discrete;
+
+  const header = headers.get('x-www-authenticate') || headers.get('www-authenticate') || '';
+  const fromHeader = parseDigestChallenge(header);
+  if (fromHeader?.nonce) return fromHeader;
+
+  try {
+    const json = JSON.parse(raw);
+    if (json.nonce && json.realm) {
+      return {
+        realm: json.realm,
+        nonce: json.nonce,
+        opaque: json.opaque,
+        qop: json.qop || 'auth',
+        algorithm: json.algorithm || 'MD5',
+      };
+    }
+    if (json.challenge) return parseDigestChallenge(json.challenge);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function formatRawResponse(response, raw, startTime) {
+  const time = Math.round(performance.now() - startTime);
+  const responseHeaders = {};
+  response.headers.forEach((value, key) => {
+    responseHeaders[key] = responseHeaders[key] ? `${responseHeaders[key]}, ${value}` : value;
+  });
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+    body: raw,
+    time,
+    size: new Blob([raw]).size,
+    ok: response.ok,
+    truncated: false,
+    contentType: response.headers.get('content-type') || '',
+  };
+}
+
 function parseDigestChallenge(header) {
+  if (!header) return null;
   const params = {};
-  const cleaned = header.replace(/^Digest\s+/i, '');
+  const cleaned = String(header).replace(/^Digest\s+/i, '');
   const regex = /(\w+)=(?:"([^"]*)"|([^\s,]+))/g;
   let match;
   while ((match = regex.exec(cleaned)) !== null) {
     params[match[1]] = match[2] ?? match[3];
   }
-  return params;
+  return params.nonce ? params : null;
 }
 
 function buildDigestHeader({ challenge, username, password, method, uri }) {

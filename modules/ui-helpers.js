@@ -12,6 +12,7 @@ export class UIHelpers {
     const toast = document.createElement('div');
     toast.textContent = message;
     toast.className = `toast toast-${type}`;
+    toast.setAttribute('data-testid', 'toast');
     toast.style.cssText = `
       position: fixed;
       bottom: 20px;

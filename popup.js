@@ -418,6 +418,9 @@ async function sendRequest() {
       if (user) headers.Authorization = `Basic ${utf8ToBase64(`${user}:${pass}`)}`;
     } else if (state.authType === 'oauth2') {
       headers.Authorization = `Bearer ${await fetchOAuthToken(variables)}`;
+    } else if (state.authType === 'digest') {
+      headers['X-Digest-User'] = applyEnvVars(dom.basicUser.value, variables);
+      headers['X-Digest-Pass'] = applyEnvVars(dom.basicPass.value, variables);
     }
 
     let body = null;

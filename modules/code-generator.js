@@ -151,13 +151,17 @@ export class CodeGenerator {
 
   static generate(method, url, headers, body, language = 'javascript') {
     const generators = {
-      curl: this.generateCurl,
+      javascript: this.generateJavaScript,
       typescript: this.generateTypeScript,
+      python: this.generatePython,
+      php: this.generatePHP,
+      go: this.generateGo,
+      curl: this.generateCurl,
       csharp: this.generateCSharp,
       java: this.generateJava,
     };
     const generator = generators[language];
-    return generator ? generator(method, url, headers, body) : 'Language not supported';
+    return generator ? generator.call(this, method, url, headers, body) : 'Language not supported';
   }
 
   static generateCurl(method, url, headers, body) {

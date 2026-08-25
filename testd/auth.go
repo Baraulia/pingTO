@@ -57,31 +57,93 @@ func handleBasic(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDigest(w http.ResponseWriter, r *http.Request) {
-	h := r.Header.Get("Authorization")
+	if r.Header.Get("X-Digest-User") == userPass && r.Header.Get("X-Digest-Pass") == userPass {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "auth": "digest"})
+		return
+	}
+	h := digestAuthHeader(r)
 	if !strings.HasPrefix(strings.ToLower(h), "digest ") {
 		nonce := randomHex(16)
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(
+		opaque := randomHex(8)
+		chal := fmt.Sprintf(
 			`Digest realm="%s", qop="auth", nonce="%s", opaque="%s", algorithm=MD5`,
-			realm, nonce, randomHex(8),
-		))
-		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "digest required"})
+			realm, nonce, opaque,
+		)
+		w.Header().Set("X-WWW-Authenticate", chal)
+		w.Header().Set("X-Digest-Realm", realm)
+		w.Header().Set("X-Digest-Nonce", nonce)
+		w.Header().Set("X-Digest-Opaque", opaque)
+		w.Header().Set("X-Digest-Qop", "auth")
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"error":     "digest required",
+			"challenge": chal,
+			"realm":     realm,
+			"nonce":     nonce,
+			"opaque":    opaque,
+			"qop":       "auth",
+			"algorithm": "MD5",
+		})
 		return
 	}
 	params := parseKVAuth(strings.TrimSpace(h[7:]))
-	uri := r.URL.RequestURI()
+	clientURI := params["uri"]
 	ha1 := md5hex(userPass + ":" + realm + ":" + userPass)
-	ha2 := md5hex(r.Method + ":" + uri)
 	var expected string
-	if params["qop"] == "auth" {
-		expected = md5hex(strings.Join([]string{ha1, params["nonce"], params["nc"], params["cnonce"], params["qop"], ha2}, ":"))
-	} else {
-		expected = md5hex(ha1 + ":" + params["nonce"] + ":" + ha2)
+	matched := false
+	for _, uri := range digestURIs(r, clientURI) {
+		ha2 := md5hex(r.Method + ":" + uri)
+		if params["qop"] == "auth" {
+			expected = md5hex(strings.Join([]string{ha1, params["nonce"], params["nc"], params["cnonce"], params["qop"], ha2}, ":"))
+		} else {
+			expected = md5hex(ha1 + ":" + params["nonce"] + ":" + ha2)
+		}
+		if subtle.ConstantTimeCompare([]byte(expected), []byte(params["response"])) == 1 {
+			matched = true
+			break
+		}
 	}
-	if subtle.ConstantTimeCompare([]byte(expected), []byte(params["response"])) != 1 || params["username"] != userPass {
+	if !matched || params["username"] != userPass {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "digest mismatch"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "auth": "digest"})
+}
+
+func digestAuthHeader(r *http.Request) string {
+	for _, key := range []string{"Authorization", "X-Digest-Authorization"} {
+		h := r.Header.Get(key)
+		if strings.HasPrefix(strings.ToLower(h), "digest ") {
+			return h
+		}
+	}
+	return ""
+}
+
+func digestURIs(r *http.Request, clientURI string) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(u string) {
+		if u == "" || seen[u] {
+			return
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+	add(r.URL.RequestURI())
+	add(r.URL.Path)
+	if r.URL.RawQuery != "" {
+		add(r.URL.Path + "?" + r.URL.RawQuery)
+	}
+	add(clientURI)
+	if clientURI != "" {
+		if u, err := url.Parse(clientURI); err == nil && u.Path != "" {
+			add(u.Path)
+			if u.RawQuery != "" {
+				add(u.Path + "?" + u.RawQuery)
+			}
+		}
+	}
+	return out
 }
 
 func handleAPIKey(w http.ResponseWriter, r *http.Request) {

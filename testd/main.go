@@ -18,6 +18,16 @@ var (
 
 func main() {
 	flag.Parse()
+	srv := &http.Server{
+		Addr:              *listenAddr,
+		Handler:           newHandler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	log.Printf("PingTo testd on http://127.0.0.1%s  latency=%dms  GET / for catalog", httpAddrPort(*listenAddr), *baseLatencyMS)
+	log.Fatal(srv.ListenAndServe())
+}
+
+func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleCatalog)
 	mux.HandleFunc("GET /health", handleHealth)
@@ -51,21 +61,19 @@ func main() {
 	mux.HandleFunc("GET /sse", handleSSE)
 	mux.HandleFunc("GET /bytes/{n}", handleBytes)
 	mux.HandleFunc("GET /slow-json", handleSlowJSON)
+	return mux
+}
 
-	srv := &http.Server{
-		Addr:              *listenAddr,
-		Handler:           withWork(mux),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-	log.Printf("PingTo testd on http://127.0.0.1%s  latency=%dms  GET / for catalog", httpAddrPort(*listenAddr), *baseLatencyMS)
-	log.Fatal(srv.ListenAndServe())
+func newHandler() http.Handler {
+	return withWork(newMux())
 }
 
 func withWork(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-API-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

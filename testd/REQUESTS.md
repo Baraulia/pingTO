@@ -4,6 +4,18 @@
 Запуск: в каталоге `testd` выполнить `go run .`  
 Окружение PingTo: `base_url` = `http://127.0.0.1:8787`
 
+## Импорт в расширение
+
+Файл коллекции: [`pingto-testd-collection.json`](pingto-testd-collection.json) (`format: pingto`).
+
+Автотесты (unit + testd + e2e расширения): из корня репозитория `npm test` (см. README). Testd отдельно: `go test -C testd .`.
+
+1. Включите **Pro** (тумблер).
+2. Collections → **Import** → выберите этот JSON.
+3. `go run .` в `testd`, затем открывайте запросы и Send.
+4. Папка **Env {{base_url}}**: Environment `testd` с `base_url=http://127.0.0.1:8787` и `ws_url=ws://127.0.0.1:8787`.
+5. Binary: после импорта выберите файл вручную. Multipart: можно добавить файлы в UI.
+
 ## Общее для всех HTTP-запросов
 
 | Параметр | Где | Обязательно | Значение |
@@ -287,11 +299,13 @@ Path-параметр.
 
 ## 23. GET `/auth/digest`
 
-Первый запрос без Digest → **401** + `WWW-Authenticate: Digest realm="pingto", qop="auth", nonce=…, opaque=…, algorithm=MD5`.  
-Клиент (PingTo Digest) повторяет с заголовком Digest.
+Chromium перехватывает `WWW-Authenticate` / `Authorization: Digest`, поэтому testd принимает ещё и:
 
-- Auth: username `pingto`, password `pingto`, realm `pingto`, qop `auth`, MD5
-- Ручной заголовок не обязателен — расширение само считает `response`
+- `X-Digest-User: pingto` + `X-Digest-Pass: pingto` → сразу **200**
+- либо RFC Digest в `Authorization` или `X-Digest-Authorization` после challenge в `X-WWW-Authenticate` / JSON
+
+PingTo (Digest) шлёт `X-Digest-User` / `X-Digest-Pass`.
+
 - Успех: **200** `{ "ok": true, "auth": "digest" }`
 - Неверный response: **401** `{ "error": "digest mismatch" }`
 

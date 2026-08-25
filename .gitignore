@@ -28,6 +28,14 @@ go.work.sum
 testd/testd
 testd/testd.exe
 
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+e2e/.testd-state.json
+
 # Editor/IDE
 # .idea/
 # .vscode/

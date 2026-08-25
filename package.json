@@ -1,0 +1,21 @@
+{
+  "name": "pingto",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:testd && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:testd": "go test -C testd .",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "testd": "go run -C testd ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "vitest": "^3.2.4"
+  }
+}

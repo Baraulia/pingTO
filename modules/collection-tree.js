@@ -5,7 +5,7 @@ function newId() {
 export function emptyRequest(partial = {}) {
   return {
     type: 'request',
-    id: newId(),
+    id: partial.id || newId(),
     name: partial.name || 'New request',
     method: partial.method || 'GET',
     url: partial.url || '',

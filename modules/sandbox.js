@@ -37,7 +37,7 @@ export function runTests(script, response, ctx) {
     } catch {
       return null;
     }
-  })();
+  });
   const expect = (actual) => ({
     toBe(expected) {
       if (actual !== expected) throw new Error(`expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
@@ -67,7 +67,7 @@ export function runTests(script, response, ctx) {
     response: {
       code: response.status,
       status: response.status,
-      json: () => json,
+      json: () => json(),
       text: () => response.body,
     },
     environment: {
@@ -76,10 +76,16 @@ export function runTests(script, response, ctx) {
         ctx.variables[key] = String(value);
       },
     },
-    json,
-    getPath: (path) => getPath(json, path),
+    get json() {
+      return json();
+    },
+    getPath: (path) => getPath(json(), path),
   };
-  const fn = new Function('pm', 'expect', script);
-  fn(pm, expect);
+  try {
+    const fn = new Function('pm', 'expect', script);
+    fn(pm, expect);
+  } catch (error) {
+    results.push({ name: 'script', pass: false, error: error.message });
+  }
   return results;
 }

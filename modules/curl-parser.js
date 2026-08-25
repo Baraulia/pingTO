@@ -92,7 +92,12 @@ export class CurlParser {
 
   static validate(curlString) {
     const result = this.parse(curlString);
-    return Boolean(result.url);
+    try {
+      const protocol = new URL(result.url).protocol;
+      return protocol === 'http:' || protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 }
 

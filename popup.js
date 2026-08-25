@@ -205,16 +205,10 @@ if (dom.proToggle) {
 
 safeAddListener(dom.themeToggle, 'click', () => {
   themeManager.toggle();
-  if (dom.themeToggle) {
-    dom.themeToggle.textContent = themeManager.isDark() ? '☀️' : '🌙';
-  }
 });
 
 (async function initTheme() {
   await themeManager.init();
-  if (dom.themeToggle) {
-    dom.themeToggle.textContent = themeManager.isDark() ? '☀️' : '🌙';
-  }
 })();
 
 function renderAllDynamic() {

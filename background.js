@@ -3,7 +3,10 @@ const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const inflight = new Map();
 
 const APP_PATH = 'app.html';
+const APP_WINDOW_WIDTH = 1280;
+const APP_WINDOW_HEIGHT = 860;
 let appWindowId = null;
+const windowRestore = new Map();
 
 function appUrl() {
   return chrome.runtime.getURL(APP_PATH);
@@ -57,37 +60,63 @@ async function openAppWindow() {
   const created = await chrome.windows.create({
     url: appUrl(),
     type: 'popup',
-    width: 1280,
-    height: 860,
+    width: APP_WINDOW_WIDTH,
+    height: APP_WINDOW_HEIGHT,
     focused: true,
   });
   appWindowId = created.id ?? null;
 }
 
-async function openFullscreen(senderWindowId) {
+async function toggleFullscreen(senderWindowId) {
   await closeSidePanel(senderWindowId);
 
-  let senderWin = null;
+  let win = null;
   if (senderWindowId) {
     try {
-      senderWin = await chrome.windows.get(senderWindowId);
+      win = await chrome.windows.get(senderWindowId);
     } catch {
-      senderWin = null;
+      win = null;
+    }
+  }
+  if (!win || win.type !== 'popup') {
+    await openAppWindow();
+    if (appWindowId == null) return;
+    try {
+      win = await chrome.windows.get(appWindowId);
+    } catch {
+      return;
     }
   }
 
-  if (senderWin?.type === 'popup') {
-    await chrome.windows.update(senderWindowId, { state: 'maximized', focused: true });
+  const expanded = win.state === 'fullscreen' || win.state === 'maximized';
+  if (expanded) {
+    const saved = windowRestore.get(win.id) || {
+      width: APP_WINDOW_WIDTH,
+      height: APP_WINDOW_HEIGHT,
+      state: 'normal',
+    };
+    windowRestore.delete(win.id);
+    await chrome.windows.update(win.id, { state: 'normal', focused: true });
+    const restore = { focused: true };
+    if (Number.isFinite(saved.width)) restore.width = saved.width;
+    if (Number.isFinite(saved.height)) restore.height = saved.height;
+    if (Number.isFinite(saved.left)) restore.left = saved.left;
+    if (Number.isFinite(saved.top)) restore.top = saved.top;
+    await chrome.windows.update(win.id, restore);
     return;
   }
 
-  await openAppWindow();
-  if (appWindowId != null) {
-    try {
-      await chrome.windows.update(appWindowId, { state: 'maximized', focused: true });
-    } catch {
-      /* ignore */
-    }
+  windowRestore.set(win.id, {
+    state: win.state,
+    width: win.width,
+    height: win.height,
+    left: win.left,
+    top: win.top,
+  });
+  try {
+    await chrome.windows.update(win.id, { state: 'fullscreen', focused: true });
+  } catch {
+    await chrome.windows.update(win.id, { state: 'maximized', focused: true });
   }
 }
 
@@ -103,6 +132,7 @@ chrome.action.onClicked.addListener(() => {
 
 chrome.windows.onRemoved.addListener((id) => {
   if (id === appWindowId) appWindowId = null;
+  windowRestore.delete(id);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -159,8 +189,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     openAppWindow().then(() => sendResponse({ ok: true }));
     return true;
   }
-  if (message.type === 'openFullscreen') {
-    openFullscreen(sender.tab?.windowId).then(() => sendResponse({ ok: true }));
+  if (message.type === 'openFullscreen' || message.type === 'toggleFullscreen') {
+    toggleFullscreen(sender.tab?.windowId).then(() => sendResponse({ ok: true }));
     return true;
   }
 });

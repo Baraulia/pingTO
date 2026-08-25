@@ -3,7 +3,7 @@ import { test, expect, enablePro, importTestdCollection, openRequest, sendAndExp
 test.describe('Collections and environments', () => {
   test('create collection, save request, reopen', async ({ page }) => {
     await enablePro(page);
-    await page.locator('#newCollectionName').fill('Manual save');
+    page.once('dialog', (dialog) => dialog.accept('Manual save'));
     await page.locator('#newCollectionBtn').click();
     await expect(page.locator('[data-testid="tree-collection"]')).toContainText('Manual save');
     await page.locator('#methodSelect').selectOption('GET');

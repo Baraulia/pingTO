@@ -38,6 +38,7 @@ import {
   emptyRequest,
   findItem,
   findParentId,
+  flattenRequests,
   newId,
   searchRequests,
 } from './modules/collection-tree.js';
@@ -71,10 +72,17 @@ const state = {
   lastRequest: null,
   selectedCollectionId: null,
   selectedFolderId: null,
+  expandedCollectionId: null,
   treeMenuTarget: null,
 };
 
 const socketSession = { ws: null, sse: null, reconnectTimer: null, manualClose: false };
+
+function activateCollection(id, folderId = null, expand = true) {
+  state.selectedCollectionId = id;
+  state.selectedFolderId = folderId;
+  if (expand) state.expandedCollectionId = id;
+}
 
 function isSocketMethod(method) {
   return method === 'WS' || method === 'SSE';
@@ -242,9 +250,10 @@ async function saveCurrentRequest() {
   const tab = current();
   if (!tab) return;
   if (!state.selectedCollectionId && !tab.collectionId) {
-    const created = await collectionsManager.create($('newCollectionName').value.trim() || I18nManager.t('defaultCollectionName'));
-    state.selectedCollectionId = created.id;
-    $('newCollectionName').value = '';
+    const name = prompt(I18nManager.t('newCollectionNamePlaceholder'), I18nManager.t('defaultCollectionName'));
+    if (!name?.trim()) return;
+    const created = await collectionsManager.create(name.trim());
+    activateCollection(created.id);
   }
   const collectionId = tab.collectionId && (!state.selectedCollectionId || String(tab.collectionId) === String(state.selectedCollectionId))
     ? tab.collectionId
@@ -368,6 +377,7 @@ function writeTabToForm() {
   $('graphqlVariables').value = tab.graphqlVariables || '';
   $('followRedirects').checked = tab.followRedirects !== false;
   toggleAuth();
+  toggleBodyJsonTools();
   renderKvs();
   renderResponse(tab);
   renderTabs();
@@ -487,6 +497,21 @@ function toggleAuth() {
   $('basicAuthFields').classList.toggle('hidden', type !== 'basic' && type !== 'digest');
   $('apiKeyFields').classList.toggle('hidden', type !== 'apikey');
   $('oauth2Fields').classList.toggle('hidden', type !== 'oauth2');
+}
+
+function isJsonBodyType(type = $('bodyType')?.value) {
+  return type === 'json' || type === 'graphql';
+}
+
+function toggleBodyJsonTools() {
+  const on = isJsonBodyType();
+  ['formatJsonBtn', 'minifyJsonBtn'].forEach((id) => {
+    const btn = $(id);
+    if (!btn) return;
+    btn.disabled = !on;
+    btn.title = on ? '' : I18nManager.t('jsonToolsNeedJson');
+  });
+  if (!on) $('jsonError').textContent = '';
 }
 
 function syncWorkspaceMode() {
@@ -795,6 +820,7 @@ async function sendCurrent() {
   try {
     await historyManager.add(
       {
+        name: tab.name,
         method: tab.method,
         url,
         headers: sanitizeHeadersForStorage(tab.headers),
@@ -956,12 +982,6 @@ function showTreeMenu(event, target) {
   menu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
 }
 
-function markTreeSelection(el) {
-  document.querySelectorAll('#collectionTree .tree-item.selected').forEach((node) => node.classList.remove('selected'));
-  el?.classList.add('selected');
-  updateCollectionTarget();
-}
-
 function renderCollections() {
   const tree = $('collectionTree');
   tree.replaceChildren();
@@ -975,17 +995,29 @@ function renderCollections() {
     return;
   }
   collectionsManager.collections.forEach((coll) => {
+    const selected = String(state.selectedCollectionId) === String(coll.id);
+    const expanded = String(state.expandedCollectionId) === String(coll.id);
+    const searching = Boolean(q);
+    if (searching) {
+      const hay = `${coll.name} ${flattenRequests(coll.items).map((r) => `${r.name} ${r.url}`).join(' ')}`.toLowerCase();
+      if (!hay.includes(q)) return;
+    }
     const wrap = document.createElement('div');
+    wrap.className = `tree-collection-wrap${selected ? ' is-selected' : ''}`;
     const title = document.createElement('div');
-    title.className = `tree-item${String(state.selectedCollectionId) === String(coll.id) && !state.selectedFolderId ? ' selected' : ''}`;
+    title.className = `tree-item tree-collection${selected ? ' selected' : ''}`;
     title.dataset.testid = 'tree-collection';
     title.dataset.collectionId = String(coll.id);
-    title.textContent = coll.name;
+    title.setAttribute('aria-expanded', expanded || searching ? 'true' : 'false');
+    title.textContent = `${expanded || searching ? '▾' : '▸'} ${coll.name}`;
     title.title = I18nManager.t('collectionDblHint');
     title.onclick = () => {
-      state.selectedCollectionId = coll.id;
-      state.selectedFolderId = null;
-      markTreeSelection(title);
+      if (selected && expanded) {
+        state.expandedCollectionId = null;
+      } else {
+        activateCollection(coll.id);
+      }
+      renderCollections();
     };
     title.ondblclick = (e) => showTreeMenu(e, { kind: 'collection', coll });
     makeDropTarget(title, coll.id, null);
@@ -1001,9 +1033,8 @@ function renderCollections() {
           f.textContent = `▸ ${item.name}`;
           f.title = I18nManager.t('collectionDblHint');
           f.onclick = () => {
-            state.selectedCollectionId = coll.id;
-            state.selectedFolderId = item.id;
-            markTreeSelection(f);
+            activateCollection(coll.id, item.id);
+            renderCollections();
           };
           f.ondblclick = (e) => showTreeMenu(e, { kind: 'folder', coll, item });
           makeDropTarget(f, coll.id, item.id);
@@ -1023,10 +1054,9 @@ function renderCollections() {
           m.textContent = item.method || 'GET';
           r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
-            state.selectedCollectionId = coll.id;
-            state.selectedFolderId = findParentId(coll.items, item.id) || null;
+            activateCollection(coll.id, findParentId(coll.items, item.id) || null);
             openTab({ ...item, collectionId: coll.id, collectionItemId: item.id });
-            updateCollectionTarget();
+            renderCollections();
           };
           r.draggable = true;
           r.addEventListener('dragstart', (e) => {
@@ -1037,7 +1067,7 @@ function renderCollections() {
         }
       });
     };
-    draw(coll.items, 12);
+    if (expanded || searching) draw(coll.items, 12);
     tree.appendChild(wrap);
   });
   updateCollectionTarget();
@@ -1065,6 +1095,7 @@ function makeDropTarget(el, collectionId, folderId) {
     if (ok) {
       state.selectedCollectionId = collectionId;
       state.selectedFolderId = folderId;
+      state.expandedCollectionId = collectionId;
       renderCollections();
     }
   });
@@ -1086,21 +1117,57 @@ function formatHistoryTime(ts) {
 
 function renderHistory() {
   const box = $('historyList');
+  if (!box) return;
   box.replaceChildren();
-  historyManager.getItems(state.historyLimit).forEach((item) => {
+  const query = ($('historySearch')?.value || '').trim().toLowerCase();
+  const items = historyManager.getItems(state.historyLimit).filter((item) => {
+    if (!query) return true;
+    const hay = `${item.name || ''} ${item.method || ''} ${item.url || ''} ${item.status ?? ''}`.toLowerCase();
+    return hay.includes(query);
+  });
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-hint';
+    empty.textContent = I18nManager.t('historyEmpty');
+    box.appendChild(empty);
+    return;
+  }
+  items.forEach((item) => {
     const div = document.createElement('div');
     div.className = 'history-item';
+    div.setAttribute('data-testid', 'history-item');
+    const top = document.createElement('div');
+    top.className = 'history-item-top';
     const m = document.createElement('span');
-    m.className = `method ${item.method}`;
-    m.textContent = item.method;
-    const url = document.createElement('span');
-    url.className = 'history-url';
-    url.textContent = item.url || '';
+    m.className = `method ${item.method || ''}`;
+    m.textContent = item.method || '';
+    const name = document.createElement('span');
+    name.className = 'history-name';
+    name.textContent = item.name || I18nManager.t('defaultRequestName');
+    const status = document.createElement('span');
+    const code = Number(item.status);
+    status.className = `history-status ${code >= 200 && code < 400 ? 'ok' : 'bad'}`;
+    status.textContent = item.status == null ? '' : String(item.status);
     const time = document.createElement('span');
     time.className = 'history-time';
     time.textContent = formatHistoryTime(item.timestamp);
-    div.append(m, url, time);
-    div.onclick = () => openTab(item);
+    top.append(m, name, status, time);
+    const url = document.createElement('div');
+    url.className = 'history-url';
+    url.textContent = item.url || '';
+    div.append(top, url);
+    div.onclick = () => {
+      openTab({
+        name: item.name,
+        method: item.method,
+        url: item.url,
+        headers: item.headers,
+        body: item.body,
+        bodyType: item.bodyType,
+        authType: item.authType,
+      });
+      $('historyModal')?.classList.add('hidden');
+    };
     box.appendChild(div);
   });
 }
@@ -1249,7 +1316,7 @@ function paletteItems() {
   const commands = [
     { label: I18nManager.t('cmdSend'), run: sendCurrent },
     { label: I18nManager.t('cmdNewTab'), run: () => openTab() },
-    { label: I18nManager.t('cmdFormatJson'), run: () => formatBody() },
+    { label: I18nManager.t('cmdFormatJson'), run: () => { if (isJsonBodyType()) formatBody(); } },
     {
       label: I18nManager.t('cmdOpenEnv'),
       run: () => {
@@ -1257,6 +1324,7 @@ function paletteItems() {
         $('envModal').classList.remove('hidden');
       },
     },
+    { label: I18nManager.t('cmdOpenHistory'), run: () => { renderHistory(); $('historyModal').classList.remove('hidden'); } },
     { label: I18nManager.t('cmdOpenSettings'), run: () => $('settingsModal').classList.remove('hidden') },
     {
       label: I18nManager.t('cmdWebsocket'),
@@ -1290,13 +1358,32 @@ function renderPalette() {
   });
 }
 
-function formatBody() {
-  try {
-    $('bodyEditor').value = formatJson($('bodyEditor').value);
+function applyBodyJson(transform) {
+  if (!isJsonBodyType()) return;
+  const raw = $('bodyEditor').value;
+  if (!String(raw).trim()) {
     $('jsonError').textContent = '';
-  } catch (e) {
-    $('jsonError').textContent = e.message;
+    return;
   }
+  try {
+    const next = transform(raw);
+    $('bodyEditor').value = next;
+    $('jsonError').textContent = '';
+    const tab = current();
+    if (tab) tab.body = next;
+  } catch (e) {
+    const message = e.message || String(e);
+    $('jsonError').textContent = message;
+    UIHelpers.showToast(`JSON: ${message}`, 'error');
+  }
+}
+
+function formatBody() {
+  applyBodyJson(formatJson);
+}
+
+function minifyBody() {
+  applyBodyJson(minifyJson);
 }
 
 function generateCode() {
@@ -1358,7 +1445,6 @@ async function init() {
 
   await I18nManager.init();
   await themeManager.init();
-  document.documentElement.setAttribute('data-theme', themeManager.isDark() ? 'dark' : 'light');
   await collectionsManager.load();
   await environmentsManager.load();
   await historyManager.load();
@@ -1435,6 +1521,8 @@ $('bodyType').onchange = () => {
   if (!FREE_BODY.has(type) && !requirePro(bodyFeatureId(type))) {
     $('bodyType').value = 'json';
   }
+  if (current()) current().bodyType = $('bodyType').value;
+  toggleBodyJsonTools();
 };
 $('environmentSelect').onchange = async () => {
   if ($('environmentSelect').value && !requirePro('environments')) {
@@ -1485,13 +1573,7 @@ $('bodyEditor').oninput = () => {
   if (tab) tab.body = $('bodyEditor').value;
 };
 $('formatJsonBtn').onclick = formatBody;
-$('minifyJsonBtn').onclick = () => {
-  try {
-    $('bodyEditor').value = minifyJson($('bodyEditor').value);
-  } catch (e) {
-    $('jsonError').textContent = e.message;
-  }
-};
+$('minifyJsonBtn').onclick = minifyBody;
 $('pickBinaryBtn').onclick = () => {
   if (!requirePro('binary')) return;
   $('binaryFile').click();
@@ -1595,11 +1677,10 @@ $('jsonPath').oninput = () => {
 };
 $('newCollectionBtn').onclick = async () => {
   if (!requirePro('collections')) return;
-  const name = $('newCollectionName').value.trim() || I18nManager.t('defaultCollectionName');
-  const created = await collectionsManager.create(name);
-  state.selectedCollectionId = created.id;
-  state.selectedFolderId = null;
-  $('newCollectionName').value = '';
+  const name = prompt(I18nManager.t('newCollectionNamePlaceholder'), I18nManager.t('defaultCollectionName'));
+  if (!name?.trim()) return;
+  const created = await collectionsManager.create(name.trim());
+  activateCollection(created.id);
   renderCollections();
   UIHelpers.showToast(I18nManager.t('collectionCreated'), 'success');
 };
@@ -1619,7 +1700,10 @@ $('importFile').onchange = async (e) => {
   try {
     const text = await file.text();
     const imported = detectAndImport(text);
+    const before = collectionsManager.collections.length;
     await collectionsManager.importMany(imported);
+    const added = collectionsManager.collections[before];
+    if (added) activateCollection(added.id);
     renderCollections();
     UIHelpers.showToast(I18nManager.t('importedOk'), 'success');
   } catch (err) {
@@ -1679,6 +1763,17 @@ $('createEnvBtn').onclick = async () => {
 };
 $('closeEnvBtn').onclick = () => $('envModal').classList.add('hidden');
 $('settingsBtn').onclick = () => $('settingsModal').classList.remove('hidden');
+$('historyBtn').onclick = () => {
+  renderHistory();
+  $('historyModal').classList.remove('hidden');
+};
+$('closeHistoryBtn').onclick = () => $('historyModal').classList.add('hidden');
+$('historySearch').oninput = debounce(renderHistory, 150);
+$('clearHistoryBtn').onclick = async () => {
+  await historyManager.clear();
+  renderHistory();
+  fillUrlHistory();
+};
 $('closeSettingsBtn').onclick = () => $('settingsModal').classList.add('hidden');
 $('saveSettingsBtn').onclick = async () => {
   state.timeout = Number($('settingsTimeout').value) || 30000;
@@ -1694,10 +1789,7 @@ $('saveSettingsBtn').onclick = async () => {
   $('settingsModal').classList.add('hidden');
 };
 $('closeRunBtn').onclick = () => $('runModal').classList.add('hidden');
-$('themeToggle').onclick = () => {
-  themeManager.toggle();
-  document.documentElement.setAttribute('data-theme', themeManager.isDark() ? 'dark' : 'light');
-};
+$('themeToggle').onclick = () => themeManager.toggle();
 $('languageToggle').onclick = async () => {
   await I18nManager.toggle();
   await renderEnvs();
@@ -1809,6 +1901,7 @@ $('treeMenuDelete').onclick = async () => {
     if (String(state.selectedCollectionId) === String(target.coll.id)) {
       state.selectedCollectionId = null;
       state.selectedFolderId = null;
+      state.expandedCollectionId = null;
     }
   } else {
     await collectionsManager.removeItem(target.coll.id, target.item.id);

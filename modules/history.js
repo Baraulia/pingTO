@@ -143,6 +143,7 @@ export class HistoryManager {
     return this.items.filter(item => 
       item.url.toLowerCase().includes(lowerQuery) ||
       item.method.toLowerCase().includes(lowerQuery) ||
+      (item.name && item.name.toLowerCase().includes(lowerQuery)) ||
       (item.status && String(item.status).includes(query))
     );
   }

@@ -212,6 +212,9 @@
   "settingsBtn": {
     "message": "Settings"
   },
+  "fullscreenBtn": {
+    "message": "Fullscreen"
+  },
   "proBtn": {
     "message": "💎 Pro"
   },
@@ -322,6 +325,9 @@
   },
   "minifyJsonBtn": {
     "message": "Minify"
+  },
+  "jsonToolsNeedJson": {
+    "message": "Format and Minify work only with JSON or GraphQL JSON"
   },
   "pickBinaryBtn": {
     "message": "Choose file"
@@ -466,6 +472,9 @@
   },
   "cmdOpenSettings": {
     "message": "Open settings"
+  },
+  "cmdOpenHistory": {
+    "message": "Open history"
   },
   "cmdWebsocket": {
     "message": "WebSocket / SSE"

@@ -212,6 +212,9 @@
   "settingsBtn": {
     "message": "Настройки"
   },
+  "fullscreenBtn": {
+    "message": "На весь экран"
+  },
   "proBtn": {
     "message": "💎 Pro"
   },
@@ -322,6 +325,9 @@
   },
   "minifyJsonBtn": {
     "message": "Сжать"
+  },
+  "jsonToolsNeedJson": {
+    "message": "Форматирование и сжатие работают только с JSON или GraphQL JSON"
   },
   "pickBinaryBtn": {
     "message": "Выбрать файл"
@@ -466,6 +472,9 @@
   },
   "cmdOpenSettings": {
     "message": "Открыть настройки"
+  },
+  "cmdOpenHistory": {
+    "message": "Открыть историю"
   },
   "cmdWebsocket": {
     "message": "WebSocket / SSE"

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,6 @@
       <p id="collectionTarget" class="hint"></p>
       <div id="collectionTree" class="tree"></div>
       <div class="side-actions">
-        <input id="newCollectionName" data-pro="collections" data-i18n-placeholder="newCollectionNamePlaceholder" placeholder="Collection name">
         <button id="newCollectionBtn" class="btn" data-pro="collections" data-i18n="newCollectionBtn">+ Collection</button>
         <button id="newFolderBtn" class="btn" data-pro="collections" data-i18n="newFolderBtn">+ Folder</button>
         <button id="importAnyBtn" class="btn" data-pro="importCollections" data-i18n="importAnyBtn">Import</button>
@@ -30,8 +29,6 @@
         <button id="saveToCollectionBtn" class="btn primary" data-pro="collections" data-i18n="saveToCollectionBtn">Save request</button>
       </div>
       <p class="empty-hint" data-i18n="importExportHint">Import/Export: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Double-click a collection to rename or delete.</p>
-      <div class="side-section-title" data-i18n="tabHistory">History</div>
-      <div id="historyList" class="tree history"></div>
     </aside>
 
     <section class="main">
@@ -42,9 +39,10 @@
         </span>
         <button id="editEnvBtn" class="btn" data-pro="environments" data-i18n="editEnvBtn">+ Environment</button>
         <button id="paletteBtn" class="btn grow" data-i18n="paletteBtn" data-i18n-title="paletteBtn">Search or jump — Ctrl+K</button>
-        <button id="themeToggle" class="icon-btn">🌙</button>
+        <button id="historyBtn" class="btn" data-i18n="tabHistory">History</button>
+        <button id="themeToggle" class="icon-btn" title="Light">☀️</button>
         <button id="languageToggle" class="icon-btn">RU</button>
-        <button id="openTabBtn" class="icon-btn" title="Fullscreen">⛶</button>
+        <button id="openTabBtn" class="icon-btn" data-i18n-title="fullscreenBtn" title="Fullscreen">⛶</button>
         <button id="settingsBtn" class="icon-btn" data-i18n-title="settingsBtn">⚙</button>
         <button id="wsBtn" class="icon-btn" data-pro="websocket" data-i18n-title="websocketBtn">WS</button>
       </header>
@@ -271,6 +269,18 @@
   <div id="palette" class="palette hidden">
     <input id="paletteInput" data-i18n-placeholder="palettePlaceholder" placeholder="Commands and requests">
     <div id="paletteList"></div>
+  </div>
+
+  <div id="historyModal" class="modal hidden">
+    <div class="modal-card wide">
+      <h3 data-i18n="tabHistory">History</h3>
+      <div class="row">
+        <input id="historySearch" data-i18n-placeholder="historySearchPlaceholder" placeholder="Search history...">
+        <button id="clearHistoryBtn" class="btn" data-i18n="clearHistoryBtn">Clear</button>
+      </div>
+      <div id="historyList" class="history-list" data-testid="history-list"></div>
+      <button id="closeHistoryBtn" class="btn" data-i18n="closeBtn">Close</button>
+    </div>
   </div>
 
   <div id="envModal" class="modal hidden">

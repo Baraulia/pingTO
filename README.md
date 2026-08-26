@@ -49,7 +49,7 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 ### Advanced Features:
 - ♾️ **Unlimited history**, collections, saved requests, environments
-- 📂 **Import** Postman, Insomnia, OpenAPI, Bruno; **export Bruno**
+- 📂 **Import/export** Postman, Insomnia, Bruno; **import** OpenAPI
 - 📊 **GraphQL** editor, variables, introspection
 - 🔌 **WebSocket and SSE**
 - 🔐 **Digest Auth and OAuth 2.0**
@@ -102,7 +102,7 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 #### Collections
 - Free: 2 collections, 25 saved requests, PingTo JSON import/export
-- Pro: unlimited collections, Postman/Insomnia/OpenAPI/Bruno import, Bruno export, run collection
+- Pro: unlimited collections, Postman/Insomnia/Bruno import and export, OpenAPI import, run collection
 
 #### Environments
 - Free: 1 environment, 10 variables

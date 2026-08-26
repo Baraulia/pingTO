@@ -1,6 +1,10 @@
 function headerList(headers) {
   if (!headers) return [];
-  if (Array.isArray(headers)) return headers.filter((h) => h?.key);
+  if (Array.isArray(headers)) {
+    return headers
+      .map((h) => ({ key: h?.key || h?.name, value: h?.value || '' }))
+      .filter((h) => h.key);
+  }
   return Object.entries(headers).map(([key, value]) => ({ key, value }));
 }
 
@@ -77,45 +81,42 @@ export function importPostman(data) {
 }
 
 export function importInsomnia(data) {
-  const resources = data.resources || data;
+  const resources = Array.isArray(data) ? data : data.resources;
   if (!Array.isArray(resources)) return null;
-  const folders = resources.filter((r) => r._type === 'request_group');
-  const requests = resources.filter((r) => r._type === 'request');
-  const items = [];
-  folders.forEach((f) => {
-    items.push({
-      type: 'folder',
-      id: f._id || Date.now(),
-      name: f.name || 'Folder',
-      items: requests
-        .filter((r) => r.parentId === f._id)
-        .map((r) => ({
-          type: 'request',
-          id: r._id,
-          name: r.name,
-          method: r.method,
-          url: r.url,
-          headers: headerList(r.headers),
-          bodyType: r.body?.mimeType?.includes('json') ? 'json' : 'text',
-          body: r.body?.text || '',
-        })),
-    });
+  const byParent = new Map();
+  resources.forEach((r) => {
+    if (!r || r._type === 'workspace') return;
+    const key = r.parentId || '';
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(r);
   });
-  const orphans = requests.filter((r) => !folders.some((f) => f._id === r.parentId));
-  orphans.forEach((r) => {
-    items.push({
+  const workspace = resources.find((r) => r._type === 'workspace');
+  const convert = (list) => (list || []).map((r) => {
+    if (r._type === 'request_group') {
+      return {
+        type: 'folder',
+        id: r._id || Date.now() + Math.random(),
+        name: r.name || 'Folder',
+        items: convert(byParent.get(r._id)),
+      };
+    }
+    if (r._type !== 'request') return null;
+    return {
       type: 'request',
-      id: r._id,
+      id: r._id || Date.now() + Math.random(),
       name: r.name,
-      method: r.method,
-      url: r.url,
+      method: (r.method || 'GET').toUpperCase(),
+      url: r.url || '',
       headers: headerList(r.headers),
+      bodyType: r.body?.mimeType?.includes('json') ? 'json' : (r.body?.text ? 'text' : 'none'),
       body: r.body?.text || '',
-    });
-  });
+    };
+  }).filter(Boolean);
+  const rootKey = workspace?._id || '';
+  const items = convert(byParent.get(rootKey) || byParent.get('') || []);
   return [{
     id: Date.now(),
-    name: data.name || 'Insomnia',
+    name: workspace?.name || data.name || 'Insomnia',
     items,
     created: new Date().toISOString(),
   }];
@@ -162,24 +163,68 @@ export function importOpenApi(spec) {
   }];
 }
 
-export function importBruno(text) {
-  if (typeof text !== 'string' || !text.includes('meta {')) return null;
-  const name = (text.match(/name:\s*(.+)/) || [])[1]?.trim() || 'Bruno';
+function bruRequestFromText(text, fallbackName) {
+  if (!text || !text.includes('meta {')) return null;
+  const name = (text.match(/name:\s*(.+)/) || [])[1]?.trim() || fallbackName || 'Bruno';
   const method = (text.match(/method:\s*(\w+)/) || [])[1] || 'GET';
   const url = (text.match(/url:\s*(.+)/) || [])[1]?.trim() || '';
   const bodyMatch = text.match(/body:json\s*\{([\s\S]*?)\n\}/);
+  return {
+    type: 'request',
+    id: Date.now() + Math.random(),
+    name,
+    method: method.toUpperCase(),
+    url,
+    bodyType: bodyMatch ? 'json' : 'none',
+    body: bodyMatch ? bodyMatch[1].trim() : '',
+  };
+}
+
+function nestBruPath(items, segments, req) {
+  if (segments.length <= 1) {
+    items.push(req);
+    return;
+  }
+  const folderName = segments[0];
+  let folder = items.find((i) => i.type === 'folder' && i.name === folderName);
+  if (!folder) {
+    folder = { type: 'folder', id: Date.now() + Math.random(), name: folderName, items: [] };
+    items.push(folder);
+  }
+  nestBruPath(folder.items, segments.slice(1), req);
+}
+
+export function importBruno(text) {
+  if (typeof text !== 'string') return null;
+  const parts = [];
+  const re = /===== ([^\n]+) =====\r?\n([\s\S]*?)(?=\r?\n===== |$)/g;
+  let match;
+  while ((match = re.exec(text))) parts.push({ path: match[1].trim(), body: match[2] });
+  if (parts.length) {
+    const firstSeg = parts[0].path.split(/[/\\]/)[0];
+    const sharedRoot = parts.every((p) => p.path.split(/[/\\]/)[0] === firstSeg);
+    const items = [];
+    parts.forEach((p) => {
+      const segs = p.path.replace(/\.bru$/i, '').split(/[/\\]/).filter(Boolean);
+      const req = bruRequestFromText(p.body, segs[segs.length - 1]);
+      if (!req) return;
+      const rest = sharedRoot ? segs.slice(1) : segs;
+      nestBruPath(items, rest, req);
+    });
+    if (!items.length) return null;
+    return [{
+      id: Date.now(),
+      name: sharedRoot ? firstSeg.replace(/\.bru$/i, '') : 'Bruno',
+      items,
+      created: new Date().toISOString(),
+    }];
+  }
+  const req = bruRequestFromText(text);
+  if (!req) return null;
   return [{
     id: Date.now(),
-    name,
-    items: [{
-      type: 'request',
-      id: Date.now() + 1,
-      name,
-      method: method.toUpperCase(),
-      url,
-      bodyType: bodyMatch ? 'json' : 'none',
-      body: bodyMatch ? bodyMatch[1].trim() : '',
-    }],
+    name: req.name,
+    items: [req],
     created: new Date().toISOString(),
   }];
 }
@@ -198,6 +243,35 @@ export function detectAndImport(raw) {
   if (Array.isArray(data)) return data;
   if (data.name && (data.items || data.requests)) return [data];
   throw new Error('Unknown collection format');
+}
+
+export function importAs(format, raw) {
+  if (!format || format === 'auto') return detectAndImport(raw);
+  if (format === 'bruno') {
+    const list = importBruno(typeof raw === 'string' ? raw : '');
+    if (!list) throw new Error('Not a Bruno collection');
+    return list;
+  }
+  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  if (format === 'pingto') {
+    if (!isNativePingto(data)) throw new Error('Not a PingTo JSON collection');
+    return data.collections;
+  }
+  if (format === 'postman') {
+    const list = importPostman(data);
+    if (!list) throw new Error('Not a Postman collection');
+    return list;
+  }
+  if (format === 'insomnia') {
+    const list = importInsomnia(data);
+    if (!list) throw new Error('Not an Insomnia export');
+    return list;
+  }
+  if (format === 'openapi') {
+    if (!data.openapi && !data.swagger) throw new Error('Not an OpenAPI file');
+    return importOpenApi(data);
+  }
+  return detectAndImport(raw);
 }
 
 export function isNativePingto(raw) {

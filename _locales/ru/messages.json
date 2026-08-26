@@ -243,7 +243,7 @@
     "message": "Ошибка"
   },
   "proFeatures": {
-    "message": "🚀 Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт Postman/Insomnia/OpenAPI/Bruno, экспорт Bruno\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen\n\nЦена: $5/месяц"
+    "message": "🚀 Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт/экспорт Postman, Insomnia, Bruno; импорт OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen\n\nЦена: $5/месяц"
   },
   "language": {
     "message": "Язык"
@@ -537,13 +537,13 @@
     "message": "Генерация кода превращает текущий запрос в сниппеты JavaScript, Python, PHP или Go."
   },
   "proDesc_collectionRun": {
-    "message": "Run collection последовательно отправляет все сохранённые запросы выбранной коллекции, с опцией остановки на ошибке."
+    "message": "Run collection — кнопка в сайдбаре коллекций. Последовательно отправляет все сохранённые запросы выбранной коллекции, с опцией остановки на ошибке, и показывает какие прошли."
   },
   "proDesc_bruno": {
-    "message": "Экспорт Bruno пишет коллекцию в файлы .bru для клиента Bruno и git-воркфлоу."
+    "message": "Bruno в меню Import и Export. Pro импортирует .bru и экспортирует бандл для клиента Bruno и git. PingTo JSON остаётся бесплатным."
   },
   "proDesc_importCollections": {
-    "message": "В Free импортируется только PingTo JSON. Pro также понимает Postman Collection v2, Insomnia, OpenAPI/Swagger и Bruno."
+    "message": "Import и Export в сайдбаре открывают меню формата. Free — только PingTo JSON. Pro добавляет Postman Collection v2, Insomnia и Bruno (импорт и экспорт) и импорт OpenAPI."
   },
   "proDesc_historyCap": {
     "message": "Free хранит последние 50 записей истории. Pro поднимает лимит до 2000."
@@ -561,22 +561,22 @@
     "message": "Снимаются лимиты 2 коллекции / 25 запросов / 1 окружение / 10 переменных."
   },
   "proItemImportTitle": {
-    "message": "Импорт Postman, Insomnia, OpenAPI, Bruno"
+    "message": "Postman, Insomnia, Bruno, OpenAPI"
   },
   "proItemImportDesc": {
-    "message": "Перенос коллекций из других клиентов. Импорт PingTo JSON остаётся бесплатным."
+    "message": "Меню Import и Export: Postman, Insomnia и Bruno в обе стороны; импорт OpenAPI. PingTo JSON остаётся бесплатным. Сначала формат, потом файл."
   },
   "proItemBrunoTitle": {
-    "message": "Экспорт Bruno (.bru)"
+    "message": "Импорт и экспорт Bruno"
   },
   "proItemBrunoDesc": {
-    "message": "Отдача коллекций файлами Bruno. Экспорт PingTo JSON остаётся бесплатным."
+    "message": "Загрузка .bru и выгрузка бандла Bruno. Те же меню Import/Export, что у Postman и Insomnia."
   },
   "proItemRunTitle": {
     "message": "Run collection"
   },
   "proItemRunDesc": {
-    "message": "Прогон всех запросов коллекции по очереди и отчёт, какие упали."
+    "message": "Кнопка в сайдбаре коллекций. Прогон всех запросов выбранной коллекции и отчёт об ошибках."
   },
   "proItemGraphqlTitle": {
     "message": "GraphQL"
@@ -665,8 +665,23 @@
   "importPingtoOnly": {
     "message": "В бесплатной версии можно импортировать только PingTo JSON. Postman, Insomnia, OpenAPI и Bruno — это Pro."
   },
+  "fmtPingto": {
+    "message": "PingTo JSON"
+  },
+  "fmtPostman": {
+    "message": "Postman Collection v2"
+  },
+  "fmtInsomnia": {
+    "message": "Insomnia"
+  },
+  "fmtBruno": {
+    "message": "Bruno"
+  },
+  "fmtOpenapi": {
+    "message": "OpenAPI"
+  },
   "importExportHint": {
-    "message": "Free: импорт и экспорт PingTo JSON (2 коллекции, 25 сохранённых запросов). Импорт Postman/Insomnia/OpenAPI/Bruno и экспорт Bruno — Pro."
+    "message": "Импорт/экспорт: PingTo JSON бесплатно. Postman, Insomnia, Bruno и OpenAPI импорт, плюс экспорт Postman/Insomnia/Bruno — Pro. Формат выбирается в меню Import или Export."
   },
   "collectionOpened": {
     "message": "Запрос открыт из коллекции"

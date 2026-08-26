@@ -8,7 +8,9 @@ test.describe('Free vs Pro shell', () => {
     await gql.click();
     await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
     await expect(page.locator('#proModalText')).toContainText(/GraphQL/i);
-    await expect(page.locator('#proModalList')).toContainText(/WebSocket/i);
+    await expect(page.locator('#proModalList')).toContainText(/Postman/i);
+    await expect(page.locator('#proModalList')).toContainText(/Insomnia/i);
+    await expect(page.locator('#proModalList')).toContainText(/Bruno/i);
     await expect(page.locator('#proModalList li.current')).toContainText(/GraphQL/i);
     await page.locator('#closeProModal').click();
     await expect(page.locator('#proModal')).toHaveClass(/hidden/);

@@ -25,4 +25,10 @@ describe('url-params', () => {
       'https://x.test/users/7'
     );
   });
+
+  it('replaces :code after a host:port without touching the port', () => {
+    expect(
+      applyPathParams('http://127.0.0.1:8787/status/:code', [{ key: 'code', value: '200' }])
+    ).toBe('http://127.0.0.1:8787/status/200');
+  });
 });

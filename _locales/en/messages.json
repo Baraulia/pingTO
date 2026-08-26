@@ -243,7 +243,7 @@
     "message": "Error"
   },
   "proFeatures": {
-    "message": "🚀 Pro features:\n• Unlimited history, collections, environments\n• Postman/Insomnia/OpenAPI/Bruno import, Bruno export\n• GraphQL, WebSocket, SSE\n• Digest Auth and OAuth 2.0\n• Binary body, scripts, tests, codegen\n\nPrice: $5/month"
+    "message": "🚀 Pro features:\n• Unlimited history, collections, environments\n• Import/export Postman, Insomnia, Bruno; import OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth and OAuth 2.0\n• Binary body, scripts, tests, codegen\n\nPrice: $5/month"
   },
   "language": {
     "message": "Language"
@@ -537,13 +537,31 @@
     "message": "Code generation turns the current request into copy-paste snippets (JavaScript, Python, PHP, Go)."
   },
   "proDesc_collectionRun": {
-    "message": "Run collection sends every saved request in the selected collection in order, with optional stop-on-fail."
+    "message": "Run collection is in the collections sidebar. It sends every saved request in the selected collection in order, with optional stop-on-fail, and shows which ones passed."
   },
   "proDesc_bruno": {
-    "message": "Bruno export writes the collection as .bru files for the Bruno client / git workflows."
+    "message": "Bruno is in the Import and Export menus. Pro imports .bru files and exports a Bruno bundle for the Bruno client and git workflows. PingTo JSON stays free."
   },
   "proDesc_importCollections": {
-    "message": "Free imports PingTo JSON only. Pro also imports Postman Collection v2, Insomnia, OpenAPI/Swagger, and Bruno."
+    "message": "Import and Export in the sidebar open a format menu. Free is PingTo JSON only. Pro adds Postman Collection v2, Insomnia and Bruno (import and export), plus OpenAPI import."
+  },
+  "proItemImportTitle": {
+    "message": "Postman, Insomnia, Bruno, OpenAPI"
+  },
+  "proItemImportDesc": {
+    "message": "Import and export menus: Postman, Insomnia and Bruno both ways; OpenAPI import. PingTo JSON stays free. Pick the format, then the file."
+  },
+  "proItemBrunoTitle": {
+    "message": "Bruno import and export"
+  },
+  "proItemBrunoDesc": {
+    "message": "Bring .bru files in and export a Bruno bundle. Same Import/Export menus as Postman and Insomnia."
+  },
+  "proItemRunTitle": {
+    "message": "Run collection"
+  },
+  "proItemRunDesc": {
+    "message": "Button in the collections sidebar. Runs every request in the selected collection and reports failures."
   },
   "proDesc_historyCap": {
     "message": "Free keeps the last 50 history items. Pro raises the cap to 2000."
@@ -559,24 +577,6 @@
   },
   "proItemCollectionsDesc": {
     "message": "No 2-collection / 25-request / 1-environment / 10-variable caps."
-  },
-  "proItemImportTitle": {
-    "message": "Import Postman, Insomnia, OpenAPI, Bruno"
-  },
-  "proItemImportDesc": {
-    "message": "Bring existing collections from other clients. PingTo JSON import stays free."
-  },
-  "proItemBrunoTitle": {
-    "message": "Export Bruno (.bru)"
-  },
-  "proItemBrunoDesc": {
-    "message": "Share collections as Bruno files. PingTo JSON export stays free."
-  },
-  "proItemRunTitle": {
-    "message": "Run collection"
-  },
-  "proItemRunDesc": {
-    "message": "Execute every request in a collection sequentially and see which ones fail."
   },
   "proItemGraphqlTitle": {
     "message": "GraphQL"
@@ -665,8 +665,23 @@
   "importPingtoOnly": {
     "message": "Free can import PingTo JSON only. Postman, Insomnia, OpenAPI and Bruno import are Pro."
   },
+  "fmtPingto": {
+    "message": "PingTo JSON"
+  },
+  "fmtPostman": {
+    "message": "Postman Collection v2"
+  },
+  "fmtInsomnia": {
+    "message": "Insomnia"
+  },
+  "fmtBruno": {
+    "message": "Bruno"
+  },
+  "fmtOpenapi": {
+    "message": "OpenAPI"
+  },
   "importExportHint": {
-    "message": "Free: import and export PingTo JSON (2 collections, 25 saved requests). Postman, Insomnia, OpenAPI and Bruno import, and Bruno export, are Pro."
+    "message": "Import/Export: PingTo JSON is free. Postman, Insomnia, Bruno and OpenAPI import, plus Postman/Insomnia/Bruno export, are Pro. Choose a format from the Import or Export menu."
   },
   "collectionOpened": {
     "message": "Request opened from collection"

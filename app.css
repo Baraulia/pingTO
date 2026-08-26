@@ -216,6 +216,35 @@ body.is-free .pro-block { opacity: 0.72; }
 }
 .tree-menu button:hover { background: var(--bg3); }
 .tree-menu button.danger { color: var(--err); }
+.menu-wrap { position: relative; display: inline-block; }
+.action-menu {
+  position: absolute;
+  z-index: 25;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.action-menu.hidden { display: none; }
+.action-menu button {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+}
+.action-menu button:hover { background: var(--bg3); }
 .tree-item.drag-over { outline: 2px dashed var(--accent); background: var(--bg3); }
 .history-list {
   min-height: 240px;

@@ -24,11 +24,29 @@
       <div class="side-actions">
         <button id="newCollectionBtn" class="btn" data-i18n="newCollectionBtn">+ Collection</button>
         <button id="newFolderBtn" class="btn" data-i18n="newFolderBtn">+ Folder</button>
-        <button id="importAnyBtn" class="btn" data-i18n="importAnyBtn">Import</button>
-        <button id="exportCollectionBtn" class="btn" data-i18n="exportCollectionBtn">Export</button>
+        <div class="menu-wrap">
+          <button id="importAnyBtn" type="button" class="btn" data-i18n="importAnyBtn">Import</button>
+          <div id="importMenu" class="action-menu hidden">
+            <button type="button" data-import="pingto" data-i18n="fmtPingto">PingTo JSON</button>
+            <button type="button" data-import="postman" data-pro="importCollections" data-i18n="fmtPostman">Postman</button>
+            <button type="button" data-import="insomnia" data-pro="importCollections" data-i18n="fmtInsomnia">Insomnia</button>
+            <button type="button" data-import="bruno" data-pro="importCollections" data-i18n="fmtBruno">Bruno</button>
+            <button type="button" data-import="openapi" data-pro="importCollections" data-i18n="fmtOpenapi">OpenAPI</button>
+          </div>
+        </div>
+        <div class="menu-wrap">
+          <button id="exportCollectionBtn" type="button" class="btn" data-i18n="exportCollectionBtn">Export</button>
+          <div id="exportMenu" class="action-menu hidden">
+            <button type="button" data-export="pingto" data-i18n="fmtPingto">PingTo JSON</button>
+            <button type="button" data-export="postman" data-pro="importCollections" data-i18n="fmtPostman">Postman</button>
+            <button type="button" data-export="insomnia" data-pro="importCollections" data-i18n="fmtInsomnia">Insomnia</button>
+            <button type="button" data-export="bruno" data-pro="bruno" data-i18n="fmtBruno">Bruno</button>
+          </div>
+        </div>
         <button id="saveToCollectionBtn" class="btn primary" data-i18n="saveToCollectionBtn">Save request</button>
+        <button id="runCollectionBtn" class="btn" data-pro="collectionRun" data-i18n="runCollectionBtn">Run collection</button>
       </div>
-      <p class="empty-hint" data-i18n="importExportHint">Free: PingTo JSON import/export (2 collections, 25 requests). Other formats and Bruno export are Pro.</p>
+      <p class="empty-hint" data-i18n="importExportHint">Free: PingTo JSON. Pro: Postman, Insomnia, Bruno, OpenAPI import, and Postman/Insomnia/Bruno export.</p>
     </aside>
 
     <section class="main">
@@ -259,8 +277,6 @@
         <span data-i18n="sslHint">Local only · Chrome cannot ignore invalid SSL</span>
         <span id="runStatus"></span>
         <button id="duplicateBtn" class="btn small" data-i18n="duplicateBtn">Duplicate</button>
-        <button id="runCollectionBtn" class="btn small" data-pro="collectionRun" data-i18n="runCollectionBtn">Run collection</button>
-        <button id="exportBruBtn" class="btn small" data-pro="bruno" data-i18n="exportBruBtn">Export Bruno</button>
       </footer>
     </section>
   </div>

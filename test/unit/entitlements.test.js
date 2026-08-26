@@ -46,6 +46,6 @@ describe('entitlements', () => {
 
   it('maps Pro features to UI ids', () => {
     expect(PRO_FEATURES.importCollections).toBe('importAnyBtn');
-    expect(PRO_FEATURES.websocket).toBe('websocketBtn');
+    expect(PRO_FEATURES.bruno).toBe('fmtBruno');
   });
 });

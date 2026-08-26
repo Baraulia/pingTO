@@ -30,8 +30,8 @@ import {
   prettyXml,
   queryJsonPath,
 } from './modules/json-tools.js';
-import { detectAndImport, isNativePingto } from './modules/importers.js';
-import { downloadBruZipLike, sanitizeExport } from './modules/bruno-export.js';
+import { importAs } from './modules/importers.js';
+import { toBrunoText, toInsomnia, toPingto, toPostman } from './modules/exporters.js';
 import { exchangeCode, launchAuthCode, refreshToken } from './modules/oauth.js';
 import { runPreRequest, runTests } from './modules/sandbox.js';
 import {
@@ -107,7 +107,6 @@ const PRO_MODAL_ITEMS = [
   { id: 'historyCap', titleKey: 'proItemHistoryTitle', descKey: 'proItemHistoryDesc' },
   { id: 'collections', titleKey: 'proItemCollectionsTitle', descKey: 'proItemCollectionsDesc' },
   { id: 'importCollections', titleKey: 'proItemImportTitle', descKey: 'proItemImportDesc' },
-  { id: 'bruno', titleKey: 'proItemBrunoTitle', descKey: 'proItemBrunoDesc' },
   { id: 'collectionRun', titleKey: 'proItemRunTitle', descKey: 'proItemRunDesc' },
   { id: 'graphql', titleKey: 'proItemGraphqlTitle', descKey: 'proItemGraphqlDesc' },
   { id: 'websocket', titleKey: 'proItemWebsocketTitle', descKey: 'proItemWebsocketDesc' },
@@ -122,11 +121,13 @@ const PRO_MODAL_ITEMS = [
 const PRO_MODAL_HIGHLIGHT = {
   snapshots: 'testsResp',
   diff: 'testsResp',
+  bruno: 'importCollections',
 };
 
 let lastProFeatureId = null;
 
 function showProModal(featureId) {
+  hideActionMenus();
   lastProFeatureId = featureId;
   const name = featureName(featureId);
   const specific = I18nManager.t(`proDesc_${featureId}`, '');
@@ -497,6 +498,20 @@ function replaceActiveTab(partial) {
   persistWorkspace();
 }
 
+const COLLECTION_RUN_TAB_ID = '__collection_run__';
+
+function loadCollectionRunTab(partial) {
+  const prev = current();
+  if (prev && prev.id !== COLLECTION_RUN_TAB_ID) readFormIntoTab();
+  if (prev && prev.id !== COLLECTION_RUN_TAB_ID) closeSocket(true);
+  const tab = tabFromDraft({ ...partial, id: COLLECTION_RUN_TAB_ID });
+  const i = state.tabs.findIndex((t) => t.id === COLLECTION_RUN_TAB_ID);
+  if (i >= 0) state.tabs[i] = tab;
+  else state.tabs.push(tab);
+  state.activeId = COLLECTION_RUN_TAB_ID;
+  writeTabToForm();
+}
+
 function openTab(partial) {
   if (partial?.collectionId && partial?.collectionItemId) {
     const existing = findOpenCollectionTab(partial.collectionId, partial.collectionItemId);
@@ -769,6 +784,7 @@ async function sendCurrent() {
     }
   }
   url = applyEnvVars(applyPathParams(applyParamsToUrl(url, tab.params), tab.pathParams), ctx.variables);
+  tab.sentUrl = url;
   if (!isHttpUrl(url)) {
     UIHelpers.showToast(I18nManager.t('invalidUrl'), 'error');
     return;
@@ -998,6 +1014,11 @@ function showResp(name) {
 function hideTreeMenu() {
   $('treeMenu')?.classList.add('hidden');
   state.treeMenuTarget = null;
+}
+
+function hideActionMenus() {
+  $('importMenu')?.classList.add('hidden');
+  $('exportMenu')?.classList.add('hidden');
 }
 
 function showTreeMenu(event, target) {
@@ -1463,14 +1484,18 @@ async function runCollection() {
   const report = $('runReport');
   report.replaceChildren();
   for (const req of reqs) {
-    openTab({ ...req, collectionId: id, collectionItemId: req.id });
-    writeTabToForm();
+    loadCollectionRunTab({ ...req, collectionId: id, collectionItemId: req.id });
     await sendCurrent();
     const tab = current();
     const line = document.createElement('div');
-    const failed = !tab.response?.ok || (tab.testResults || []).some((t) => !t.pass);
+    const tests = tab.testResults || [];
+    const status = tab.response?.status;
+    const aborted = /abort/i.test(String(status ?? ''));
+    const failed = !tab.response || aborted || tests.some((t) => !t.pass);
     line.className = failed ? 'fail' : 'pass';
-    line.textContent = `${tab.method} ${tab.url} → ${tab.response?.status} tests ${(tab.testResults || []).filter((t) => t.pass).length}/${(tab.testResults || []).length}`;
+    const shownUrl = tab.sentUrl || tab.url;
+    const passedTests = tests.filter((t) => t.pass).length;
+    line.textContent = `${tab.method} ${shownUrl} → ${status ?? '—'} tests ${passedTests}/${tests.length}`;
     report.appendChild(line);
     if (failed && $('stopOnFail').checked) break;
   }
@@ -1760,26 +1785,72 @@ $('newFolderBtn').onclick = async () => {
     renderCollections();
   }
 };
-$('importAnyBtn').onclick = () => $('importFile').click();
+let pendingImportFormat = 'pingto';
+
+function toggleActionMenu(menuId, event) {
+  event.stopPropagation();
+  const menu = $(menuId);
+  const open = menu.classList.contains('hidden');
+  hideActionMenus();
+  hideTreeMenu();
+  if (open) menu.classList.remove('hidden');
+}
+
+async function collectionsForExport() {
+  if (state.selectedCollectionId) {
+    const one = await collectionsManager.exportCollection(state.selectedCollectionId);
+    return one ? [one] : [];
+  }
+  return collectionsManager.exportAll();
+}
+
+$('importAnyBtn').onclick = (e) => toggleActionMenu('importMenu', e);
+$('exportCollectionBtn').onclick = (e) => toggleActionMenu('exportMenu', e);
+$('importMenu').onclick = (e) => {
+  e.stopPropagation();
+  const btn = e.target.closest('[data-import]');
+  if (!btn) return;
+  if (btn.dataset.pro && !state.isPro) return;
+  pendingImportFormat = btn.dataset.import;
+  hideActionMenus();
+  $('importFile').accept = pendingImportFormat === 'bruno' ? '.bru,.txt,text/plain' : '.json,application/json';
+  $('importFile').click();
+};
+$('exportMenu').onclick = async (e) => {
+  e.stopPropagation();
+  const btn = e.target.closest('[data-export]');
+  if (!btn) return;
+  if (btn.dataset.pro && !state.isPro) return;
+  hideActionMenus();
+  const format = btn.dataset.export;
+  const list = await collectionsForExport();
+  if (!list.length) {
+    UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
+    return;
+  }
+  const base = list.length === 1 ? (list[0].name || 'collection') : 'pingto-collections';
+  if (format === 'pingto') {
+    UIHelpers.downloadText(`${base}.json`, JSON.stringify(toPingto(list), null, 2), 'application/json');
+    return;
+  }
+  if (format === 'postman') {
+    UIHelpers.downloadText(`${base}.postman.json`, JSON.stringify(toPostman(list), null, 2), 'application/json');
+    return;
+  }
+  if (format === 'insomnia') {
+    UIHelpers.downloadText(`${base}.insomnia.json`, JSON.stringify(toInsomnia(list), null, 2), 'application/json');
+    return;
+  }
+  if (format === 'bruno') {
+    UIHelpers.downloadText(`${base}.bru.txt`, toBrunoText(list), 'text/plain');
+  }
+};
 $('importFile').onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
     const text = await file.text();
-    if (!state.isPro && !isNativePingto(text)) {
-      try {
-        detectAndImport(text);
-      } catch (err) {
-        UIHelpers.showToast(err.message || I18nManager.t('importFailed'), 'error');
-        e.target.value = '';
-        return;
-      }
-      UIHelpers.showToast(I18nManager.t('importPingtoOnly'), 'error');
-      requirePro('importCollections');
-      e.target.value = '';
-      return;
-    }
-    const imported = detectAndImport(text);
+    const imported = importAs(pendingImportFormat, text);
     const before = collectionsManager.collections.length;
     await collectionsManager.importMany(imported);
     const added = collectionsManager.collections[before];
@@ -1789,17 +1860,8 @@ $('importFile').onchange = async (e) => {
   } catch (err) {
     UIHelpers.showToast(err.message || I18nManager.t('importFailed'), 'error');
   }
+  pendingImportFormat = 'pingto';
   e.target.value = '';
-};
-$('exportCollectionBtn').onclick = async () => {
-  const selected = state.selectedCollectionId
-    ? await collectionsManager.exportCollection(state.selectedCollectionId)
-    : null;
-  const payload = selected
-    ? { format: 'pingto', version: 1, collections: [selected] }
-    : { format: 'pingto', version: 1, collections: await collectionsManager.exportAll() };
-  const filename = selected ? `${selected.name || 'collection'}.json` : 'pingto-collections.json';
-  UIHelpers.downloadText(filename, JSON.stringify(payload, null, 2), 'application/json');
 };
 $('saveRequestBtn').onclick = saveCurrentRequest;
 $('saveToCollectionBtn').onclick = saveCurrentRequest;
@@ -1814,11 +1876,6 @@ $('duplicateBtn').onclick = () => {
   });
 };
 $('runCollectionBtn').onclick = runCollection;
-$('exportBruBtn').onclick = async () => {
-  const coll = await collectionsManager.getById(state.selectedCollectionId);
-  if (!coll) return UIHelpers.showToast('Select a collection', 'error');
-  downloadBruZipLike(sanitizeExport(coll));
-};
 $('createEnvBtn').onclick = async () => {
   if (!canAddEnvironment(state.isPro, environmentsManager.environments.length)) {
     UIHelpers.showToast(I18nManager.t('freeEnvLimit'), 'error');
@@ -1939,9 +1996,11 @@ document.addEventListener('keydown', (e) => {
     $('settingsModal').classList.add('hidden');
     $('proModal').classList.add('hidden');
     hideTreeMenu();
+    hideActionMenus();
   }
 });
 document.addEventListener('click', (e) => {
+  if (!e.target.closest('.menu-wrap')) hideActionMenus();
   if (!$('treeMenu') || $('treeMenu').classList.contains('hidden')) return;
   if (e.target.closest('#treeMenu')) return;
   hideTreeMenu();

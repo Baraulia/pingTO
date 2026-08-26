@@ -33,12 +33,23 @@ export function applyParamsToUrl(url, params) {
   return `${path}${query ? `?${query}` : ''}${hash}`;
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function applyPathParams(url, params) {
-  let out = String(url || '');
+  const raw = String(url || '');
+  const hashIdx = raw.indexOf('#');
+  const hash = hashIdx >= 0 ? raw.slice(hashIdx) : '';
+  const noHash = hashIdx >= 0 ? raw.slice(0, hashIdx) : raw;
+  const qIdx = noHash.indexOf('?');
+  const query = qIdx >= 0 ? noHash.slice(qIdx) : '';
+  let path = qIdx >= 0 ? noHash.slice(0, qIdx) : noHash;
   (params || []).forEach((p) => {
-    if (!p.key) return;
-    out = out.split(`:${p.key}`).join(encodeURIComponent(p.value ?? ''));
-    out = out.split(`{${p.key}}`).join(encodeURIComponent(p.value ?? ''));
+    if (!p.key || p.enabled === false) return;
+    const val = encodeURIComponent(p.value ?? '');
+    path = path.replace(new RegExp(`:${escapeRegExp(p.key)}(?=$|[/?#])`, 'g'), val);
+    path = path.split(`{${p.key}}`).join(val);
   });
-  return out;
+  return `${path}${query}${hash}`;
 }

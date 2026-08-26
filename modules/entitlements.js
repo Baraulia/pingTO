@@ -20,7 +20,7 @@ export const PRO_FEATURES = {
   binary: 'bodyTypeBinary',
   historyCap: 'proHistoryHint',
   collectionRun: 'runCollectionBtn',
-  bruno: 'exportBruBtn',
+  bruno: 'fmtBruno',
   importCollections: 'importAnyBtn',
 };
 

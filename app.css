@@ -172,7 +172,6 @@ body.is-free [data-pro]:not(option):not(select):not(input)::after {
 .pro-list li { margin: 4px 0; }
 .with-pro { display: inline-flex; align-items: center; gap: 4px; }
 .pro-block { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-body.is-free #collectionTree,
 body.is-free .pro-block { opacity: 0.72; }
 .http-actions, .ws-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ws-workspace { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 8px 10px; gap: 8px; }

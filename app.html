@@ -17,27 +17,27 @@
         </label>
       </div>
       <input id="sidebarSearch" class="search" data-i18n-placeholder="searchCollections" placeholder="Search collections...">
-      <div class="side-section-title" data-pro="collections" data-i18n="tabCollections">Collections</div>
+      <div class="side-section-title" data-i18n="tabCollections">Collections</div>
       <p id="collectionHelp" class="empty-hint" data-i18n="collectionHelp">Create a collection, click it to select, then save the current request. Click a request in the tree to open it.</p>
       <p id="collectionTarget" class="hint"></p>
       <div id="collectionTree" class="tree"></div>
       <div class="side-actions">
-        <button id="newCollectionBtn" class="btn" data-pro="collections" data-i18n="newCollectionBtn">+ Collection</button>
-        <button id="newFolderBtn" class="btn" data-pro="collections" data-i18n="newFolderBtn">+ Folder</button>
-        <button id="importAnyBtn" class="btn" data-pro="importCollections" data-i18n="importAnyBtn">Import</button>
-        <button id="exportCollectionBtn" class="btn" data-pro="importCollections" data-i18n="exportCollectionBtn">Export</button>
-        <button id="saveToCollectionBtn" class="btn primary" data-pro="collections" data-i18n="saveToCollectionBtn">Save request</button>
+        <button id="newCollectionBtn" class="btn" data-i18n="newCollectionBtn">+ Collection</button>
+        <button id="newFolderBtn" class="btn" data-i18n="newFolderBtn">+ Folder</button>
+        <button id="importAnyBtn" class="btn" data-i18n="importAnyBtn">Import</button>
+        <button id="exportCollectionBtn" class="btn" data-i18n="exportCollectionBtn">Export</button>
+        <button id="saveToCollectionBtn" class="btn primary" data-i18n="saveToCollectionBtn">Save request</button>
       </div>
-      <p class="empty-hint" data-i18n="importExportHint">Import/Export: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Double-click a collection to rename or delete.</p>
+      <p class="empty-hint" data-i18n="importExportHint">Free: PingTo JSON import/export (2 collections, 25 requests). Other formats and Bruno export are Pro.</p>
     </aside>
 
     <section class="main">
       <header class="topbar">
         <button id="sidebarToggle" class="icon-btn" title="Toggle sidebar">☰</button>
-        <span class="with-pro" data-pro="environments">
+        <span class="with-pro">
           <select id="environmentSelect"></select>
         </span>
-        <button id="editEnvBtn" class="btn" data-pro="environments" data-i18n="editEnvBtn">+ Environment</button>
+        <button id="editEnvBtn" class="btn" data-i18n="editEnvBtn">+ Environment</button>
         <button id="paletteBtn" class="btn grow" data-i18n="paletteBtn" data-i18n-title="paletteBtn">Search or jump — Ctrl+K</button>
         <button id="historyBtn" class="btn" data-i18n="tabHistory">History</button>
         <button id="themeToggle" class="icon-btn" title="Light">☀️</button>
@@ -49,7 +49,7 @@
 
       <div class="req-tabs-row">
         <input id="reqName" class="tab-name-input" data-i18n-placeholder="reqNamePlaceholder" placeholder="Request name" spellcheck="false">
-        <button id="saveRequestBtn" class="btn primary" data-pro="collections" data-i18n="saveRequestBtn">Save</button>
+        <button id="saveRequestBtn" class="btn primary" data-i18n="saveRequestBtn">Save</button>
         <div id="reqTabs" class="req-tabs"></div>
       </div>
 
@@ -85,8 +85,8 @@
             <button data-pane="auth" data-i18n="authTab">Auth</button>
             <button data-pane="scripts" data-pro="scripts" data-i18n="scriptsTab">Scripts</button>
             <button data-pane="graphql" data-pro="graphql" data-i18n="graphqlTab">GraphQL</button>
-            <button data-pane="cookies" data-pro="cookies" data-i18n="cookiesTab">Cookies</button>
-            <button data-pane="docs" data-pro="docs" data-i18n="docsTab">Docs</button>
+            <button data-pane="cookies" data-i18n="cookiesTab">Cookies</button>
+            <button data-pane="docs" data-i18n="docsTab">Docs</button>
             <button data-pane="curl" data-i18n="codeTab">Code</button>
           </div>
 
@@ -111,7 +111,7 @@
                 <option value="none" data-i18n="bodyTypeNone">No body</option>
                 <option value="json" data-i18n="bodyTypeJson">JSON</option>
                 <option value="form" data-i18n="bodyTypeForm">x-www-form-urlencoded</option>
-                <option value="multipart" data-pro="binary" data-i18n="bodyTypeMultipart">multipart</option>
+                <option value="multipart" data-i18n="bodyTypeMultipart">multipart</option>
                 <option value="text" data-i18n="bodyTypeText">Text</option>
                 <option value="binary" data-pro="binary" data-i18n="bodyTypeBinary">Binary file</option>
                 <option value="graphql" data-pro="graphql" data-i18n="bodyTypeGraphql">GraphQL JSON</option>
@@ -124,7 +124,7 @@
             <div id="jsonError" class="error"></div>
             <textarea id="bodyEditor" rows="12" spellcheck="false"></textarea>
             <div id="multipartFiles" class="hint" data-i18n="multipartHint">multipart: lines key=value, or attach files below</div>
-            <input type="file" id="multiFiles" multiple data-pro="binary">
+            <input type="file" id="multiFiles" multiple>
           </div>
 
           <div id="pane-auth" class="subpane">
@@ -133,7 +133,7 @@
               <option value="bearer" data-i18n="authBearer">Bearer</option>
               <option value="basic" data-i18n="authBasic">Basic</option>
               <option value="digest" data-pro="digest" data-i18n="authDigest">Digest</option>
-              <option value="apikey" data-pro="apikey" data-i18n="authApiKey">API Key</option>
+              <option value="apikey" data-i18n="authApiKey">API Key</option>
               <option value="oauth2" data-pro="oauth" data-i18n="authOauth2">OAuth 2.0</option>
             </select>
             <input id="authToken" data-i18n-placeholder="tokenPlaceholder" placeholder="Bearer token" class="hidden">
@@ -183,12 +183,12 @@
           </div>
 
           <div id="pane-cookies" class="subpane">
-            <button id="loadCookiesBtn" class="btn small" data-pro="cookies" data-i18n="loadCookiesBtn">Load cookies for URL</button>
+            <button id="loadCookiesBtn" class="btn small" data-i18n="loadCookiesBtn">Load cookies for URL</button>
             <div id="cookieList"></div>
             <div class="row">
               <input id="cookieName" placeholder="Name">
               <input id="cookieValue" placeholder="Value">
-              <button id="setCookieBtn" class="btn small" data-pro="cookies" data-i18n="setCookieBtn">Set</button>
+              <button id="setCookieBtn" class="btn small" data-i18n="setCookieBtn">Set</button>
             </div>
           </div>
 
@@ -231,7 +231,7 @@
             <button data-rpane="redirects" data-i18n="redirectsTab">Redirects</button>
             <button data-rpane="tests" data-pro="testsResp" data-i18n="testsTab">Tests</button>
             <button data-rpane="diff" data-pro="diff" data-i18n="diffTab">Diff</button>
-            <button data-rpane="filter" data-pro="jsonpath" data-i18n="jsonPathTab">JSONPath</button>
+            <button data-rpane="filter" data-i18n="jsonPathTab">JSONPath</button>
           </div>
           <pre id="responseBody" class="body"></pre>
           <pre id="responsePretty" class="body hidden"></pre>
@@ -259,7 +259,7 @@
       <footer class="statusline">
         <span data-i18n="sslHint">Local only · Chrome cannot ignore invalid SSL</span>
         <span id="runStatus"></span>
-        <button id="duplicateBtn" class="btn small" data-pro="extraTabs" data-i18n="duplicateBtn">Duplicate</button>
+        <button id="duplicateBtn" class="btn small" data-i18n="duplicateBtn">Duplicate</button>
         <button id="runCollectionBtn" class="btn small" data-pro="collectionRun" data-i18n="runCollectionBtn">Run collection</button>
         <button id="exportBruBtn" class="btn small" data-pro="bruno" data-i18n="exportBruBtn">Export Bruno</button>
       </footer>

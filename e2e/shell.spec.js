@@ -1,17 +1,18 @@
 import { test, expect, disablePro, enablePro } from './fixtures.js';
 
 test.describe('Free vs Pro shell', () => {
-  test('starts in Free and gates collections import', async ({ page }) => {
+  test('starts in Free and gates GraphQL', async ({ page }) => {
     await expect(page.locator('body')).toHaveClass(/is-free/);
-    await expect(page.getByRole('button', { name: /Import.*PRO/i })).toBeVisible();
-    await page.locator('#importAnyBtn').click();
+    const gql = page.locator('#reqSubtabs button[data-pane="graphql"]');
+    await expect(gql).toHaveAttribute('data-pro', 'graphql');
+    await gql.click();
     await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
     await page.locator('#closeProModal').click();
     await expect(page.locator('#proModal')).toHaveClass(/hidden/);
   });
 
-  test('Enable Pro from modal unlocks collections', async ({ page }) => {
-    await page.locator('#newCollectionBtn').click();
+  test('Enable Pro from modal unlocks GraphQL', async ({ page }) => {
+    await page.locator('#reqSubtabs button[data-pane="graphql"]').click();
     await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
     await page.locator('#proEnableBtn').click();
     await expect(page.locator('body')).toHaveClass(/is-pro/);
@@ -21,8 +22,14 @@ test.describe('Free vs Pro shell', () => {
   test('toggle Pro on and off', async ({ page }) => {
     await enablePro(page);
     await disablePro(page);
-    await page.locator('#saveRequestBtn').click();
+    await page.locator('#reqSubtabs button[data-pane="graphql"]').click();
     await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
+  });
+
+  test('Free allows extra tabs', async ({ page }) => {
+    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await expect(page.locator('.tab-chip')).toHaveCount(3);
   });
 
   test('theme toggle flips data-theme', async ({ page }) => {

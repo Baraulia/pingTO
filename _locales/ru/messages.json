@@ -243,7 +243,7 @@
     "message": "Ошибка"
   },
   "proFeatures": {
-    "message": "🚀 Функции Pro-версии:\n• Безлимитная история\n• Безлимитные коллекции\n• Переменные окружения\n• GraphQL и WebSocket\n• Генерация кода\n• Git-коллекции\n\nЦена: $5/месяц"
+    "message": "🚀 Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт Postman/Insomnia/OpenAPI/Bruno, экспорт Bruno\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen\n\nЦена: $5/месяц"
   },
   "language": {
     "message": "Язык"
@@ -533,8 +533,11 @@
   "importFailed": {
     "message": "Неизвестный формат. Нужен PingTo JSON, Postman v2, Insomnia, OpenAPI или Bruno."
   },
+  "importPingtoOnly": {
+    "message": "В бесплатной версии можно импортировать только PingTo JSON. Postman, Insomnia, OpenAPI и Bruno — это Pro."
+  },
   "importExportHint": {
-    "message": "Импорт и экспорт: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Экспорт пишет PingTo JSON."
+    "message": "Free: импорт и экспорт PingTo JSON (2 коллекции, 25 сохранённых запросов). Импорт Postman/Insomnia/OpenAPI/Bruno и экспорт Bruno — Pro."
   },
   "collectionOpened": {
     "message": "Запрос открыт из коллекции"
@@ -556,6 +559,18 @@
   },
   "requestSaved": {
     "message": "Запрос сохранён в коллекцию"
+  },
+  "freeCollectionLimit": {
+    "message": "В бесплатной версии 2 коллекции. Безлимит — в Pro."
+  },
+  "freeRequestLimit": {
+    "message": "В бесплатной версии 25 сохранённых запросов. Безлимит — в Pro."
+  },
+  "freeEnvLimit": {
+    "message": "В бесплатной версии 1 окружение. Больше — в Pro."
+  },
+  "freeEnvVarLimit": {
+    "message": "В бесплатной версии 10 переменных окружения. Больше — в Pro."
   },
   "envHelp": {
     "message": "Создайте окружение, добавьте переменные (например base_url), выберите его сверху и пишите {{base_url}} в URL, заголовках или теле."

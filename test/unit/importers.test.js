@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { detectAndImport, importOpenApi, importPostman } from '../../modules/importers.js';
+import { detectAndImport, importOpenApi, importPostman, isNativePingto } from '../../modules/importers.js';
 
 const testdCollection = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../testd/pingto-testd-collection.json'), 'utf8')
@@ -24,6 +24,11 @@ describe('importers', () => {
     expect(ids).toContain('testd-health');
     expect(ids).toContain('testd-ws');
     expect(ids.length).toBeGreaterThan(30);
+  });
+
+  it('detects native pingto JSON', () => {
+    expect(isNativePingto(testdCollection)).toBe(true);
+    expect(isNativePingto({ info: { name: 'PM' }, item: [] })).toBe(false);
   });
 
   it('imports Postman v2', () => {

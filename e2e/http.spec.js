@@ -1,4 +1,4 @@
-import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, responseJson, testdUrl } from './fixtures.js';
+import { test, expect, enablePro, importTestdCollection, openRequest, sendAndExpectStatus, responseJson, testdUrl } from './fixtures.js';
 
 test.describe('HTTP against testd', () => {
   test.beforeEach(async ({ page }) => {
@@ -84,6 +84,7 @@ test.describe('HTTP against testd', () => {
     expect(JSON.stringify(multi.files)).toMatch(/note\.txt/);
 
     await openRequest(page, 'testd-binary');
+    await enablePro(page);
     await page.locator('#reqSubtabs button[data-pane="body"]').click();
     await page.locator('#binaryFile').setInputFiles({
       name: 'blob.bin',

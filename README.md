@@ -18,16 +18,17 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 **Core Features:**
 - ✅ **HTTP Methods:** GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
-- ✅ **Request Builder** with intuitive interface
-- ✅ **Headers Management** with common headers presets
-- ✅ **Request Body:** JSON, Form Data, Multipart, Text/Plain
-- ✅ **Authentication:** Bearer Token, Basic Auth, Digest Auth, OAuth 2.0
-- ✅ **Response Viewer** with pretty-printed JSON, XML, HTML preview
-- ✅ **Response Metadata:** Status code, response time, size
-- ✅ **History** with search and restore (50 items limit)
-- ✅ **cURL** Import and Export
+- ✅ **Unlimited tabs**
+- ✅ **Request Builder** with query, path params, headers, cookies, docs
+- ✅ **Request Body:** JSON, form-urlencoded, multipart, text
+- ✅ **Authentication:** Bearer, Basic, API Key
+- ✅ **Response Viewer:** pretty JSON/XML, HTML preview, headers, redirects, JSONPath
+- ✅ **History** with search (50 items)
+- ✅ **Collections:** 2 collections, 25 saved requests; PingTo JSON import/export
+- ✅ **Environments:** 1 environment, 10 variables (`{{base_url}}` in URL, headers, body)
+- ✅ **cURL** import and export
 - ✅ **Light and Dark Theme**
-- ✅ **English and Russian Language**
+- ✅ **English and Russian**
 
 ### Privacy & Security
 - 🔒 **100% Local** — All data stored in `chrome.storage.local`
@@ -47,16 +48,15 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 ## 💎 Pro Version
 
 ### Advanced Features:
-- ♾️ **Unlimited History**
-- 📂 **Collections** with create, manage, import/export
-- 🌍 **Environments** with variables and quick switching
-- 📊 **GraphQL** with query editor and variables
-- 🔌 **WebSocket** with real-time messaging client
-- 💻 **Code Generation** in JavaScript, Python, PHP, Go
-- 🔗 **Git Integration** with .bru files
-- 📝 **Notion Integration** for sync
-- 📋 **Request Templates**
-- 📦 **Full Export/Import** of collections
+- ♾️ **Unlimited history**, collections, saved requests, environments
+- 📂 **Import** Postman, Insomnia, OpenAPI, Bruno; **export Bruno**
+- 📊 **GraphQL** editor, variables, introspection
+- 🔌 **WebSocket and SSE**
+- 🔐 **Digest Auth and OAuth 2.0**
+- 📎 **Binary request body**
+- 🧪 **Pre-request scripts, tests, snapshots, response diff**
+- ▶️ **Run collection**
+- 💻 **Code generation** (JavaScript, Python, PHP, Go)
 
 ### Pricing:
 - **Monthly:** $5/month
@@ -100,15 +100,14 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 ### Advanced Features
 
-#### Collections (Pro)
-- Create and organize requests by project
-- Export and import collections as JSON
-- Run saved requests with one click
+#### Collections
+- Free: 2 collections, 25 saved requests, PingTo JSON import/export
+- Pro: unlimited collections, Postman/Insomnia/OpenAPI/Bruno import, Bruno export, run collection
 
-#### Environments (Pro)
-- Create multiple environments (Production, Staging, Development)
-- Use variables like `{{base_url}}` and `{{api_key}}`
-- Variables are automatically replaced in URL, headers, and body
+#### Environments
+- Free: 1 environment, 10 variables
+- Pro: unlimited environments
+- Use `{{base_url}}` and `{{api_key}}` in URL, headers, and body
 
 #### GraphQL (Pro)
 - Query editor with syntax highlighting
@@ -160,9 +159,9 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 
 ### Data Storage
 All data is stored locally in `chrome.storage.local`:
-- **History:** API requests with full details (50 items free, unlimited Pro)
-- **Collections:** Grouped requests with metadata (Pro only)
-- **Environments:** Variables for different contexts (Pro only)
+- **History:** API requests with full details (50 items free, 2000 Pro)
+- **Collections:** grouped requests (2 collections / 25 requests on Free; unlimited on Pro)
+- **Environments:** variables (1 env / 10 vars on Free; unlimited on Pro)
 - **Settings:** Theme, language, timeout, default headers
 
 ### Security Features

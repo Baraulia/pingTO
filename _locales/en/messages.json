@@ -243,7 +243,7 @@
     "message": "Error"
   },
   "proFeatures": {
-    "message": "🚀 Pro features:\n• Unlimited history\n• Unlimited collections\n• Environment variables\n• GraphQL & WebSocket\n• Code generation\n• Git collections\n\nPrice: $5/month"
+    "message": "🚀 Pro features:\n• Unlimited history, collections, environments\n• Postman/Insomnia/OpenAPI/Bruno import, Bruno export\n• GraphQL, WebSocket, SSE\n• Digest Auth and OAuth 2.0\n• Binary body, scripts, tests, codegen\n\nPrice: $5/month"
   },
   "language": {
     "message": "Language"
@@ -533,8 +533,11 @@
   "importFailed": {
     "message": "Unknown format. Use PingTo JSON, Postman v2, Insomnia, OpenAPI or Bruno."
   },
+  "importPingtoOnly": {
+    "message": "Free can import PingTo JSON only. Postman, Insomnia, OpenAPI and Bruno import are Pro."
+  },
   "importExportHint": {
-    "message": "Import and Export: PingTo JSON, Postman Collection v2, Insomnia, OpenAPI, Bruno (.bru). Export writes PingTo JSON."
+    "message": "Free: import and export PingTo JSON (2 collections, 25 saved requests). Postman, Insomnia, OpenAPI and Bruno import, and Bruno export, are Pro."
   },
   "collectionOpened": {
     "message": "Request opened from collection"
@@ -556,6 +559,18 @@
   },
   "requestSaved": {
     "message": "Request saved to collection"
+  },
+  "freeCollectionLimit": {
+    "message": "Free includes 2 collections. Upgrade to Pro for unlimited collections."
+  },
+  "freeRequestLimit": {
+    "message": "Free includes 25 saved requests. Upgrade to Pro for unlimited saves."
+  },
+  "freeEnvLimit": {
+    "message": "Free includes 1 environment. Upgrade to Pro for more."
+  },
+  "freeEnvVarLimit": {
+    "message": "Free includes 10 environment variables. Upgrade to Pro for more."
   },
   "envHelp": {
     "message": "Create an environment, add variables (for example base_url), select it in the top bar, then write {{base_url}} in the URL, headers or body."

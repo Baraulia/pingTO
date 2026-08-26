@@ -1,8 +1,9 @@
-import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, responseJson } from './fixtures.js';
+import { test, expect, enablePro, importTestdCollection, openRequest, sendAndExpectStatus, responseJson } from './fixtures.js';
 
 test.describe('GraphQL against testd', () => {
   test.beforeEach(async ({ page }) => {
     await importTestdCollection(page);
+    await enablePro(page);
   });
 
   test('ping, user, users, introspection', async ({ page }) => {

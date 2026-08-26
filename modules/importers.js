@@ -199,3 +199,12 @@ export function detectAndImport(raw) {
   if (data.name && (data.items || data.requests)) return [data];
   throw new Error('Unknown collection format');
 }
+
+export function isNativePingto(raw) {
+  try {
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Boolean(data && data.format === 'pingto' && Array.isArray(data.collections));
+  } catch {
+    return false;
+  }
+}

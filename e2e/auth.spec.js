@@ -1,4 +1,4 @@
-import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, responseJson } from './fixtures.js';
+import { test, expect, enablePro, importTestdCollection, openRequest, sendAndExpectStatus, responseJson } from './fixtures.js';
 
 test.describe('Auth against testd', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,6 +16,7 @@ test.describe('Auth against testd', () => {
   });
 
   test('digest', async ({ page }) => {
+    await enablePro(page);
     await openRequest(page, 'testd-auth-digest');
     await page.locator('#reqSubtabs button[data-pane="auth"]').click();
     await expect(page.locator('#authType')).toHaveValue('digest');
@@ -35,6 +36,7 @@ test.describe('Auth against testd', () => {
   });
 
   test('oauth client credentials login then resource', async ({ page }) => {
+    await enablePro(page);
     await openRequest(page, 'testd-oauth-token');
     await sendAndExpectStatus(page, 200);
     const tok = await responseJson(page);

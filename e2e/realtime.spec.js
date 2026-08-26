@@ -1,8 +1,9 @@
-import { test, expect, importTestdCollection, openRequest } from './fixtures.js';
+import { test, expect, enablePro, importTestdCollection, openRequest } from './fixtures.js';
 
 test.describe('Realtime against testd', () => {
   test.beforeEach(async ({ page }) => {
     await importTestdCollection(page);
+    await enablePro(page);
   });
 
   test('websocket echo', async ({ page }) => {

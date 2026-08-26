@@ -30,7 +30,7 @@ import {
   prettyXml,
   queryJsonPath,
 } from './modules/json-tools.js';
-import { detectAndImport } from './modules/importers.js';
+import { detectAndImport, isNativePingto } from './modules/importers.js';
 import { downloadBruZipLike, sanitizeExport } from './modules/bruno-export.js';
 import { exchangeCode, launchAuthCode, refreshToken } from './modules/oauth.js';
 import { runPreRequest, runTests } from './modules/sandbox.js';
@@ -49,9 +49,12 @@ import {
   FREE_HISTORY_LIMIT,
   FREE_REQ_PANES,
   FREE_RESP_PANES,
-  FREE_TAB_LIMIT,
-  PRO_FEATURES,
+  canAddCollection,
+  canAddEnvVar,
+  canAddEnvironment,
+  canAddRequest,
   historyLimitFor,
+  PRO_FEATURES,
 } from './modules/entitlements.js';
 
 const storage = new StorageManager();
@@ -101,7 +104,7 @@ function showProModal(featureId) {
   const title = document.createElement('p');
   title.textContent = I18nManager.t('proFeatureListTitle');
   list.appendChild(title);
-  ['tabCollections', 'tabEnvironments', 'graphqlTab', 'websocketBtn', 'scriptsTab', 'generateCodeBtn', 'authOauth2'].forEach((key) => {
+  ['graphqlTab', 'websocketBtn', 'scriptsTab', 'generateCodeBtn', 'authOauth2', 'authDigest', 'runCollectionBtn'].forEach((key) => {
     const li = document.createElement('li');
     li.textContent = I18nManager.t(key);
     list.appendChild(li);
@@ -141,16 +144,11 @@ function applyProUi() {
   }
 
   if (!state.isPro) {
-    if (state.tabs.length > FREE_TAB_LIMIT) {
-      state.tabs = state.tabs.slice(0, FREE_TAB_LIMIT);
-      state.activeId = state.tabs[0].id;
-    }
     state.tabs.forEach((tab) => {
       if (!FREE_AUTH.has(tab.authType)) tab.authType = 'none';
       if (!FREE_BODY.has(tab.bodyType)) tab.bodyType = 'json';
       if (isSocketMethod(tab.method)) tab.method = 'GET';
     });
-    if ($('environmentSelect')) $('environmentSelect').value = '';
     const auth = $('authType');
     if (auth && !FREE_AUTH.has(auth.value)) {
       auth.value = 'none';
@@ -244,12 +242,19 @@ function collectionRequestPayload(tab) {
   };
 }
 
+function totalSavedRequests() {
+  return collectionsManager.collections.reduce((n, coll) => n + flattenRequests(coll.items).length, 0);
+}
+
 async function saveCurrentRequest() {
-  if (!requirePro('collections')) return;
   readFormIntoTab();
   const tab = current();
   if (!tab) return;
   if (!state.selectedCollectionId && !tab.collectionId) {
+    if (!canAddCollection(state.isPro, collectionsManager.collections.length)) {
+      UIHelpers.showToast(I18nManager.t('freeCollectionLimit'), 'error');
+      return;
+    }
     const name = prompt(I18nManager.t('newCollectionNamePlaceholder'), I18nManager.t('defaultCollectionName'));
     if (!name?.trim()) return;
     const created = await collectionsManager.create(name.trim());
@@ -263,6 +268,10 @@ async function saveCurrentRequest() {
     await collectionsManager.updateRequest(collectionId, tab.collectionItemId, collectionRequestPayload(tab));
     await collectionsManager.moveItem(collectionId, tab.collectionItemId, folderId);
   } else {
+    if (!canAddRequest(state.isPro, totalSavedRequests())) {
+      UIHelpers.showToast(I18nManager.t('freeRequestLimit'), 'error');
+      return;
+    }
     const saved = await collectionsManager.addRequest(
       collectionId,
       collectionRequestPayload({ ...tab, collectionItemId: newId() }),
@@ -434,7 +443,6 @@ function renderTabs() {
   const add = document.createElement('button');
   add.className = 'btn small';
   add.textContent = '+';
-  add.dataset.pro = 'extraTabs';
   add.onclick = () => openTab();
   box.appendChild(add);
 }
@@ -464,16 +472,6 @@ function openTab(partial) {
         writeTabToForm();
       }
       return existing;
-    }
-  }
-  if (!state.isPro) {
-    if (partial) {
-      replaceActiveTab(partial);
-      return;
-    }
-    if (state.tabs.length >= FREE_TAB_LIMIT) {
-      requirePro('extraTabs');
-      return;
     }
   }
   if (state.tabs.length) readFormIntoTab();
@@ -657,10 +655,6 @@ function openSocketWorkspace() {
 async function updateEnvHint() {
   const hint = $('urlHint');
   if (!hint) return;
-  if (!state.isPro) {
-    hint.textContent = I18nManager.t('urlPlaceholder');
-    return;
-  }
   const selected = $('environmentSelect')?.value;
   if (!selected) {
     hint.textContent = I18nManager.t('envHintSelect');
@@ -691,7 +685,6 @@ function updateCollectionTarget() {
 }
 
 async function envVars() {
-  if (!state.isPro) return {};
   const id = $('environmentSelect').value;
   if (!id) return {};
   const env = await environmentsManager.getById(id);
@@ -1083,7 +1076,6 @@ function makeDropTarget(el, collectionId, folderId) {
   el.addEventListener('drop', async (e) => {
     e.preventDefault();
     el.classList.remove('drag-over');
-    if (!requirePro('collections')) return;
     let payload;
     try {
       payload = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
@@ -1302,6 +1294,10 @@ function renderEnvEditor() {
     add.onclick = () => {
       Object.assign(env, collectEnvCard(card));
       env.variables = env.variables || {};
+      if (!canAddEnvVar(state.isPro, Object.keys(env.variables).length)) {
+        UIHelpers.showToast(I18nManager.t('freeEnvVarLimit'), 'error');
+        return;
+      }
       let n = 1;
       while (Object.prototype.hasOwnProperty.call(env.variables, `key${n}`)) n += 1;
       env.variables[`key${n}`] = '';
@@ -1320,7 +1316,6 @@ function paletteItems() {
     {
       label: I18nManager.t('cmdOpenEnv'),
       run: () => {
-        if (!requirePro('environments')) return;
         $('envModal').classList.remove('hidden');
       },
     },
@@ -1335,7 +1330,6 @@ function paletteItems() {
     commands.push({
       label: `${hit.request.method} ${hit.request.name || hit.request.url}`,
       run: () => {
-        if (!requirePro('collections')) return;
         openTab({ ...hit.request, collectionId: hit.collection.id, collectionItemId: hit.request.id });
       },
     });
@@ -1476,7 +1470,7 @@ async function init() {
   fillUrlHistory();
   await renderEnvs();
   const activeEnv = await storage.get('active_env_id', null);
-  if (activeEnv && state.isPro) $('environmentSelect').value = String(activeEnv);
+  if (activeEnv) $('environmentSelect').value = String(activeEnv);
   writeTabToForm();
   syncWorkspaceMode();
   await updateEnvHint();
@@ -1525,10 +1519,6 @@ $('bodyType').onchange = () => {
   toggleBodyJsonTools();
 };
 $('environmentSelect').onchange = async () => {
-  if ($('environmentSelect').value && !requirePro('environments')) {
-    $('environmentSelect').value = '';
-    return;
-  }
   await storage.set('active_env_id', $('environmentSelect').value || null);
   await updateEnvHint();
 };
@@ -1587,10 +1577,6 @@ $('binaryFile').onchange = async (e) => {
   UIHelpers.showToast(`Binary ${file.name}`, 'success');
 };
 $('multiFiles').onchange = async (e) => {
-  if (!requirePro('binary')) {
-    e.target.value = '';
-    return;
-  }
   current().files = [];
   for (const file of [...e.target.files]) {
     const encoded = await fileToBase64(file);
@@ -1676,7 +1662,10 @@ $('jsonPath').oninput = () => {
   }
 };
 $('newCollectionBtn').onclick = async () => {
-  if (!requirePro('collections')) return;
+  if (!canAddCollection(state.isPro, collectionsManager.collections.length)) {
+    UIHelpers.showToast(I18nManager.t('freeCollectionLimit'), 'error');
+    return;
+  }
   const name = prompt(I18nManager.t('newCollectionNamePlaceholder'), I18nManager.t('defaultCollectionName'));
   if (!name?.trim()) return;
   const created = await collectionsManager.create(name.trim());
@@ -1685,7 +1674,6 @@ $('newCollectionBtn').onclick = async () => {
   UIHelpers.showToast(I18nManager.t('collectionCreated'), 'success');
 };
 $('newFolderBtn').onclick = async () => {
-  if (!requirePro('collections')) return;
   if (!state.selectedCollectionId) return UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
   const name = prompt(I18nManager.t('newFolderBtn'), I18nManager.t('defaultFolderName'));
   if (name) {
@@ -1699,6 +1687,19 @@ $('importFile').onchange = async (e) => {
   if (!file) return;
   try {
     const text = await file.text();
+    if (!state.isPro && !isNativePingto(text)) {
+      try {
+        detectAndImport(text);
+      } catch (err) {
+        UIHelpers.showToast(err.message || I18nManager.t('importFailed'), 'error');
+        e.target.value = '';
+        return;
+      }
+      UIHelpers.showToast(I18nManager.t('importPingtoOnly'), 'error');
+      requirePro('importCollections');
+      e.target.value = '';
+      return;
+    }
     const imported = detectAndImport(text);
     const before = collectionsManager.collections.length;
     await collectionsManager.importMany(imported);
@@ -1712,7 +1713,6 @@ $('importFile').onchange = async (e) => {
   e.target.value = '';
 };
 $('exportCollectionBtn').onclick = async () => {
-  if (!requirePro('importCollections')) return;
   const selected = state.selectedCollectionId
     ? await collectionsManager.exportCollection(state.selectedCollectionId)
     : null;
@@ -1741,12 +1741,14 @@ $('exportBruBtn').onclick = async () => {
   downloadBruZipLike(sanitizeExport(coll));
 };
 $('editEnvBtn').onclick = () => {
-  if (!requirePro('environments')) return;
   renderEnvEditor();
   $('envModal').classList.remove('hidden');
 };
 $('createEnvBtn').onclick = async () => {
-  if (!requirePro('environments')) return;
+  if (!canAddEnvironment(state.isPro, environmentsManager.environments.length)) {
+    UIHelpers.showToast(I18nManager.t('freeEnvLimit'), 'error');
+    return;
+  }
   const name = $('newEnvName').value.trim();
   if (!name) {
     UIHelpers.showToast(I18nManager.t('envNeedName'), 'error');
@@ -1827,12 +1829,6 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopImmediatePropagation();
   requirePro(el.dataset.pro);
-}, true);
-$('collectionTree').addEventListener('click', (e) => {
-  if (state.isPro) return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  requirePro('collections');
 }, true);
 $('paletteBtn').onclick = () => {
   $('palette').classList.remove('hidden');

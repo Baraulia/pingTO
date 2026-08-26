@@ -73,7 +73,6 @@ export async function disablePro(page) {
 }
 
 export async function importTestdCollection(page) {
-  await enablePro(page);
   await page.locator('#importFile').setInputFiles(collectionPath);
   await expect(page.locator('[data-testid="tree-collection"]')).toContainText('PingTo testd');
   await expect(page.locator('[data-testid="tree-request"][data-request-id="testd-health"]')).toBeVisible();

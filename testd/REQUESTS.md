@@ -10,11 +10,11 @@
 
 Автотесты (unit + testd + e2e расширения): из корня репозитория `npm test` (см. README). Testd отдельно: `go test -C testd .`.
 
-1. Включите **Pro** (тумблер).
-2. Collections → **Import** → выберите этот JSON.
-3. `go run .` в `testd`, затем открывайте запросы и Send.
-4. Папка **Env {{base_url}}**: Environment `testd` с `base_url=http://127.0.0.1:8787` и `ws_url=ws://127.0.0.1:8787`.
-5. Binary: после импорта выберите файл вручную. Multipart: можно добавить файлы в UI.
+1. Collections → **Import** → выберите этот JSON (PingTo JSON доступен в Free).
+2. `go run .` в `testd`, затем открывайте запросы и Send.
+3. Папка **Env {{base_url}}**: Environment `testd` с `base_url=http://127.0.0.1:8787` и `ws_url=ws://127.0.0.1:8787` (Free: 1 окружение, 10 переменных).
+4. GraphQL, WebSocket, Digest, OAuth, binary body — включите **Pro**.
+5. Binary: после импорта выберите файл вручную. Multipart доступен в Free.
 
 ## Общее для всех HTTP-запросов
 

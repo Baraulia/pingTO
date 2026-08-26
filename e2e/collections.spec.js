@@ -1,8 +1,7 @@
-import { test, expect, enablePro, importTestdCollection, openRequest, sendAndExpectStatus, testdUrl } from './fixtures.js';
+import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, testdUrl } from './fixtures.js';
 
 test.describe('Collections and environments', () => {
   test('create collection, save request, reopen', async ({ page }) => {
-    await enablePro(page);
     page.once('dialog', (dialog) => dialog.accept('Manual save'));
     await page.locator('#newCollectionBtn').click();
     await expect(page.locator('[data-testid="tree-collection"]')).toContainText('Manual save');

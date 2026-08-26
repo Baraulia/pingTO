@@ -5,7 +5,7 @@
     {
       "id": "pingto-testd",
       "name": "PingTo testd",
-      "description": "Все маршруты локального testd (go run . в testd/). База http://127.0.0.1:8787. Импорт: Pro → Collections → Import. Для папки Env создайте Environment testd: base_url=http://127.0.0.1:8787, ws_url=ws://127.0.0.1:8787 и выберите его. Учётки: pingto/pingto, Bearer pingto-token, X-API-Key pingto-key, OAuth pingto / pingto-secret.",
+      "description": "Все маршруты локального testd (go run . в testd/). База http://127.0.0.1:8787. Импорт: Collections → Import (PingTo JSON доступен в Free). Для папки Env создайте Environment testd: base_url=http://127.0.0.1:8787, ws_url=ws://127.0.0.1:8787 и выберите его. Учётки: pingto/pingto, Bearer pingto-token, X-API-Key pingto-key, OAuth pingto / pingto-secret.",
       "created": "2026-08-21T00:00:00.000Z",
       "items": [
         {

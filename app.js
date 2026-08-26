@@ -81,6 +81,13 @@ const state = {
 
 const socketSession = { ws: null, sse: null, reconnectTimer: null, manualClose: false };
 
+const ENV_SELECT_NEW = '__env_new__';
+const ENV_SELECT_MANAGE = '__env_manage__';
+
+function isEnvSelectAction(value) {
+  return value === ENV_SELECT_NEW || value === ENV_SELECT_MANAGE;
+}
+
 function activateCollection(id, folderId = null, expand = true) {
   state.selectedCollectionId = id;
   state.selectedFolderId = folderId;
@@ -96,17 +103,46 @@ function featureName(id) {
   return key ? I18nManager.t(key) : id;
 }
 
+const PRO_MODAL_ITEMS = [
+  { id: 'historyCap', titleKey: 'proItemHistoryTitle', descKey: 'proItemHistoryDesc' },
+  { id: 'collections', titleKey: 'proItemCollectionsTitle', descKey: 'proItemCollectionsDesc' },
+  { id: 'importCollections', titleKey: 'proItemImportTitle', descKey: 'proItemImportDesc' },
+  { id: 'bruno', titleKey: 'proItemBrunoTitle', descKey: 'proItemBrunoDesc' },
+  { id: 'collectionRun', titleKey: 'proItemRunTitle', descKey: 'proItemRunDesc' },
+  { id: 'graphql', titleKey: 'proItemGraphqlTitle', descKey: 'proItemGraphqlDesc' },
+  { id: 'websocket', titleKey: 'proItemWebsocketTitle', descKey: 'proItemWebsocketDesc' },
+  { id: 'digest', titleKey: 'proItemDigestTitle', descKey: 'proItemDigestDesc' },
+  { id: 'oauth', titleKey: 'proItemOauthTitle', descKey: 'proItemOauthDesc' },
+  { id: 'binary', titleKey: 'proItemBinaryTitle', descKey: 'proItemBinaryDesc' },
+  { id: 'scripts', titleKey: 'proItemScriptsTitle', descKey: 'proItemScriptsDesc' },
+  { id: 'testsResp', titleKey: 'proItemTestsTitle', descKey: 'proItemTestsDesc' },
+  { id: 'codegen', titleKey: 'proItemCodegenTitle', descKey: 'proItemCodegenDesc' },
+];
+
+const PRO_MODAL_HIGHLIGHT = {
+  snapshots: 'testsResp',
+  diff: 'testsResp',
+};
+
+let lastProFeatureId = null;
+
 function showProModal(featureId) {
+  lastProFeatureId = featureId;
   const name = featureName(featureId);
-  $('proModalText').textContent = I18nManager.t('proModalText').replace('{name}', name);
+  const specific = I18nManager.t(`proDesc_${featureId}`, '');
+  $('proModalText').textContent = specific || I18nManager.t('proModalText').replace('{name}', name);
   const list = $('proModalList');
   list.replaceChildren();
-  const title = document.createElement('p');
-  title.textContent = I18nManager.t('proFeatureListTitle');
-  list.appendChild(title);
-  ['graphqlTab', 'websocketBtn', 'scriptsTab', 'generateCodeBtn', 'authOauth2', 'authDigest', 'runCollectionBtn'].forEach((key) => {
+  const highlight = PRO_MODAL_HIGHLIGHT[featureId] || featureId;
+  PRO_MODAL_ITEMS.forEach((item) => {
     const li = document.createElement('li');
-    li.textContent = I18nManager.t(key);
+    if (item.id === highlight) li.className = 'current';
+    const title = document.createElement('strong');
+    title.textContent = I18nManager.t(item.titleKey);
+    const desc = document.createElement('span');
+    desc.className = 'pro-item-desc';
+    desc.textContent = I18nManager.t(item.descKey);
+    li.append(title, desc);
     list.appendChild(li);
   });
   $('proModal').classList.remove('hidden');
@@ -1175,20 +1211,48 @@ function fillUrlHistory() {
 
 async function renderEnvs() {
   const select = $('environmentSelect');
-  const selected = select.value;
+  const selected = isEnvSelectAction(select.value) ? '' : select.value;
   select.replaceChildren();
   const empty = document.createElement('option');
   empty.value = '';
   empty.textContent = I18nManager.t('noEnvironment');
   select.appendChild(empty);
-  (await environmentsManager.getAll()).forEach((env) => {
+  const list = await environmentsManager.getAll();
+  list.forEach((env) => {
     const o = document.createElement('option');
     o.value = env.id;
     o.textContent = env.name;
     select.appendChild(o);
   });
-  if (selected) select.value = selected;
+  const split = document.createElement('option');
+  split.disabled = true;
+  split.textContent = '────────';
+  select.appendChild(split);
+  const add = document.createElement('option');
+  add.value = ENV_SELECT_NEW;
+  add.textContent = I18nManager.t('envSelectNew');
+  select.appendChild(add);
+  if (list.length) {
+    const manage = document.createElement('option');
+    manage.value = ENV_SELECT_MANAGE;
+    manage.textContent = I18nManager.t('envSelectManage');
+    select.appendChild(manage);
+  }
+  if (selected && list.some((env) => String(env.id) === String(selected))) {
+    select.value = selected;
+    select.dataset.activeEnv = selected;
+  } else {
+    select.dataset.activeEnv = '';
+  }
   await updateEnvHint();
+}
+
+function openEnvEditor({ focusCreate = false } = {}) {
+  renderEnvEditor();
+  $('envModal').classList.remove('hidden');
+  if (focusCreate) {
+    requestAnimationFrame(() => $('newEnvName')?.focus());
+  }
 }
 
 function collectEnvCard(card) {
@@ -1227,6 +1291,7 @@ function renderEnvEditor() {
       await environmentsManager.delete(env.id);
       if ($('environmentSelect').value === String(env.id)) {
         $('environmentSelect').value = '';
+        $('environmentSelect').dataset.activeEnv = '';
         await storage.set('active_env_id', null);
       }
       await renderEnvs();
@@ -1315,9 +1380,7 @@ function paletteItems() {
     { label: I18nManager.t('cmdFormatJson'), run: () => { if (isJsonBodyType()) formatBody(); } },
     {
       label: I18nManager.t('cmdOpenEnv'),
-      run: () => {
-        $('envModal').classList.remove('hidden');
-      },
+      run: () => openEnvEditor(),
     },
     { label: I18nManager.t('cmdOpenHistory'), run: () => { renderHistory(); $('historyModal').classList.remove('hidden'); } },
     { label: I18nManager.t('cmdOpenSettings'), run: () => $('settingsModal').classList.remove('hidden') },
@@ -1470,7 +1533,10 @@ async function init() {
   fillUrlHistory();
   await renderEnvs();
   const activeEnv = await storage.get('active_env_id', null);
-  if (activeEnv) $('environmentSelect').value = String(activeEnv);
+  if (activeEnv) {
+    $('environmentSelect').value = String(activeEnv);
+    $('environmentSelect').dataset.activeEnv = String(activeEnv);
+  }
   writeTabToForm();
   syncWorkspaceMode();
   await updateEnvHint();
@@ -1519,7 +1585,20 @@ $('bodyType').onchange = () => {
   toggleBodyJsonTools();
 };
 $('environmentSelect').onchange = async () => {
-  await storage.set('active_env_id', $('environmentSelect').value || null);
+  const select = $('environmentSelect');
+  const value = select.value;
+  if (value === ENV_SELECT_NEW) {
+    select.value = select.dataset.activeEnv || '';
+    openEnvEditor({ focusCreate: true });
+    return;
+  }
+  if (value === ENV_SELECT_MANAGE) {
+    select.value = select.dataset.activeEnv || '';
+    openEnvEditor();
+    return;
+  }
+  select.dataset.activeEnv = value;
+  await storage.set('active_env_id', value || null);
   await updateEnvHint();
 };
 $('methodSelect').onchange = () => {
@@ -1740,10 +1819,6 @@ $('exportBruBtn').onclick = async () => {
   if (!coll) return UIHelpers.showToast('Select a collection', 'error');
   downloadBruZipLike(sanitizeExport(coll));
 };
-$('editEnvBtn').onclick = () => {
-  renderEnvEditor();
-  $('envModal').classList.remove('hidden');
-};
 $('createEnvBtn').onclick = async () => {
   if (!canAddEnvironment(state.isPro, environmentsManager.environments.length)) {
     UIHelpers.showToast(I18nManager.t('freeEnvLimit'), 'error');
@@ -1758,6 +1833,7 @@ $('createEnvBtn').onclick = async () => {
   $('newEnvName').value = '';
   await renderEnvs();
   $('environmentSelect').value = String(env.id);
+  $('environmentSelect').dataset.activeEnv = String(env.id);
   await storage.set('active_env_id', env.id);
   renderEnvEditor();
   await updateEnvHint();
@@ -1802,6 +1878,7 @@ document.addEventListener('languageChanged', async () => {
   await renderEnvs();
   renderHistory();
   renderCollections();
+  if (lastProFeatureId && !$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
 });
 $('openTabBtn').onclick = () => chrome.runtime.sendMessage({ type: 'openFullscreen' });
 $('sidebarToggle').onclick = () => document.body.classList.toggle('sidebar-collapsed');

@@ -37,7 +37,6 @@
         <span class="with-pro">
           <select id="environmentSelect"></select>
         </span>
-        <button id="editEnvBtn" class="btn" data-i18n="editEnvBtn">+ Environment</button>
         <button id="paletteBtn" class="btn grow" data-i18n="paletteBtn" data-i18n-title="paletteBtn">Search or jump — Ctrl+K</button>
         <button id="historyBtn" class="btn" data-i18n="tabHistory">History</button>
         <button id="themeToggle" class="icon-btn" title="Light">☀️</button>
@@ -311,9 +310,11 @@
   </div>
 
   <div id="proModal" class="modal hidden">
-    <div class="modal-card">
+    <div class="modal-card wide">
       <h3 data-i18n="proModalTitle">Pro feature</h3>
-      <p id="proModalText" class="hint"></p>
+      <p id="proModalText"></p>
+      <p id="proModalFreeNote" class="hint" data-i18n="proModalFreeNote">Free already includes unlimited tabs, HTTP, Bearer/Basic/API Key, multipart, cookies, JSONPath, 2 collections / 25 requests, 1 environment, and PingTo JSON import/export.</p>
+      <p id="proFeatureListTitle" class="pro-list-heading" data-i18n="proFeatureListTitle">Included in Pro:</p>
       <ul id="proModalList" class="pro-list"></ul>
       <p class="hint" data-i18n="proModalHint">Turn on the Pro toggle in the sidebar to unlock. Later this will be a paid plan.</p>
       <div class="row">

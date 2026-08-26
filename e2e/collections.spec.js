@@ -20,7 +20,7 @@ test.describe('Collections and environments', () => {
 
   test('environment substitutes base_url', async ({ page }) => {
     await importTestdCollection(page);
-    await page.locator('#editEnvBtn').click();
+    await page.locator('#environmentSelect').selectOption('__env_new__');
     await page.locator('#newEnvName').fill('testd');
     await page.locator('#createEnvBtn').click();
     const card = page.locator('.env-card').filter({ hasText: 'testd' });

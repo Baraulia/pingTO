@@ -275,6 +275,12 @@
   "editEnvBtn": {
     "message": "+ Environment"
   },
+  "envSelectNew": {
+    "message": "+ New environment"
+  },
+  "envSelectManage": {
+    "message": "Manage environments…"
+  },
   "paletteBtn": {
     "message": "Search or jump — Ctrl+K"
   },
@@ -485,6 +491,9 @@
   "proModalText": {
     "message": "“{name}” is available on the Pro plan."
   },
+  "proModalFreeNote": {
+    "message": "Free already includes unlimited tabs, HTTP methods, Bearer / Basic / API Key, JSON / form / multipart / text bodies, cookies, docs, JSONPath, 2 collections (25 saved requests), 1 environment (10 variables), history up to 50, cURL, and PingTo JSON import/export."
+  },
   "proModalHint": {
     "message": "Turn on the Pro toggle in the sidebar to unlock. Later this will be a paid plan."
   },
@@ -495,7 +504,127 @@
     "message": "History over 50 items is a Pro feature."
   },
   "proFeatureListTitle": {
-    "message": "Included in Pro:"
+    "message": "What Pro adds"
+  },
+  "proDesc_graphql": {
+    "message": "GraphQL is a query language for APIs: you ask for exact fields instead of a fixed REST response. Pro adds a query editor, variables, schema introspection, and a GraphQL body type so you don’t have to paste JSON by hand."
+  },
+  "proDesc_websocket": {
+    "message": "WebSocket is a two-way live connection (you send and receive). SSE (Server-Sent Events) is a one-way HTTP stream from the server. Pro lets you connect, watch messages arrive, and send frames on WebSocket."
+  },
+  "proDesc_digest": {
+    "message": "HTTP Digest Auth proves the password with a hash instead of sending it in the clear (unlike Basic). Used by some cameras, routers, and older APIs. Free already covers Bearer, Basic, and API Key."
+  },
+  "proDesc_oauth": {
+    "message": "OAuth 2.0 obtains an access token (client credentials or authorization code) and attaches it to requests. Needed for many APIs that don’t accept a static token."
+  },
+  "proDesc_binary": {
+    "message": "Binary body sends a raw file as the request payload (images, protobuf, zip). Multipart form uploads with files are already in Free."
+  },
+  "proDesc_scripts": {
+    "message": "Pre-request scripts run JavaScript before Send — set headers, timestamps, signatures, or derived variables."
+  },
+  "proDesc_testsResp": {
+    "message": "Response tests run assertions after Send (status, JSON fields, timing) and show pass/fail in the Tests pane."
+  },
+  "proDesc_snapshots": {
+    "message": "Snapshot stores the current response so you can compare later changes."
+  },
+  "proDesc_diff": {
+    "message": "Diff compares the latest response with a saved snapshot and highlights what changed."
+  },
+  "proDesc_codegen": {
+    "message": "Code generation turns the current request into copy-paste snippets (JavaScript, Python, PHP, Go)."
+  },
+  "proDesc_collectionRun": {
+    "message": "Run collection sends every saved request in the selected collection in order, with optional stop-on-fail."
+  },
+  "proDesc_bruno": {
+    "message": "Bruno export writes the collection as .bru files for the Bruno client / git workflows."
+  },
+  "proDesc_importCollections": {
+    "message": "Free imports PingTo JSON only. Pro also imports Postman Collection v2, Insomnia, OpenAPI/Swagger, and Bruno."
+  },
+  "proDesc_historyCap": {
+    "message": "Free keeps the last 50 history items. Pro raises the cap to 2000."
+  },
+  "proItemHistoryTitle": {
+    "message": "History up to 2000"
+  },
+  "proItemHistoryDesc": {
+    "message": "Keep far more past requests with search and restore. Free stops at 50."
+  },
+  "proItemCollectionsTitle": {
+    "message": "Unlimited collections and environments"
+  },
+  "proItemCollectionsDesc": {
+    "message": "No 2-collection / 25-request / 1-environment / 10-variable caps."
+  },
+  "proItemImportTitle": {
+    "message": "Import Postman, Insomnia, OpenAPI, Bruno"
+  },
+  "proItemImportDesc": {
+    "message": "Bring existing collections from other clients. PingTo JSON import stays free."
+  },
+  "proItemBrunoTitle": {
+    "message": "Export Bruno (.bru)"
+  },
+  "proItemBrunoDesc": {
+    "message": "Share collections as Bruno files. PingTo JSON export stays free."
+  },
+  "proItemRunTitle": {
+    "message": "Run collection"
+  },
+  "proItemRunDesc": {
+    "message": "Execute every request in a collection sequentially and see which ones fail."
+  },
+  "proItemGraphqlTitle": {
+    "message": "GraphQL"
+  },
+  "proItemGraphqlDesc": {
+    "message": "Query editor, variables, introspection, and GraphQL JSON body type."
+  },
+  "proItemWebsocketTitle": {
+    "message": "WebSocket and SSE"
+  },
+  "proItemWebsocketDesc": {
+    "message": "Live two-way sockets (WS) and one-way server streams (SSE)."
+  },
+  "proItemDigestTitle": {
+    "message": "Digest Auth"
+  },
+  "proItemDigestDesc": {
+    "message": "Challenge-response login for APIs that reject Basic or Bearer."
+  },
+  "proItemOauthTitle": {
+    "message": "OAuth 2.0"
+  },
+  "proItemOauthDesc": {
+    "message": "Fetch and attach access tokens (client credentials and authorization code)."
+  },
+  "proItemBinaryTitle": {
+    "message": "Binary request body"
+  },
+  "proItemBinaryDesc": {
+    "message": "Send a raw file as the body. Multipart file fields are already in Free."
+  },
+  "proItemScriptsTitle": {
+    "message": "Pre-request scripts"
+  },
+  "proItemScriptsDesc": {
+    "message": "Run JavaScript before each send to compute headers, signatures, or variables."
+  },
+  "proItemTestsTitle": {
+    "message": "Tests, snapshots, and diff"
+  },
+  "proItemTestsDesc": {
+    "message": "Assert on the response, freeze a snapshot, and diff later replies against it."
+  },
+  "proItemCodegenTitle": {
+    "message": "Code generation"
+  },
+  "proItemCodegenDesc": {
+    "message": "Copy the request as JavaScript, Python, PHP, or Go."
   },
   "collectionHelp": {
     "message": "Create a collection, click its name to select it, then Save request. Click a request to open it. Double-click a collection to rename or delete."

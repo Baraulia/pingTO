@@ -275,6 +275,12 @@
   "editEnvBtn": {
     "message": "+ Окружение"
   },
+  "envSelectNew": {
+    "message": "+ Новое окружение"
+  },
+  "envSelectManage": {
+    "message": "Управлять окружениями…"
+  },
   "paletteBtn": {
     "message": "Поиск и команды — Ctrl+K"
   },
@@ -485,6 +491,9 @@
   "proModalText": {
     "message": "«{name}» доступна только в тарифе Pro."
   },
+  "proModalFreeNote": {
+    "message": "В Free уже есть безлимит вкладок, HTTP-методы, Bearer / Basic / API Key, тела JSON / form / multipart / text, cookies, docs, JSONPath, 2 коллекции (25 запросов), 1 окружение (10 переменных), история до 50, cURL и импорт/экспорт PingTo JSON."
+  },
   "proModalHint": {
     "message": "Чтобы открыть, включите тумблер Pro в сайдбаре. Позже здесь будет оплата."
   },
@@ -495,7 +504,127 @@
     "message": "История больше 50 записей — это функция Pro."
   },
   "proFeatureListTitle": {
-    "message": "Входит в Pro:"
+    "message": "Что даёт Pro"
+  },
+  "proDesc_graphql": {
+    "message": "GraphQL — язык запросов к API: вы просите нужные поля, а не фиксированный REST-ответ. В Pro есть редактор запроса, переменные, интроспекция схемы и отдельный тип тела GraphQL, без ручной сборки JSON."
+  },
+  "proDesc_websocket": {
+    "message": "WebSocket — двустороннее живое соединение (можно и слать, и получать). SSE (Server-Sent Events) — односторонний HTTP-поток с сервера. Pro позволяет подключиться, смотреть события и отправлять кадры по WebSocket."
+  },
+  "proDesc_digest": {
+    "message": "HTTP Digest Auth подтверждает пароль хешем, а не шлёт его открытым текстом (в отличие от Basic). Встречается у камер, роутеров и старых API. В Free уже есть Bearer, Basic и API Key."
+  },
+  "proDesc_oauth": {
+    "message": "OAuth 2.0 получает access token (client credentials или authorization code) и подставляет его в запросы. Нужен API, которые не принимают статичный токен."
+  },
+  "proDesc_binary": {
+    "message": "Бинарное тело отправляет сырой файл как payload (картинки, protobuf, zip). Multipart с файлами уже есть в Free."
+  },
+  "proDesc_scripts": {
+    "message": "Pre-request скрипты выполняют JavaScript до Send — заголовки, метки времени, подписи, вычисляемые переменные."
+  },
+  "proDesc_testsResp": {
+    "message": "Тесты ответа проверяют статус, JSON-поля и время после Send и показывают pass/fail на вкладке Tests."
+  },
+  "proDesc_snapshots": {
+    "message": "Snapshot сохраняет текущий ответ, чтобы потом сравнить с новым."
+  },
+  "proDesc_diff": {
+    "message": "Diff сравнивает последний ответ с сохранённым snapshot и подсвечивает изменения."
+  },
+  "proDesc_codegen": {
+    "message": "Генерация кода превращает текущий запрос в сниппеты JavaScript, Python, PHP или Go."
+  },
+  "proDesc_collectionRun": {
+    "message": "Run collection последовательно отправляет все сохранённые запросы выбранной коллекции, с опцией остановки на ошибке."
+  },
+  "proDesc_bruno": {
+    "message": "Экспорт Bruno пишет коллекцию в файлы .bru для клиента Bruno и git-воркфлоу."
+  },
+  "proDesc_importCollections": {
+    "message": "В Free импортируется только PingTo JSON. Pro также понимает Postman Collection v2, Insomnia, OpenAPI/Swagger и Bruno."
+  },
+  "proDesc_historyCap": {
+    "message": "Free хранит последние 50 записей истории. Pro поднимает лимит до 2000."
+  },
+  "proItemHistoryTitle": {
+    "message": "История до 2000"
+  },
+  "proItemHistoryDesc": {
+    "message": "Гораздо больше прошлых запросов с поиском и восстановлением. Free — 50."
+  },
+  "proItemCollectionsTitle": {
+    "message": "Безлимит коллекций и окружений"
+  },
+  "proItemCollectionsDesc": {
+    "message": "Снимаются лимиты 2 коллекции / 25 запросов / 1 окружение / 10 переменных."
+  },
+  "proItemImportTitle": {
+    "message": "Импорт Postman, Insomnia, OpenAPI, Bruno"
+  },
+  "proItemImportDesc": {
+    "message": "Перенос коллекций из других клиентов. Импорт PingTo JSON остаётся бесплатным."
+  },
+  "proItemBrunoTitle": {
+    "message": "Экспорт Bruno (.bru)"
+  },
+  "proItemBrunoDesc": {
+    "message": "Отдача коллекций файлами Bruno. Экспорт PingTo JSON остаётся бесплатным."
+  },
+  "proItemRunTitle": {
+    "message": "Run collection"
+  },
+  "proItemRunDesc": {
+    "message": "Прогон всех запросов коллекции по очереди и отчёт, какие упали."
+  },
+  "proItemGraphqlTitle": {
+    "message": "GraphQL"
+  },
+  "proItemGraphqlDesc": {
+    "message": "Редактор запроса, переменные, интроспекция и тип тела GraphQL JSON."
+  },
+  "proItemWebsocketTitle": {
+    "message": "WebSocket и SSE"
+  },
+  "proItemWebsocketDesc": {
+    "message": "Живые двусторонние сокеты (WS) и односторонние потоки с сервера (SSE)."
+  },
+  "proItemDigestTitle": {
+    "message": "Digest Auth"
+  },
+  "proItemDigestDesc": {
+    "message": "Challenge-response логин для API, которые не принимают Basic или Bearer."
+  },
+  "proItemOauthTitle": {
+    "message": "OAuth 2.0"
+  },
+  "proItemOauthDesc": {
+    "message": "Получение и подстановка access token (client credentials и authorization code)."
+  },
+  "proItemBinaryTitle": {
+    "message": "Бинарное тело запроса"
+  },
+  "proItemBinaryDesc": {
+    "message": "Отправка сырого файла как body. Multipart с файлами уже в Free."
+  },
+  "proItemScriptsTitle": {
+    "message": "Pre-request скрипты"
+  },
+  "proItemScriptsDesc": {
+    "message": "JavaScript перед отправкой: заголовки, подписи, переменные."
+  },
+  "proItemTestsTitle": {
+    "message": "Тесты, snapshot и diff"
+  },
+  "proItemTestsDesc": {
+    "message": "Проверки ответа, снимок и сравнение следующих ответов с ним."
+  },
+  "proItemCodegenTitle": {
+    "message": "Генерация кода"
+  },
+  "proItemCodegenDesc": {
+    "message": "Копия запроса в JavaScript, Python, PHP или Go."
   },
   "collectionHelp": {
     "message": "Создайте коллекцию, кликните по имени чтобы выбрать, затем «Сохранить запрос». Клик по запросу открывает его. Двойной клик по коллекции — переименовать или удалить."

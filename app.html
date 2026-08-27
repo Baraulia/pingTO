@@ -20,6 +20,7 @@
       <div class="side-section-title" data-i18n="tabCollections">Collections</div>
       <p id="collectionHelp" class="empty-hint" data-i18n="collectionHelp">Create a collection, click it to select, then save the current request. Click a request in the tree to open it.</p>
       <p id="collectionTarget" class="hint"></p>
+      <p id="freeQuotaHint" class="hint quota-hint" hidden></p>
       <div id="collectionTree" class="tree"></div>
       <div class="side-actions">
         <button id="newCollectionBtn" class="btn" data-i18n="newCollectionBtn">+ Collection</button>
@@ -145,39 +146,86 @@
           </div>
 
           <div id="pane-auth" class="subpane">
-            <select id="authType">
-              <option value="none" data-i18n="authNone">No auth</option>
-              <option value="bearer" data-i18n="authBearer">Bearer</option>
-              <option value="basic" data-i18n="authBasic">Basic</option>
-              <option value="digest" data-pro="digest" data-i18n="authDigest">Digest</option>
-              <option value="apikey" data-i18n="authApiKey">API Key</option>
-              <option value="oauth2" data-pro="oauth" data-i18n="authOauth2">OAuth 2.0</option>
-            </select>
-            <input id="authToken" data-i18n-placeholder="tokenPlaceholder" placeholder="Bearer token" class="hidden">
-            <div id="basicAuthFields" class="hidden">
-              <input id="basicUser" data-i18n-placeholder="usernamePlaceholder" placeholder="Username">
-              <input id="basicPass" type="password" data-i18n-placeholder="passwordPlaceholder" placeholder="Password">
-            </div>
-            <div id="apiKeyFields" class="hidden">
-              <input id="apiKeyName" data-i18n-placeholder="apiKeyNamePlaceholder" placeholder="Header or query name" value="X-API-Key">
-              <input id="apiKeyValue" data-i18n-placeholder="apiKeyValuePlaceholder" placeholder="Key value">
-              <select id="apiKeyIn">
-                <option value="header" data-i18n="apiKeyInHeader">Header</option>
-                <option value="query" data-i18n="apiKeyInQuery">Query</option>
+            <p id="authHelp" class="hint" data-i18n="authHelp">Choose how this request proves who you are. Only one type is sent with Send.</p>
+            <label class="field">
+              <span data-i18n="authTypeLabel">Auth type</span>
+              <select id="authType">
+                <option value="none" data-i18n="authNone">No auth</option>
+                <option value="bearer" data-i18n="authBearer">Bearer token</option>
+                <option value="basic" data-i18n="authBasic">Basic (user + password)</option>
+                <option value="apikey" data-i18n="authApiKey">API Key</option>
+                <option value="digest" data-pro="digest" data-i18n="authDigest">Digest</option>
+                <option value="oauth2" data-pro="oauth" data-i18n="authOauth2">OAuth 2.0</option>
               </select>
+            </label>
+            <p id="authHint" class="hint"></p>
+            <div id="authBearerFields" class="auth-fields hidden">
+              <label class="field">
+                <span data-i18n="tokenPlaceholder">Bearer token</span>
+                <input id="authToken" data-i18n-placeholder="tokenPlaceholder" placeholder="eyJhbGciOi…" autocomplete="off">
+              </label>
             </div>
-            <div id="oauth2Fields" class="hidden">
-              <select id="oauthGrant">
-                <option value="client_credentials" data-i18n="oauthClientCredentials">Client credentials</option>
-                <option value="authorization_code" data-i18n="oauthAuthCode">Authorization code + PKCE</option>
-              </select>
-              <input id="oauthAuthUrl" placeholder="Authorization URL">
-              <input id="oauthTokenUrl" placeholder="Token URL">
-              <input id="oauthClientId" placeholder="Client ID">
-              <input id="oauthClientSecret" type="password" placeholder="Client secret">
-              <input id="oauthScope" placeholder="Scope">
+            <div id="basicAuthFields" class="auth-fields hidden">
+              <p id="digestHint" class="hint hidden" data-i18n="authHint_digest"></p>
+              <label class="field">
+                <span data-i18n="usernamePlaceholder">Username</span>
+                <input id="basicUser" data-i18n-placeholder="usernamePlaceholder" placeholder="Username" autocomplete="off">
+              </label>
+              <label class="field">
+                <span data-i18n="passwordPlaceholder">Password</span>
+                <input id="basicPass" type="password" data-i18n-placeholder="passwordPlaceholder" placeholder="Password">
+              </label>
+            </div>
+            <div id="apiKeyFields" class="auth-fields hidden">
+              <label class="field">
+                <span data-i18n="apiKeyNamePlaceholder">Header or query name</span>
+                <input id="apiKeyName" data-i18n-placeholder="apiKeyNamePlaceholder" placeholder="X-API-Key" value="X-API-Key">
+              </label>
+              <label class="field">
+                <span data-i18n="apiKeyValuePlaceholder">Key value</span>
+                <input id="apiKeyValue" data-i18n-placeholder="apiKeyValuePlaceholder" placeholder="Key value" autocomplete="off">
+              </label>
+              <label class="field">
+                <span data-i18n="apiKeyInLabel">Send as</span>
+                <select id="apiKeyIn">
+                  <option value="header" data-i18n="apiKeyInHeader">HTTP header</option>
+                  <option value="query" data-i18n="apiKeyInQuery">Query parameter</option>
+                </select>
+              </label>
+            </div>
+            <div id="oauth2Fields" class="auth-fields hidden">
+              <label class="field">
+                <span data-i18n="oauthGrantLabel">Grant type</span>
+                <select id="oauthGrant">
+                  <option value="client_credentials" data-i18n="oauthClientCredentials">Client credentials (server-to-server)</option>
+                  <option value="authorization_code" data-i18n="oauthAuthCode">Authorization code + PKCE (browser login)</option>
+                </select>
+              </label>
+              <label class="field">
+                <span data-i18n="oauthAuthUrlLabel">Authorization URL</span>
+                <input id="oauthAuthUrl" data-i18n-placeholder="oauthAuthUrlLabel" placeholder="https://example.com/oauth/authorize">
+              </label>
+              <label class="field">
+                <span data-i18n="oauthTokenUrlLabel">Token URL</span>
+                <input id="oauthTokenUrl" data-i18n-placeholder="oauthTokenUrlLabel" placeholder="https://example.com/oauth/token">
+              </label>
+              <label class="field">
+                <span data-i18n="oauthClientIdLabel">Client ID</span>
+                <input id="oauthClientId" placeholder="client id" autocomplete="off">
+              </label>
+              <label class="field">
+                <span data-i18n="oauthClientSecretLabel">Client secret</span>
+                <input id="oauthClientSecret" type="password" placeholder="client secret">
+              </label>
+              <label class="field">
+                <span data-i18n="oauthScopeLabel">Scope</span>
+                <input id="oauthScope" placeholder="read write">
+              </label>
               <button id="oauthLoginBtn" class="btn small" data-i18n="oauthLoginBtn">Login / Get token</button>
-              <input id="oauthRefresh" placeholder="Refresh token">
+              <label class="field">
+                <span data-i18n="oauthRefreshLabel">Refresh token</span>
+                <input id="oauthRefresh" placeholder="optional">
+              </label>
             </div>
           </div>
 
@@ -200,30 +248,37 @@
           </div>
 
           <div id="pane-cookies" class="subpane">
+            <p class="hint" data-i18n="cookiesHelp">Cookies belong to the request URL’s site (Chrome cookie store), not to PingTo storage. Load lists cookies Chrome already has for this URL. Set writes a cookie for that URL so the next Send can include it.</p>
             <button id="loadCookiesBtn" class="btn small" data-i18n="loadCookiesBtn">Load cookies for URL</button>
-            <div id="cookieList"></div>
+            <pre id="cookieList" class="body"></pre>
             <div class="row">
-              <input id="cookieName" placeholder="Name">
-              <input id="cookieValue" placeholder="Value">
+              <input id="cookieName" data-i18n-placeholder="cookieNamePlaceholder" placeholder="Name">
+              <input id="cookieValue" data-i18n-placeholder="cookieValuePlaceholder" placeholder="Value">
               <button id="setCookieBtn" class="btn small" data-i18n="setCookieBtn">Set</button>
             </div>
           </div>
 
           <div id="pane-docs" class="subpane">
-            <p class="hint" data-i18n="docsNameHint">The request name is in the tab bar above.</p>
+            <p class="hint" data-i18n="docsHelp">Docs are notes for this request only (what it does, sample payloads). They are not sent to the server. The request name is in the tab bar above.</p>
             <textarea id="docs" rows="10" data-i18n-placeholder="docsPlaceholder" placeholder="Markdown notes for this request"></textarea>
           </div>
 
           <div id="pane-curl" class="subpane">
+            <p class="hint" data-i18n="codeHelp">cURL: paste a curl command to fill this request, or copy this request as curl. Code (Pro): generate the same request in JavaScript, Python, PHP or Go to paste into your app.</p>
+            <h4 data-i18n="curlSection">cURL</h4>
             <textarea id="curlInput" rows="4" data-i18n-placeholder="curlPlaceholder" placeholder="Paste cURL"></textarea>
             <div class="row">
               <button id="parseCurlBtn" class="btn small" data-i18n="importCurlBtn">Import cURL</button>
               <button id="exportCurlBtn" class="btn small" data-i18n="exportCurlBtn">Copy cURL</button>
             </div>
             <div class="pro-block" data-pro="codegen">
+              <h4 data-i18n="codeSnippetTitle">Code snippet</h4>
               <select id="codeLanguage"></select>
               <pre id="codeOutput" class="code"></pre>
-              <button id="copyCodeBtn" class="btn small" data-i18n="copyCodeBtn">Copy code</button>
+              <div class="row">
+                <button id="generateCodeBtn" class="btn small" data-pro="codegen" data-i18n="generateCodeBtn">Generate code</button>
+                <button id="copyCodeBtn" class="btn small" data-i18n="copyCodeBtn">Copy code</button>
+              </div>
             </div>
           </div>
         </div>
@@ -265,6 +320,7 @@
       </div>
 
       <div id="wsWorkspace" class="ws-workspace hidden">
+        <p id="wsHelp" class="hint" data-i18n="wsHelp"></p>
         <div id="wsStatus" class="ws-status offline" data-i18n="wsOffline">Offline</div>
         <div id="wsMessages" class="ws-messages"></div>
         <div class="row">

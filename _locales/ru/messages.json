@@ -707,6 +707,87 @@
   "freeCollectionLimit": {
     "message": "В бесплатной версии 2 коллекции. Безлимит — в Pro."
   },
+  "freeCollectionOverQuota": {
+    "message": "На Free открыты 2 коллекции. Ещё {n} сохранены (значок замка) — удалите лишние или включите Pro. Данные не удалялись."
+  },
+  "freeCollectionLocked": {
+    "message": "Коллекция сверх лимита Free (2). Открыть запросы можно в Pro либо удалить лишние коллекции — тогда разблокируются следующие."
+  },
+  "authHelp": {
+    "message": "Выберите один тип авторизации. Он уйдёт с Send; остальные поля не используются."
+  },
+  "authTypeLabel": {
+    "message": "Тип авторизации"
+  },
+  "authHint_none": {
+    "message": "Без учётных данных. Для открытых эндпоинтов."
+  },
+  "authHint_bearer": {
+    "message": "Заголовок Authorization: Bearer <токен>. Вставьте только токен, без слова Bearer."
+  },
+  "authHint_basic": {
+    "message": "Authorization: Basic с логином и паролем (Base64). Часто у старых HTTP API."
+  },
+  "authHint_digest": {
+    "message": "Pro. После ответа 401 Digest PingTo считает challenge. Те же поля логин/пароль, что у Basic."
+  },
+  "authHint_apikey": {
+    "message": "Именованный ключ уходит заголовком или query-параметром (например X-API-Key)."
+  },
+  "authHint_oauth2": {
+    "message": "Pro. Client credentials: PingTo сам ходит на Token URL. Auth code + PKCE: Login открывает браузер и сохраняет токен."
+  },
+  "apiKeyInLabel": {
+    "message": "Отправлять как"
+  },
+  "oauthGrantLabel": {
+    "message": "Тип grant"
+  },
+  "oauthAuthUrlLabel": {
+    "message": "Authorization URL"
+  },
+  "oauthTokenUrlLabel": {
+    "message": "Token URL"
+  },
+  "oauthClientIdLabel": {
+    "message": "Client ID"
+  },
+  "oauthClientSecretLabel": {
+    "message": "Client secret"
+  },
+  "oauthScopeLabel": {
+    "message": "Scope"
+  },
+  "oauthRefreshLabel": {
+    "message": "Refresh token"
+  },
+  "cookiesHelp": {
+    "message": "Cookies хранятся в Chrome для сайта из URL запроса, не внутри PingTo. Load показывает уже существующие cookies. Set записывает cookie, чтобы следующий Send мог его отправить."
+  },
+  "cookieNamePlaceholder": {
+    "message": "Имя"
+  },
+  "cookieValuePlaceholder": {
+    "message": "Значение"
+  },
+  "docsHelp": {
+    "message": "Docs — заметки только к этому запросу (зачем он, примеры тел). На сервер они не уходят. Имя запроса меняется в поле рядом с вкладками."
+  },
+  "codeHelp": {
+    "message": "cURL: вставьте команду curl, чтобы заполнить запрос, или скопируйте текущий запрос как curl. Code (Pro): тот же запрос на JavaScript, Python, PHP или Go для вставки в код."
+  },
+  "curlSection": {
+    "message": "cURL"
+  },
+  "codeSnippetTitle": {
+    "message": "Фрагмент кода"
+  },
+  "wsHelp": {
+    "message": "WebSocket — двустороннее соединение. Метод WS, URL ws:// или wss://, Connect, затем текст и Send."
+  },
+  "sseHelp": {
+    "message": "SSE (Server-Sent Events) — односторонний HTTP-поток. Метод SSE, URL https://, затем Connect. События пишутся в лог. Send нет: сервер только пушит данные."
+  },
   "freeRequestLimit": {
     "message": "В бесплатной версии 25 сохранённых запросов. Безлимит — в Pro."
   },

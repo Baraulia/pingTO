@@ -8,33 +8,33 @@
 
 ---
 
-- [ ] **0. Установка и запуск**
-  - [ ] Расширение грузится unpacked без ошибок в `chrome://extensions`
-  - [ ] Иконки 16/48/128 на кнопке панели
-  - [ ] Клик по иконке открывает окно ~1280×860 (`popup`), не узкую side panel
-  - [ ] Повторный клик фокусирует уже открытое окно, не плодит второе
-  - [ ] Горячая клавиша Ctrl+Shift+A (Mac: Cmd+Shift+A) открывает то же окно
-  - [ ] После reload расширения окно открывается снова, service worker живой
+- [x] **0. Установка и запуск**
+  - [x] Расширение грузится unpacked без ошибок в `chrome://extensions`
+  - [x] Иконки 16/48/128 на кнопке панели
+  - [x] Клик по иконке открывает окно ~1280×860 (`popup`), не узкую side panel
+  - [x] Повторный клик фокусирует уже открытое окно, не плодит второе
+  - [x] Горячая клавиша Ctrl+Shift+A (Mac: Cmd+Shift+A) открывает то же окно
+  - [x] После reload расширения окно открывается снова, service worker живой
 
 - [ ] **1. Оболочка UI**
-  - [ ] ☰ скрывает/показывает сайдбар
-  - [ ] ⛶ разворачивает окно на весь экран (fullscreen), side panel закрывается если была
-  - [ ] Тема 🌙 переключает light/dark, переживает reload расширения
-  - [ ] Кнопка языка: на EN-интерфейсе написано **RU**, на RU — **EN**; клик реально меняет язык, а не наоборот
-  - [ ] После смены языка подписи, плейсхолдеры и тосты на выбранном языке
-  - [ ] Ctrl+K / кнопка палитры: поиск команд и запросов, Enter/клик выполняет, Esc закрывает
-  - [ ] Палитра: Send, New tab, Format JSON, Environments, Settings, WebSocket
-  - [ ] Узкое окно: layout не ломает url-бар и split (stacked)
+  - [x] ☰ скрывает/показывает сайдбар
+  - [x] ⛶ разворачивает окно на весь экран (fullscreen), side panel закрывается если была
+  - [x] Тема 🌙 переключает light/dark, переживает reload расширения
+  - [x] Кнопка языка: на EN-интерфейсе написано **RU**, на RU — **EN**; клик реально меняет язык, а не наоборот
+  - [x] После смены языка подписи, плейсхолдеры и тосты на выбранном языке
+  - [x] Ctrl+K / кнопка палитры: поиск команд и запросов, Enter/клик выполняет, Esc закрывает
+  - [x] Палитра: Send, New tab, Format JSON, Environments, Settings, WebSocket
+  - [x] Узкое окно: layout не ломает url-бар и split (stacked)
 
 - [ ] **2. Free vs Pro (тумблер слева)**
-  - [ ] По умолчанию Free: бейджи **PRO** на закрытых контролах
-  - [ ] Клик по Pro-кнопке открывает модалку «функция Pro», не выполняет действие
-  - [ ] Enable Pro (dev) и тумблер включают Pro, модалка закрывается
-  - [ ] Выключение Pro сразу режет вкладки до 1, сбрасывает env/auth/body Pro-типов
-  - [ ] На Free история > 50 в настройках не применяется, показывается hint
-  - [ ] На Free одна вкладка «+» зовёт модалку extra tabs
-  - [ ] Collections / Env / WS / GraphQL / Scripts / Cookies / Docs / OAuth / Digest / API Key / binary / multipart / snapshot / tests / diff / JSONPath / codegen / import-export / run / Bruno — закрыты на Free
-  - [ ] На Free доступны: HTTP-методы (кроме WS/SSE), params/headers, body none/json/form/text, auth none/bearer/basic, ответ body/pretty/headers/preview/redirects, cURL import/export, тема, язык, история до 50
+  - [x] По умолчанию Free: бейджи **PRO** на закрытых контролах
+  - [x] Клик по Pro-кнопке открывает модалку «функция Pro», не выполняет действие
+  - [x] Enable Pro (dev) и тумблер включают Pro, модалка закрывается
+  - [ ] Выключение Pro не удаляет коллекции: первые 2 в списке остаются рабочими, остальные с 🔒; клик по запросу в лишней → модалка Pro; удаление лишних разблокирует следующие
+  - [x] На Free история > 50 в настройках не применяется, показывается hint
+  - [x] Вкладки на Free не режутся до 1
+  - [ ] На Free закрыты: WS/SSE, GraphQL, Scripts, Digest, OAuth, binary, snapshot, tests, diff, codegen, Postman/Insomnia/Bruno/OpenAPI import-export, Run collection
+  - [ ] На Free доступны: HTTP GET…HEAD, params/headers, body none/json/form/text/multipart, auth none/bearer/basic/API Key, cookies, docs, JSONPath, cURL, 2 коллекции / 25 запросов, 1 env / 10 vars, тема, язык, история до 50
 
 - [ ] **3. Имя запроса и вкладки**
   - [ ] Поле имени слева от вкладок, не «зарыто» в Docs
@@ -73,11 +73,12 @@
   - [ ] Free: binary/multipart/graphql в селекте с «· PRO», выбор откатывается и модалка
 
 - [ ] **6. Auth**
+  - [ ] Поля с подписями; подсказка меняется по типу; лишние блоки скрыты
   - [ ] none: без Authorization
   - [ ] Bearer: заголовок `Bearer <token>`
   - [ ] Basic: `Basic` + base64 user:pass
+  - [ ] API Key: in header и in query (Free)
   - [ ] Pro Digest: 401 Digest challenge проходит (если есть тестовый сервер)
-  - [ ] Pro API Key: in header и in query
   - [ ] Pro OAuth2 client_credentials: token URL, client id/secret, scope → Authorization Bearer
   - [ ] Pro OAuth2 authorization_code + PKCE: Login / Get token открывает identity flow
   - [ ] Refresh token подтягивает новый access (если endpoint есть)
@@ -110,7 +111,9 @@
   - [ ] Несуществующий `{{foo}}` остаётся как есть
   - [ ] Активное env переживает reload
 
-- [ ] **9. Коллекции (Pro)**
+- [ ] **9. Коллекции**
+  - [ ] Free: не больше 2 новых; лишние после снятия Pro не удаляются, а 🔒
+  - [ ] Free: открыть запрос из 3-й+ коллекции → Pro; двойной клик Delete снимает лишние
   - [ ] Пустое состояние: подсказка создать коллекцию
   - [ ] Имя + Collection создаёт коллекцию (пустое имя → дефолт)
   - [ ] Клик по имени коллекции выделяет её; строка «Сохранение в: …»
@@ -136,7 +139,7 @@
   - [ ] Import Bruno `.bru` / `.bru.txt`
   - [ ] Мусорный файл → понятная ошибка формата
   - [ ] Export Bruno качает `.bru.txt` выбранной коллекции
-  - [ ] Free: дерево коллекций кликается в модалку Pro
+  - [ ] Free: дерево видно; запросы сверх 2 коллекций открывают модалку Pro
 
 - [ ] **10. История**
   - [ ] После Send появляется запись: метод, URL, **дата и время**
@@ -147,6 +150,7 @@
   - [ ] История переживает reload
 
 - [ ] **11. Code / cURL (вкладка Code)**
+  - [ ] Подсказка объясняет cURL vs сниппеты кода
   - [ ] Paste cURL → Import создаёт/заполняет запрос
   - [ ] Copy cURL / Export cURL копирует валидную строку
   - [ ] Pro codegen: смена языка генерирует код, Copy code копирует
@@ -159,6 +163,7 @@
   - [ ] Body type GraphQL JSON недоступен на Free
 
 - [ ] **13. WebSocket / SSE (Pro)**
+  - [ ] Подсказка: WS двусторонний, SSE односторонний HTTP-поток
   - [ ] Кнопка WS, метод WS/SSE и палитра открывают клиент **в том же окне**, не вкладку Chrome
   - [ ] WS: Connect к echo, Send, сообщение в логе, Disconnect
   - [ ] Reconnect: после обрыва соединение поднимается снова (если сервер рвёт)
@@ -174,14 +179,16 @@
   - [ ] Tests после ответа: pass/fail во вкладке Tests
   - [ ] Run collection учитывает упавшие тесты и Stop on fail
 
-- [ ] **15. Cookies (Pro)**
+- [ ] **15. Cookies (Free)**
+  - [ ] Подсказка: cookies в Chrome по URL, не в storage PingTo
   - [ ] Load cookies for URL показывает cookies домена (нужен host_permissions)
   - [ ] Set cookie появляется в списке после Load
   - [ ] Невалидный URL не роняет страницу
 
-- [ ] **16. Docs (Pro)**
+- [ ] **16. Docs (Free)**
+  - [ ] Подсказка: заметки не уходят на сервер
   - [ ] Заметки Markdown сохраняются с запросом (Save в коллекцию)
-  - [ ] Имя запроса правится в поле у вкладок, в Docs только подсказка
+  - [ ] Имя запроса правится в поле у вкладок
 
 - [ ] **17. Settings**
   - [ ] Timeout сохраняется и используется

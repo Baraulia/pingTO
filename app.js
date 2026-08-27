@@ -46,6 +46,7 @@ import { introspect, suggestGraphql } from './modules/graphql-schema.js';
 import {
   FREE_AUTH,
   FREE_BODY,
+  FREE_COLLECTION_LIMIT,
   FREE_HISTORY_LIMIT,
   FREE_REQ_PANES,
   FREE_RESP_PANES,
@@ -54,6 +55,7 @@ import {
   canAddEnvironment,
   canAddRequest,
   historyLimitFor,
+  isCollectionUnlocked,
   PRO_FEATURES,
 } from './modules/entitlements.js';
 
@@ -202,15 +204,22 @@ function applyProUi() {
     renderTabs();
     persistWorkspace();
   }
+  updateFreeQuotaHint();
+  renderCollections();
   if (state.tabs.length) writeTabToForm();
 }
 
 async function setPro(enabled) {
+  const wasPro = state.isPro;
   state.isPro = Boolean(enabled);
   $('proToggle').checked = state.isPro;
   await chrome.storage.local.set({ isPro: state.isPro });
   applyProUi();
   persistWorkspace();
+  if (wasPro && !state.isPro && collectionsManager.collections.length > FREE_COLLECTION_LIMIT) {
+    const extra = collectionsManager.collections.length - FREE_COLLECTION_LIMIT;
+    UIHelpers.showToast(I18nManager.t('freeCollectionOverQuota').replace('{n}', String(extra)), 'info');
+  }
 }
 
 function current() {
@@ -300,6 +309,11 @@ async function saveCurrentRequest() {
   const collectionId = tab.collectionId && (!state.selectedCollectionId || String(tab.collectionId) === String(state.selectedCollectionId))
     ? tab.collectionId
     : (state.selectedCollectionId || tab.collectionId);
+  if (collectionId && !collectionUnlocked(collectionId)) {
+    UIHelpers.showToast(I18nManager.t('freeCollectionLocked'), 'error');
+    requirePro('collections');
+    return;
+  }
   const folderId = String(collectionId) === String(state.selectedCollectionId) ? state.selectedFolderId : null;
   if (tab.collectionItemId && tab.collectionId && String(tab.collectionId) === String(collectionId)) {
     await collectionsManager.updateRequest(collectionId, tab.collectionItemId, collectionRequestPayload(tab));
@@ -540,12 +554,36 @@ function closeTab(id) {
   writeTabToForm();
 }
 
+function collectionUnlocked(collectionId) {
+  return isCollectionUnlocked(state.isPro, collectionsManager.collections, collectionId);
+}
+
+function updateFreeQuotaHint() {
+  const el = $('freeQuotaHint');
+  if (!el) return;
+  if (state.isPro) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const extra = Math.max(0, collectionsManager.collections.length - FREE_COLLECTION_LIMIT);
+  if (!extra) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  el.hidden = false;
+  el.textContent = I18nManager.t('freeCollectionOverQuota').replace('{n}', String(extra));
+}
+
 function toggleAuth() {
-  const type = $('authType').value;
-  $('authToken').classList.toggle('hidden', type !== 'bearer');
-  $('basicAuthFields').classList.toggle('hidden', type !== 'basic' && type !== 'digest');
-  $('apiKeyFields').classList.toggle('hidden', type !== 'apikey');
-  $('oauth2Fields').classList.toggle('hidden', type !== 'oauth2');
+  const type = $('authType')?.value || 'none';
+  $('authHint') && ($('authHint').textContent = I18nManager.t(`authHint_${type}`));
+  $('authBearerFields')?.classList.toggle('hidden', type !== 'bearer');
+  $('basicAuthFields')?.classList.toggle('hidden', type !== 'basic' && type !== 'digest');
+  $('digestHint')?.classList.toggle('hidden', type !== 'digest');
+  $('apiKeyFields')?.classList.toggle('hidden', type !== 'apikey');
+  $('oauth2Fields')?.classList.toggle('hidden', type !== 'oauth2');
 }
 
 function isJsonBodyType(type = $('bodyType')?.value) {
@@ -569,10 +607,12 @@ function syncWorkspaceMode() {
   $('wsActions')?.classList.toggle('hidden', !socket);
   $('httpSplit')?.classList.toggle('hidden', socket);
   $('wsWorkspace')?.classList.toggle('hidden', !socket);
+  const sse = $('methodSelect').value === 'SSE';
   if (socket) {
-    $('urlInput').placeholder = $('methodSelect').value === 'SSE' ? 'https://example.com/events' : 'wss://echo.websocket.org';
-    $('wsSendBtn')?.classList.toggle('hidden', $('methodSelect').value === 'SSE');
-    $('wsMessageInput')?.classList.toggle('hidden', $('methodSelect').value === 'SSE');
+    $('urlInput').placeholder = sse ? 'https://example.com/events' : 'wss://echo.websocket.org';
+    $('wsSendBtn')?.classList.toggle('hidden', sse);
+    $('wsMessageInput')?.classList.toggle('hidden', sse);
+    if ($('wsHelp')) $('wsHelp').textContent = I18nManager.t(sse ? 'sseHelp' : 'wsHelp');
   } else {
     $('urlInput').placeholder = I18nManager.t('urlPlaceholder');
   }
@@ -698,8 +738,8 @@ function openSocketWorkspace() {
   if (!requirePro('websocket')) return;
   readFormIntoTab();
   const tab = current();
-  tab.method = 'WS';
-  if (!tab.url || tab.url.startsWith('http')) tab.url = 'wss://echo.websocket.org';
+  if (!isSocketMethod(tab.method)) tab.method = 'WS';
+  if (!tab.url || (tab.method === 'WS' && tab.url.startsWith('http'))) tab.url = 'wss://echo.websocket.org';
   writeTabToForm();
 }
 
@@ -724,6 +764,10 @@ function updateCollectionTarget() {
   if (!el) return;
   if (!state.selectedCollectionId) {
     el.textContent = I18nManager.t('collectionTargetNone');
+    return;
+  }
+  if (!collectionUnlocked(state.selectedCollectionId)) {
+    el.textContent = I18nManager.t('freeCollectionLocked');
     return;
   }
   const coll = collectionsManager.collections.find((c) => String(c.id) === String(state.selectedCollectionId));
@@ -1042,25 +1086,27 @@ function renderCollections() {
     empty.textContent = I18nManager.t('collectionsEmpty');
     tree.appendChild(empty);
     updateCollectionTarget();
+    updateFreeQuotaHint();
     return;
   }
   collectionsManager.collections.forEach((coll) => {
     const selected = String(state.selectedCollectionId) === String(coll.id);
     const expanded = String(state.expandedCollectionId) === String(coll.id);
+    const locked = !collectionUnlocked(coll.id);
     const searching = Boolean(q);
     if (searching) {
       const hay = `${coll.name} ${flattenRequests(coll.items).map((r) => `${r.name} ${r.url}`).join(' ')}`.toLowerCase();
       if (!hay.includes(q)) return;
     }
     const wrap = document.createElement('div');
-    wrap.className = `tree-collection-wrap${selected ? ' is-selected' : ''}`;
+    wrap.className = `tree-collection-wrap${selected ? ' is-selected' : ''}${locked ? ' is-locked' : ''}`;
     const title = document.createElement('div');
-    title.className = `tree-item tree-collection${selected ? ' selected' : ''}`;
+    title.className = `tree-item tree-collection${selected ? ' selected' : ''}${locked ? ' locked' : ''}`;
     title.dataset.testid = 'tree-collection';
     title.dataset.collectionId = String(coll.id);
     title.setAttribute('aria-expanded', expanded || searching ? 'true' : 'false');
-    title.textContent = `${expanded || searching ? '▾' : '▸'} ${coll.name}`;
-    title.title = I18nManager.t('collectionDblHint');
+    title.textContent = `${expanded || searching ? '▾' : '▸'} ${coll.name}${locked ? ' 🔒' : ''}`;
+    title.title = locked ? I18nManager.t('freeCollectionLocked') : I18nManager.t('collectionDblHint');
     title.onclick = () => {
       if (selected && expanded) {
         state.expandedCollectionId = null;
@@ -1104,6 +1150,10 @@ function renderCollections() {
           m.textContent = item.method || 'GET';
           r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
+            if (locked) {
+              requirePro('collections');
+              return;
+            }
             activateCollection(coll.id, findParentId(coll.items, item.id) || null);
             openTab({ ...item, collectionId: coll.id, collectionItemId: item.id });
             renderCollections();
@@ -1118,8 +1168,9 @@ function renderCollections() {
       });
     };
     if (expanded || searching) draw(coll.items, 12);
-    tree.appendChild(wrap);
+  tree.appendChild(wrap);
   });
+  updateFreeQuotaHint();
   updateCollectionTarget();
 }
 
@@ -1140,6 +1191,10 @@ function makeDropTarget(el, collectionId, folderId) {
       return;
     }
     if (!payload.itemId || String(payload.collectionId) !== String(collectionId)) return;
+    if (!collectionUnlocked(collectionId)) {
+      requirePro('collections');
+      return;
+    }
     const ok = await collectionsManager.moveItem(collectionId, payload.itemId, folderId);
     if (ok) {
       state.selectedCollectionId = collectionId;
@@ -1414,6 +1469,10 @@ function paletteItems() {
     commands.push({
       label: `${hit.request.method} ${hit.request.name || hit.request.url}`,
       run: () => {
+        if (!collectionUnlocked(hit.collection.id)) {
+          requirePro('collections');
+          return;
+        }
         openTab({ ...hit.request, collectionId: hit.collection.id, collectionItemId: hit.request.id });
       },
     });
@@ -1477,6 +1536,10 @@ async function runCollection() {
   const id = state.selectedCollectionId;
   if (!id) {
     UIHelpers.showToast('Select a collection in the sidebar', 'error');
+    return;
+  }
+  if (!collectionUnlocked(id)) {
+    requirePro('collections');
     return;
   }
   const reqs = collectionsManager.flatten(id);
@@ -1719,6 +1782,7 @@ $('parseCurlBtn').onclick = () => {
 };
 $('exportCurlBtn').onclick = () => $('copyAsCurlBtn').click();
 $('codeLanguage').onchange = generateCode;
+$('generateCodeBtn').onclick = generateCode;
 $('copyCodeBtn').onclick = () => {
   generateCode();
   navigator.clipboard.writeText($('codeOutput').textContent);
@@ -1779,6 +1843,10 @@ $('newCollectionBtn').onclick = async () => {
 };
 $('newFolderBtn').onclick = async () => {
   if (!state.selectedCollectionId) return UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
+  if (!collectionUnlocked(state.selectedCollectionId)) {
+    requirePro('collections');
+    return;
+  }
   const name = prompt(I18nManager.t('newFolderBtn'), I18nManager.t('defaultFolderName'));
   if (name) {
     await collectionsManager.addFolder(state.selectedCollectionId, name, state.selectedFolderId);
@@ -1935,6 +2003,8 @@ document.addEventListener('languageChanged', async () => {
   await renderEnvs();
   renderHistory();
   renderCollections();
+  toggleAuth();
+  syncWorkspaceMode();
   if (lastProFeatureId && !$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
 });
 $('openTabBtn').onclick = () => chrome.runtime.sendMessage({ type: 'openFullscreen' });

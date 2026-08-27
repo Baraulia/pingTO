@@ -11,7 +11,9 @@ import {
   canAddEnvironment,
   canAddRequest,
   historyLimitFor,
+  isCollectionUnlocked,
   PRO_FEATURES,
+  unlockedCollectionIds,
 } from '../../modules/entitlements.js';
 
 describe('entitlements', () => {
@@ -47,5 +49,14 @@ describe('entitlements', () => {
   it('maps Pro features to UI ids', () => {
     expect(PRO_FEATURES.importCollections).toBe('importAnyBtn');
     expect(PRO_FEATURES.bruno).toBe('fmtBruno');
+  });
+
+  it('keeps extra Free collections locked instead of deleting them', () => {
+    const cols = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(unlockedCollectionIds(true, cols)).toEqual(['a', 'b', 'c']);
+    expect(unlockedCollectionIds(false, cols)).toEqual(['a', 'b']);
+    expect(isCollectionUnlocked(false, cols, 'c')).toBe(false);
+    expect(isCollectionUnlocked(false, cols, 'a')).toBe(true);
+    expect(isCollectionUnlocked(true, cols, 'c')).toBe(true);
   });
 });

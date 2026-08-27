@@ -707,6 +707,87 @@
   "freeCollectionLimit": {
     "message": "Free includes 2 collections. Upgrade to Pro for unlimited collections."
   },
+  "freeCollectionOverQuota": {
+    "message": "Free keeps 2 collections unlocked. {n} extra stay saved (lock icon) — delete them or upgrade to Pro. Nothing was deleted."
+  },
+  "freeCollectionLocked": {
+    "message": "This collection is over the Free limit of 2. Open requests here needs Pro, or delete extra collections to unlock the next ones."
+  },
+  "authHelp": {
+    "message": "Pick one auth type. PingTo sends it with Send; unused types are ignored."
+  },
+  "authTypeLabel": {
+    "message": "Auth type"
+  },
+  "authHint_none": {
+    "message": "No credentials. Use this for public endpoints."
+  },
+  "authHint_bearer": {
+    "message": "Sends Authorization: Bearer <token>. Paste the access token only, without the word Bearer."
+  },
+  "authHint_basic": {
+    "message": "Sends Authorization: Basic with username and password (Base64). Common for older HTTP APIs."
+  },
+  "authHint_digest": {
+    "message": "Pro. After a 401 Digest challenge, PingTo computes the response. Same username/password fields as Basic."
+  },
+  "authHint_apikey": {
+    "message": "Sends a named key as an HTTP header or as a query parameter (for example X-API-Key)."
+  },
+  "authHint_oauth2": {
+    "message": "Pro. Client credentials: PingTo calls the token URL. Auth code + PKCE: Login opens the browser, then stores the token."
+  },
+  "apiKeyInLabel": {
+    "message": "Send as"
+  },
+  "oauthGrantLabel": {
+    "message": "Grant type"
+  },
+  "oauthAuthUrlLabel": {
+    "message": "Authorization URL"
+  },
+  "oauthTokenUrlLabel": {
+    "message": "Token URL"
+  },
+  "oauthClientIdLabel": {
+    "message": "Client ID"
+  },
+  "oauthClientSecretLabel": {
+    "message": "Client secret"
+  },
+  "oauthScopeLabel": {
+    "message": "Scope"
+  },
+  "oauthRefreshLabel": {
+    "message": "Refresh token"
+  },
+  "cookiesHelp": {
+    "message": "Cookies live in Chrome for this request URL’s site, not inside PingTo. Load lists cookies Chrome already has. Set writes one cookie so the next Send can include it."
+  },
+  "cookieNamePlaceholder": {
+    "message": "Name"
+  },
+  "cookieValuePlaceholder": {
+    "message": "Value"
+  },
+  "docsHelp": {
+    "message": "Docs are notes for this request only (what it does, sample bodies). They are not sent to the server. Rename the request in the field next to the tabs."
+  },
+  "codeHelp": {
+    "message": "cURL: paste a curl command to fill this request, or copy this request as curl. Code (Pro): generate the same request in JavaScript, Python, PHP or Go to paste into your app."
+  },
+  "curlSection": {
+    "message": "cURL"
+  },
+  "codeSnippetTitle": {
+    "message": "Code snippet"
+  },
+  "wsHelp": {
+    "message": "WebSocket is a two-way connection. Set method to WS, enter a ws:// or wss:// URL, Connect, then type messages and Send."
+  },
+  "sseHelp": {
+    "message": "SSE (Server-Sent Events) is a one-way HTTP stream. Set method to SSE, enter an https:// URL, then Connect. Events appear in the log. There is no Send — the server only pushes data."
+  },
   "freeRequestLimit": {
     "message": "Free includes 25 saved requests. Upgrade to Pro for unlimited saves."
   },

@@ -49,3 +49,14 @@ export function canAddEnvironment(isPro, count) {
 export function canAddEnvVar(isPro, count) {
   return isPro || count < FREE_ENV_VAR_LIMIT;
 }
+
+export function unlockedCollectionIds(isPro, collections) {
+  const list = collections || [];
+  if (isPro) return list.map((c) => String(c.id));
+  return list.slice(0, FREE_COLLECTION_LIMIT).map((c) => String(c.id));
+}
+
+export function isCollectionUnlocked(isPro, collections, collectionId) {
+  if (isPro) return true;
+  return unlockedCollectionIds(false, collections).includes(String(collectionId));
+}

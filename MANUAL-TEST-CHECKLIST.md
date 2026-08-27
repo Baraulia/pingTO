@@ -1,10 +1,31 @@
 # PingTo — чеклист ручного тестирования
 
-Версия UI: `app.html` / unpacked Chrome MV3.  
-Тумблер Pro в сайдбаре — заглушка лицензии (не магазин).  
-Удобные цели: `https://httpbin.org`, `https://jsonplaceholder.typicode.com`, `wss://echo.websocket.events`, любой GraphQL endpoint.
+Версия: `1.0.0`, UI `app.html`, unpacked Chrome MV3.  
+Тумблер Pro в сайдбаре — **dev-заглушка** лицензии, не магазин.
 
-Отмечай `- [x]` по мере прохождения. Free-сценарии гоняй **до** включения Pro, затем повтори критичное на Pro.
+**Локальный сервер (предпочтительно):** в каталоге `testd/` — `go run .` → `http://127.0.0.1:8787`.  
+Импорт коллекции: `testd/pingto-testd-collection.json` (формат PingTo JSON, доступен на Free).  
+Окружение: `base_url=http://127.0.0.1:8787`, `ws_url=ws://127.0.0.1:8787`. Учётки testd: `pingto` / `pingto`, Bearer `pingto-token`, `X-API-Key pingto-key`.
+
+Запасные цели: `https://httpbin.org`, `https://jsonplaceholder.typicode.com`, `wss://echo.websocket.events`.
+
+Отмечай `- [x]` по мере прохождения. Сначала **Free**, затем критичное на **Pro**.
+
+### Тариф (ожидание)
+
+| | Free | Pro |
+|---|---|---|
+| Вкладки | без лимита, Duplicate | то же |
+| HTTP | GET…HEAD | + GraphQL, WS, SSE |
+| Auth | none, Bearer, Basic, API Key | + Digest, OAuth 2.0 |
+| Body | none, json, form, text, **multipart** | + binary, GraphQL JSON |
+| Коллекции | 2 рабочих, 25 сохранённых запросов | без лимита |
+| Сверх лимита коллекций | **не удаляются**, 🔒, открыть запрос → модалка Pro | все открыты |
+| Env | 1 окружение, 10 переменных | без лимита |
+| Import / Export | только PingTo JSON | + Postman, Insomnia, Bruno; OpenAPI **только import** |
+| Run collection, Scripts, Snapshot, Diff, Tests, codegen | нет | да |
+| Cookies, Docs, JSONPath, cURL | да | да |
+| История | 50 | до 2000 |
 
 ---
 
@@ -17,225 +38,222 @@
   - [x] После reload расширения окно открывается снова, service worker живой
 
 - [ ] **1. Оболочка UI**
-  - [x] ☰ скрывает/показывает сайдбар
-  - [x] ⛶ разворачивает окно на весь экран (fullscreen), side panel закрывается если была
-  - [x] Тема 🌙 переключает light/dark, переживает reload расширения
-  - [x] Кнопка языка: на EN-интерфейсе написано **RU**, на RU — **EN**; клик реально меняет язык, а не наоборот
-  - [x] После смены языка подписи, плейсхолдеры и тосты на выбранном языке
-  - [x] Ctrl+K / кнопка палитры: поиск команд и запросов, Enter/клик выполняет, Esc закрывает
-  - [x] Палитра: Send, New tab, Format JSON, Environments, Settings, WebSocket
-  - [x] Узкое окно: layout не ломает url-бар и split (stacked)
+  - [ ] ☰ скрывает/показывает сайдбар
+  - [ ] ⛶ разворачивает окно на весь экран; side panel закрывается, если была
+  - [ ] Тема переключает light/dark, переживает reload
+  - [ ] Кнопка языка: на EN написано **RU**, на RU — **EN**; клик реально меняет язык
+  - [ ] После смены языка подписи, плейсхолдеры, toasts и подсказки Auth/Docs/Cookies/Code/WS на выбранном языке
+  - [ ] Ctrl+K / палитра: поиск команд и запросов, Enter/клик выполняет, Esc закрывает
+  - [ ] Палитра: Send, New tab, Format JSON, Environments, History, Settings, WebSocket
+  - [ ] Запрос из 🔒-коллекции в палитре → модалка Pro
+  - [ ] Узкое окно: url-бар и split не ломаются (stacked)
 
 - [ ] **2. Free vs Pro (тумблер слева)**
-  - [x] По умолчанию Free: бейджи **PRO** на закрытых контролах
-  - [x] Клик по Pro-кнопке открывает модалку «функция Pro», не выполняет действие
-  - [x] Enable Pro (dev) и тумблер включают Pro, модалка закрывается
-  - [ ] Выключение Pro не удаляет коллекции: первые 2 в списке остаются рабочими, остальные с 🔒; клик по запросу в лишней → модалка Pro; удаление лишних разблокирует следующие
-  - [x] На Free история > 50 в настройках не применяется, показывается hint
-  - [x] Вкладки на Free не режутся до 1
-  - [ ] На Free закрыты: WS/SSE, GraphQL, Scripts, Digest, OAuth, binary, snapshot, tests, diff, codegen, Postman/Insomnia/Bruno/OpenAPI import-export, Run collection
-  - [ ] На Free доступны: HTTP GET…HEAD, params/headers, body none/json/form/text/multipart, auth none/bearer/basic/API Key, cookies, docs, JSONPath, cURL, 2 коллекции / 25 запросов, 1 env / 10 vars, тема, язык, история до 50
+  - [ ] По умолчанию Free: бейджи **PRO** на закрытых контролах
+  - [ ] Клик по Pro-кнопке открывает модалку, действие не выполняется
+  - [ ] Enable Pro (dev) и тумблер включают Pro, модалка закрывается
+  - [ ] Выключение Pro **не режет вкладки** и **не удаляет** коллекции/env
+  - [ ] Было >2 коллекций: тост + баннер `#freeQuotaHint`; первые 2 в списке рабочие, остальные 🔒
+  - [ ] Auth Digest/OAuth и body binary/GraphQL на вкладках сбрасываются на Free-значения
+  - [ ] История >50 обрезается до 50, в Settings hint про кап
+  - [ ] На Free закрыты: WS/SSE, GraphQL, Scripts, Digest, OAuth, binary, Snapshot, Tests, Diff, codegen, чужие форматы import/export, Run collection
+  - [ ] На Free открыты: HTTP GET…HEAD, params/headers, body none/json/form/text/multipart, auth none/bearer/basic/API Key, cookies, docs, JSONPath, cURL, PingTo JSON, 2 коллекции / 25 запросов, 1 env / 10 vars
 
 - [ ] **3. Имя запроса и вкладки**
-  - [ ] Поле имени слева от вкладок, не «зарыто» в Docs
+  - [ ] Поле имени слева от чипов вкладок, не в Docs
   - [ ] Ввод имени сразу меняет текст вкладки
-  - [ ] Enter / blur сохраняет имя (пустое → дефолт «New request» / «Новый запрос»)
+  - [ ] Enter / blur: пустое имя → «New request» / «Новый запрос»
   - [ ] Двойной клик по имени на чипе ставит курсор в поле имени
-  - [ ] Duplicate (Pro) создаёт копию с суффиксом, не привязанную к тому же item коллекции
-  - [ ] Pro: несколько вкладок, переключение не теряет несохранённый ввод до Save (workspace persist)
+  - [ ] Duplicate (footer) создаёт копию с суффиксом, **без** привязки к item коллекции; на Free тоже работает
+  - [ ] Несколько вкладок на Free и Pro; переключение не теряет несохранённый ввод до Save
   - [ ] Закрытие последней вкладки невозможно
-  - [ ] После reload расширения вкладки и активная восстанавливаются
+  - [ ] После reload вкладки и активная восстанавливаются
 
 - [ ] **4. HTTP: URL, методы, Send**
-  - [ ] GET/POST/PUT/PATCH/DELETE/OPTIONS/HEAD уходят корректным method
+  - [ ] GET/POST/PUT/PATCH/DELETE/OPTIONS/HEAD уходят корректным method (удобно: testd `/echo`)
   - [ ] Пустой URL → ошибка «введите URL»
   - [ ] Не-http(s) URL → invalid URL
-  - [ ] Query-параметры из вкладки Params попадают в URL; чекбокс disable не отправляет пару
-  - [ ] Path `:id` и `{id}` подставляются из Path params
+  - [ ] Query из Params попадают в URL; чекбокс disable не отправляет пару (`/query`)
+  - [ ] Path `:id` и `{id}` подставляются (`/users/:id`)
   - [ ] Common headers добавляют Accept и Content-Type, не дублируют существующие
   - [ ] Header enable/disable и удаление строки
-  - [ ] Follow redirects on: цепочка видна во вкладке Redirects
-  - [ ] Follow redirects off: виден 3xx без автоматического следования (если API отдаёт Location)
-  - [ ] Send → Cancel на долгом запросе (задержка httpbin `/delay/10`), кнопка Send возвращается
+  - [ ] Follow redirects on: цепочка во вкладке Redirects
+  - [ ] Follow redirects off: виден 3xx без следования
+  - [ ] Send → Cancel на долгом запросе (`/delay/8000`, ms), кнопка Send возвращается
   - [ ] Repeat повторяет последний запрос
   - [ ] Ctrl+Enter / Cmd+Enter и команда Ctrl+Shift+Q шлют запрос
-  - [ ] Таймаут из Settings реально рвёт запрос (маленький timeout + delay)
+  - [ ] Таймаут из Settings рвёт запрос (маленький timeout + delay)
   - [ ] Клик по status / time / size копирует значение
 
 - [ ] **5. Body**
   - [ ] none: тело не уходит
-  - [ ] json: валидный JSON уходит с Content-Type json; битый JSON блокирует Send
-  - [ ] Format / Minify меняют редактор; ошибка json показывается под полем
-  - [ ] form: `a=1&b=2` как x-www-form-urlencoded
-  - [ ] text: сырой текст
-  - [ ] Pro multipart: строки key=value + файлы multiFiles
-  - [ ] Pro binary: Choose file, файл уходит телом
-  - [ ] Free: binary/multipart/graphql в селекте с «· PRO», выбор откатывается и модалка
+  - [ ] json: валидный JSON + Content-Type json; битый JSON блокирует Send
+  - [ ] Format / Minify меняют редактор; ошибка json под полем; на form/text кнопки неактивны
+  - [ ] form: `a=1&b=2` как x-www-form-urlencoded (`/form`)
+  - [ ] text: сырой текст (`/text`)
+  - [ ] **Free multipart**: строки `key=value` + файлы (`/multipart`)
+  - [ ] **Pro binary**: Choose file, файл уходит телом (`/binary`)
+  - [ ] Free: binary и GraphQL JSON в селекте с «· PRO», выбор откатывается, модалка. **multipart без PRO**
 
 - [ ] **6. Auth**
-  - [ ] Поля с подписями; подсказка меняется по типу; лишние блоки скрыты
+  - [ ] Подписи полей, подсказка по типу, лишние блоки скрыты
   - [ ] none: без Authorization
-  - [ ] Bearer: заголовок `Bearer <token>`
-  - [ ] Basic: `Basic` + base64 user:pass
-  - [ ] API Key: in header и in query (Free)
-  - [ ] Pro Digest: 401 Digest challenge проходит (если есть тестовый сервер)
-  - [ ] Pro OAuth2 client_credentials: token URL, client id/secret, scope → Authorization Bearer
+  - [ ] Bearer: `Authorization: Bearer …` (testd: `pingto-token`)
+  - [ ] Basic: `Basic` + base64 user:pass (`pingto` / `pingto`)
+  - [ ] API Key header и query — **Free** (`X-API-Key` / `pingto-key`)
+  - [ ] Pro Digest: 401 challenge проходит (testd `/auth/digest`)
+  - [ ] Pro OAuth2 client_credentials: token URL, client id/secret, scope → Bearer
   - [ ] Pro OAuth2 authorization_code + PKCE: Login / Get token открывает identity flow
   - [ ] Refresh token подтягивает новый access (если endpoint есть)
-  - [ ] Free: digest/apikey/oauth2 недоступны
+  - [ ] Free: digest и oauth2 недоступны; **API Key доступен**
 
 - [ ] **7. Ответ**
   - [ ] Body: сырой текст
   - [ ] Pretty: JSON подсветка / XML pretty
   - [ ] Headers: список заголовков ответа
-  - [ ] Preview: HTML в iframe sandbox
+  - [ ] Preview: HTML в iframe sandbox (`/html`)
   - [ ] Redirects: шаги редиректов
   - [ ] Copy копирует body
-  - [ ] Save качает файл response_*.json
+  - [ ] Save качает файл `response_*.json`
   - [ ] Copy as cURL собирает текущий запрос
-  - [ ] Pro Snapshot: снимок тела
-  - [ ] Pro Diff: сравнение с snapshot
-  - [ ] Pro Tests: результаты post-response тестов
-  - [ ] Pro JSONPath: `$.…` фильтрует JSON
+  - [ ] **JSONPath Free**: `$.…` фильтрует JSON
+  - [ ] Pro Snapshot / Diff / Tests
   - [ ] Большой ответ не вешает UI (лимит ~2 МБ в background)
 
-- [ ] **8. Переменные окружения (Pro)**
-  - [ ] Free: селект и «+ Environment» → модалка Pro
-  - [ ] Create: имя обязательно; создаётся env с `base_url`
-  - [ ] Новое env сразу выбрано в топбаре
+- [ ] **8. Переменные окружения**
+  - [ ] Free: селект доступен; пункты **+ New environment** и **Manage environments…** внутри селекта (отдельной кнопки «+ Environment» нет)
+  - [ ] Free: второе окружение → тост лимита (1 env)
+  - [ ] Free: 11-я переменная → тост лимита (10 vars)
+  - [ ] Create: имя обязательно; env с `base_url`; сразу выбрано в топбаре
   - [ ] + Variable, правка ключа/значения, secret маскирует value
   - [ ] × удаляет одну переменную, не всё окружение
-  - [ ] Delete environment удаляет env целиком и сбрасывает селект, если оно было активным
-  - [ ] Селект сверху переключает активное окружение, hint под URL показывает `{{keys}}`
+  - [ ] Delete environment удаляет env и сбрасывает селект, если оно было активным
+  - [ ] Hint под URL показывает активные `{{keys}}`
   - [ ] В URL/headers/body `{{base_url}}` подставляется при Send
   - [ ] Несуществующий `{{foo}}` остаётся как есть
   - [ ] Активное env переживает reload
 
 - [ ] **9. Коллекции**
-  - [ ] Free: не больше 2 новых; лишние после снятия Pro не удаляются, а 🔒
-  - [ ] Free: открыть запрос из 3-й+ коллекции → Pro; двойной клик Delete снимает лишние
   - [ ] Пустое состояние: подсказка создать коллекцию
-  - [ ] Имя + Collection создаёт коллекцию (пустое имя → дефолт)
-  - [ ] Клик по имени коллекции выделяет её; строка «Сохранение в: …»
-  - [ ] Двойной клик по коллекции: Rename / Delete, confirm на удаление
+  - [ ] + Collection создаёт коллекцию (пустое имя → дефолт)
+  - [ ] Free: 3-я новая коллекция → тост лимита, не создаётся
+  - [ ] Free: 26-й **новый** сохранённый запрос → тост; обновление уже сохранённого не считается
+  - [ ] После снятия Pro: лишние коллекции на месте, 🔒, баннер; клик по имени **раскрывает** дерево
+  - [ ] Клик по запросу в 🔒-коллекции → модалка Pro, вкладка не открывается
+  - [ ] Двойной клик → Rename / Delete; после удаления лишней следующая в списке разблокируется
+  - [ ] Save в 🔒-коллекцию → тост + модалка Pro
+  - [ ] Клик по коллекции: «Saving into: …»; у 🔒 — текст про лимит
   - [ ] После удаления коллекции вкладки отвязываются (не падают)
-  - [ ] + Folder без выбранной коллекции → тост «сначала выберите»
-  - [ ] + Folder создаёт папку в выбранной коллекции / вложенно в выбранную папку
-  - [ ] Двойной клик по папке: rename/delete папки
+  - [ ] + Folder без выбранной коллекции → тост; в 🔒-коллекции → модалка Pro
+  - [ ] + Folder создаёт папку в выбранной коллекции / во вложенной папке
   - [ ] Клик по папке: Save пишет **в эту папку**
-  - [ ] Save (у вкладок) и Save to collection в сайдбаре делают одно и то же
-  - [ ] Save обновляет имя/метод/URL/params/headers/body в дереве сразу, без второй копии
-  - [ ] Повторный клик по тому же запросу в дереве не открывает новую вкладку, а активирует существующую
-  - [ ] Drag запроса на другую папку той же коллекции переносит его
-  - [ ] Drag запроса на имя коллекции кладёт в корень
-  - [ ] Drag в другую коллекцию не срабатывает (только внутри своей)
-  - [ ] Поиск в сайдбаре фильтрует запросы по имени/URL
-  - [ ] Run collection: прогон запросов, Stop on fail, отчёт pass/fail
-  - [ ] Export: JSON PingTo выбранной коллекции (или всех, если ничего не выбрано)
-  - [ ] Import того же JSON возвращает коллекцию
-  - [ ] Import Postman Collection v2 JSON
-  - [ ] Import Insomnia export (если есть фикстура)
-  - [ ] Import OpenAPI/Swagger JSON
-  - [ ] Import Bruno `.bru` / `.bru.txt`
+  - [ ] Save у вкладок и Save request в сайдбаре — одно и то же
+  - [ ] Save обновляет дерево сразу, без второй копии
+  - [ ] Повторный клик по тому же запросу активирует существующую вкладку
+  - [ ] Drag внутри своей коллекции; на 🔒-коллекцию drop → модалка; в другую коллекцию не переносится
+  - [ ] Поиск в сайдбаре фильтрует по имени/URL
+  - [ ] **Run collection** — кнопка в сайдбаре, **Pro**; на 🔒-коллекции → модалка
+  - [ ] Меню **Import / Export** в сайдбаре (не футер)
+  - [ ] Free: PingTo JSON import и export (выбранная коллекция или все, если ничего не выбрано)
+  - [ ] Импорт PingTo **может** добавить коллекции сверх 2 — лишние сразу 🔒, данные не режутся
+  - [ ] Pro import: Postman v2, Insomnia, OpenAPI/Swagger JSON, Bruno `.bru` / `.bru.txt`
+  - [ ] Pro export: Postman, Insomnia, Bruno (файл `.bru.txt`)
+  - [ ] Free: пункты Postman/Insomnia/Bruno/OpenAPI → модалка Pro
   - [ ] Мусорный файл → понятная ошибка формата
-  - [ ] Export Bruno качает `.bru.txt` выбранной коллекции
-  - [ ] Free: дерево видно; запросы сверх 2 коллекций открывают модалку Pro
 
 - [ ] **10. История**
-  - [ ] После Send появляется запись: метод, URL, **дата и время**
-  - [ ] Клик по записи открывает запрос в редакторе
-  - [ ] На Free список не растёт бесконечно (кап 50)
-  - [ ] Settings history limit на Pro до 2000, на Free capped 50 + hint
-  - [ ] Смена языка перерисовывает формат timestamp
+  - [ ] После Send: метод, URL, дата и время
+  - [ ] Клик по записи открывает запрос
+  - [ ] Поиск и Clear
+  - [ ] Free: список не растёт бесконечно (кап 50)
+  - [ ] Settings: Pro до 2000, Free capped 50 + hint
+  - [ ] Смена языка перерисовывает timestamp
   - [ ] История переживает reload
 
-- [ ] **11. Code / cURL (вкладка Code)**
-  - [ ] Подсказка объясняет cURL vs сниппеты кода
-  - [ ] Paste cURL → Import создаёт/заполняет запрос
-  - [ ] Copy cURL / Export cURL копирует валидную строку
-  - [ ] Pro codegen: смена языка генерирует код, Copy code копирует
-  - [ ] Free: блок codegen с PRO, без генерации
+- [ ] **11. Code / cURL**
+  - [ ] Подсказка: cURL vs сниппеты кода
+  - [ ] Paste cURL → Import заполняет запрос
+  - [ ] Copy cURL / Export cURL — валидная строка
+  - [ ] Pro: Generate code / смена языка / Copy code
+  - [ ] Free: блок codegen с PRO, без генерации; cURL остаётся
 
 - [ ] **12. GraphQL (Pro)**
   - [ ] Вкладка GraphQL: query + variables → Execute шлёт POST JSON
-  - [ ] Introspect schema заполняет список типов (нужен живой endpoint)
-  - [ ] Подсказки по вводу (suggest) не падают без схемы
+  - [ ] Introspect schema заполняет типы (testd `POST /graphql`)
+  - [ ] Suggest не падает без схемы
   - [ ] Body type GraphQL JSON недоступен на Free
 
 - [ ] **13. WebSocket / SSE (Pro)**
   - [ ] Подсказка: WS двусторонний, SSE односторонний HTTP-поток
-  - [ ] Кнопка WS, метод WS/SSE и палитра открывают клиент **в том же окне**, не вкладку Chrome
-  - [ ] WS: Connect к echo, Send, сообщение в логе, Disconnect
-  - [ ] Reconnect: после обрыва соединение поднимается снова (если сервер рвёт)
-  - [ ] `{{var}}` в URL сокета подставляется из env
-  - [ ] SSE: Connect к http(s) event stream, Send скрыт/запрещён (receive-only)
-  - [ ] Невалидный URL: ошибка в логе, не падает UI
-  - [ ] Переключение вкладки/метода закрывает сокет
+  - [ ] Кнопка WS, метод WS/SSE и палитра открывают клиент **в том же окне**
+  - [ ] Если уже SSE, палитра/WS не сбрасывают метод на WS
+  - [ ] WS: Connect к `ws://127.0.0.1:8787/ws/echo` (или public echo), Send, лог, Disconnect
+  - [ ] Reconnect после обрыва (если сервер рвёт)
+  - [ ] `{{var}}` в URL сокета из env
+  - [ ] SSE: метод SSE, URL `http://127.0.0.1:8787/sse`, Connect; Send и поле сообщения скрыты
+  - [ ] Невалидный URL: ошибка в логе, UI не падает
+  - [ ] Смена вкладки/метода закрывает сокет
   - [ ] Free: WS/SSE → модалка Pro
 
 - [ ] **14. Scripts и тесты (Pro)**
-  - [ ] Pre-request меняет env/запрос до отправки (как в песочнице `pm.environment.set`)
-  - [ ] Ошибка pre-request показывает тост и не шлёт
+  - [ ] Pre-request меняет env/запрос до отправки (`pm.environment.set`)
+  - [ ] Ошибка pre-request → тост, запрос не уходит
   - [ ] Tests после ответа: pass/fail во вкладке Tests
   - [ ] Run collection учитывает упавшие тесты и Stop on fail
 
 - [ ] **15. Cookies (Free)**
-  - [ ] Подсказка: cookies в Chrome по URL, не в storage PingTo
-  - [ ] Load cookies for URL показывает cookies домена (нужен host_permissions)
-  - [ ] Set cookie появляется в списке после Load
+  - [ ] Подсказка: cookies Chrome по URL запроса, не storage PingTo
+  - [ ] Load cookies for URL показывает cookies домена
+  - [ ] Set появляется в списке после Load
   - [ ] Невалидный URL не роняет страницу
 
 - [ ] **16. Docs (Free)**
   - [ ] Подсказка: заметки не уходят на сервер
-  - [ ] Заметки Markdown сохраняются с запросом (Save в коллекцию)
-  - [ ] Имя запроса правится в поле у вкладок
+  - [ ] Markdown сохраняется с запросом при Save в коллекцию
+  - [ ] Имя запроса правится только в поле у вкладок
 
 - [ ] **17. Settings**
   - [ ] Timeout сохраняется и используется
-  - [ ] History max сохраняется с учётом тарифа
-  - [ ] SSL hint: нельзя обойти invalid TLS из расширения
-  - [ ] Close / Esc закрывают модалку без сохранения, если не жали Save
+  - [ ] History max с учётом тарифа
+  - [ ] SSL hint: invalid TLS из расширения не обойти
+  - [ ] Close / Esc закрывают модалку без Save
   - [ ] Save закрывает модалку
 
 - [ ] **18. Персистентность и изоляция**
-  - [ ] Reload расширения: вкладки, Pro-флаг, язык, тема, env, коллекции, история на месте
+  - [ ] Reload: вкладки, Pro-флаг, язык, тема, env, коллекции, история
   - [ ] Закрыть окно PingTo и открыть снова — то же состояние
-  - [ ] Данные только локально (chrome.storage), не уходят на внешний бэкенд PingTo
+  - [ ] Данные только в `chrome.storage`, без бэкенда PingTo
   - [ ] Два профиля Chrome не шарят коллекции
 
 - [ ] **19. Ошибки и края**
-  - [ ] 4xx/5xx: статус красный, body виден
-  - [ ] CORS не должен ломать запросы из service worker (в отличие от страницы)
+  - [ ] 4xx/5xx: статус красный, body виден (testd `/status/404`)
+  - [ ] CORS не ломает запросы из service worker
   - [ ] HTTPS с битым сертификатом: ошибка, без обхода
   - [ ] Отмена на уже завершённом запросе безопасна
-  - [ ] Очень длинный URL / много хедеров не ломают вёрстку
-  - [ ] Модалки: Pro, Env, Settings, Run, Palette — Esc закрывает
+  - [ ] Длинный URL / много хедеров не ломают вёрстку
+  - [ ] Модалки Pro, Env, Settings, History, Run, Palette — Esc закрывает
 
 - [ ] **20. Регрессии, которые уже ломались**
   - [ ] Язык: кнопка = язык, **на который** переключишься
-  - [ ] Save сразу обновляет дерево коллекции
-  - [ ] Сохранение в папку, не только в корень коллекции
+  - [ ] Селект env не растягивает топбар; «+» вкладки на месте
+  - [ ] Save сразу обновляет дерево; Save в папку, не только в корень
   - [ ] DnD запрос ↔ папка
   - [ ] История с timestamp
   - [ ] Повторное открытие запроса из коллекции не плодит вкладки
   - [ ] WS не в новой вкладке браузера
   - [ ] Env: удаление переменной vs удаление окружения
   - [ ] Имя запроса не вечное «New request»
-
-
+  - [ ] Pro → Free не удаляет коллекции
+  - [ ] Auth не выглядит как куча неподписанных полей
 
 ---
 
-
-
 ## Минимальный прогон (если мало времени)
 
-1. Free: Send GET httpbin `/get`, история с временем, Pro-кнопка → модалка.
-2. Включить Pro.
-3. Env `base_url` + Send `{{base_url}}/get`.
-4. Коллекция → папка → Save → открыть снова (та же вкладка) → изменить имя → Save → дерево обновилось.
-5. DnD в другую папку.
-6. WS echo.
-7. RU/EN кнопка и подписи.
-8. Reload расширения — всё на месте.
-
+1. `go run .` в `testd/`. Free: Import PingTo JSON `testd/pingto-testd-collection.json`.
+2. Env `base_url` + Send `{{base_url}}/health`. История с временем.
+3. Auth Bearer / API Key на testd. Вкладка Auth: подписи и подсказка.
+4. Cookies Load/Set, Docs заметка, Code: cURL copy. JSONPath по JSON-ответу.
+5. Создать 3-ю коллекцию на Free — отказ. Включить Pro, создать 3+, выключить Pro — 🔒, данные на месте, открыть запрос из 3-й → модалка.
+6. Pro: папка → Save → открыть снова (та же вкладка) → DnD. Run collection. WS `/ws/echo`. SSE `/sse`. GraphQL `/graphql`.
+7. RU/EN. Reload расширения — всё на месте.

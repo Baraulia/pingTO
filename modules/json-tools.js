@@ -93,15 +93,15 @@ export function diffText(a, b) {
 export function hintForResponse(response) {
   if (!response) return '';
   if (response.statusText === 'Aborted' || /timeout|cancelled/i.test(response.error || '')) {
-    return 'Request timed out or was cancelled. Increase timeout in Settings or check the server.';
+    return 'hintTimeout';
   }
-  if (response.status === 401) return '401 Unauthorized — check Bearer/Basic/OAuth credentials and environment variables.';
-  if (response.status === 403) return '403 Forbidden — the token may lack scope or the resource is protected.';
-  if (response.status === 404) return '404 Not Found — verify the URL, path params and selected environment.';
-  if (response.status === 429) return '429 Too Many Requests — back off and retry.';
-  if (response.status >= 500) return 'Server error — the API is failing, not the client.';
+  if (response.status === 401) return 'hint401';
+  if (response.status === 403) return 'hint403';
+  if (response.status === 404) return 'hint404';
+  if (response.status === 429) return 'hint429';
+  if (response.status >= 500) return 'hint5xx';
   if (response.error && /Failed to fetch|NetworkError|CORS/i.test(response.error)) {
-    return 'Network error. PingTo bypasses CORS via the service worker; this is usually DNS, TLS, mixed content, or the server is down. Chrome cannot ignore invalid SSL certificates.';
+    return 'hintNetwork';
   }
   return '';
 }

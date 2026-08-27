@@ -123,7 +123,7 @@
     "message": "Экспортировать cURL"
   },
   "generateCodeBtn": {
-    "message": "💻 Генерация кода"
+    "message": "Сгенерировать код"
   },
   "saveToCollectionBtn": {
     "message": "Сохранить в коллекцию"
@@ -871,5 +871,101 @@
   },
   "wsNotConnected": {
     "message": "Нет соединения"
+  },
+  "responseEmpty": {
+    "message": "Отправьте запрос, чтобы увидеть ответ"
+  },
+  "snapshotNeed": {
+    "message": "Сначала сохраните snapshot"
+  },
+  "snapshotSaved": {
+    "message": "Snapshot сохранён"
+  },
+  "tokenReady": {
+    "message": "Токен получен"
+  },
+  "oauthFailed": {
+    "message": "OAuth client credentials не удался"
+  },
+  "preRequestFailed": {
+    "message": "Pre-request: {error}"
+  },
+  "jsonErrorToast": {
+    "message": "JSON: {error}"
+  },
+  "binaryLoaded": {
+    "message": "Binary: {name}"
+  },
+  "pickFilesBtn": {
+    "message": "Выбрать файлы"
+  },
+  "noFileChosen": {
+    "message": "Файл не выбран"
+  },
+  "kvKey": {
+    "message": "Ключ"
+  },
+  "kvValue": {
+    "message": "Значение"
+  },
+  "testPass": {
+    "message": "PASS"
+  },
+  "testFail": {
+    "message": "FAIL"
+  },
+  "oauthClientIdPlaceholder": {
+    "message": "Client ID"
+  },
+  "oauthClientSecretPlaceholder": {
+    "message": "Client secret"
+  },
+  "oauthScopePlaceholder": {
+    "message": "Scope"
+  },
+  "oauthRefreshPlaceholder": {
+    "message": "Необязательный refresh token"
+  },
+  "hintTimeout": {
+    "message": "Запрос прерван по таймауту или отменён. Увеличьте timeout в Settings или проверьте сервер."
+  },
+  "hint401": {
+    "message": "401 Unauthorized — проверьте Bearer/Basic/OAuth и переменные окружения."
+  },
+  "hint403": {
+    "message": "403 Forbidden — у токена может не быть scope, или ресурс закрыт."
+  },
+  "hint404": {
+    "message": "404 Not Found — проверьте URL, path-параметры и выбранное окружение."
+  },
+  "hint429": {
+    "message": "429 Too Many Requests — подождите и повторите."
+  },
+  "hint5xx": {
+    "message": "Ошибка сервера — падает API, не клиент."
+  },
+  "hintNetwork": {
+    "message": "Сетевая ошибка. Обычно DNS, TLS, mixed content или сервер недоступен. Chrome не умеет игнорировать невалидный SSL."
+  },
+  "importUnknownFormat": {
+    "message": "Неизвестный формат коллекции"
+  },
+  "importNotBruno": {
+    "message": "Это не коллекция Bruno"
+  },
+  "importNotPingto": {
+    "message": "Это не JSON-коллекция PingTo"
+  },
+  "importNotPostman": {
+    "message": "Это не коллекция Postman"
+  },
+  "importNotInsomnia": {
+    "message": "Это не экспорт Insomnia"
+  },
+  "importNotOpenapi": {
+    "message": "Это не файл OpenAPI"
+  },
+  "importNothing": {
+    "message": "Нечего импортировать"
   }
 }

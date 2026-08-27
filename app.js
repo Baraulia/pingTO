@@ -229,6 +229,7 @@ function current() {
 function tabFromDraft(partial = {}) {
   return {
     ...emptyRequest(partial),
+    name: partial.name || I18nManager.t('defaultRequestName'),
     id: partial.id || newId(),
     params: partial.params || parseUrlParams(partial.url || ''),
     pathParams: partial.pathParams || [],
@@ -332,6 +333,7 @@ async function saveCurrentRequest() {
     tab.collectionItemId = saved.id;
   }
   persistWorkspace();
+  renderTabs();
   renderCollections();
   UIHelpers.showToast(I18nManager.t('requestSaved'), 'success');
 }
@@ -356,7 +358,7 @@ function bindKv(container, list, fields, onChange) {
     };
     fields.forEach((field) => {
       const input = document.createElement('input');
-      input.placeholder = field;
+      input.placeholder = I18nManager.t(field === 'key' ? 'kvKey' : 'kvValue');
       input.value = row[field] || '';
       input.oninput = () => {
         row[field] = input.value;
@@ -443,6 +445,7 @@ function writeTabToForm() {
   renderTabs();
   syncWorkspaceMode();
   updateEnvHint();
+  updateFileLabels();
 }
 
 function renderKvs() {
@@ -584,6 +587,21 @@ function toggleAuth() {
   $('digestHint')?.classList.toggle('hidden', type !== 'digest');
   $('apiKeyFields')?.classList.toggle('hidden', type !== 'apikey');
   $('oauth2Fields')?.classList.toggle('hidden', type !== 'oauth2');
+}
+
+function updateFileLabels() {
+  const multiLabel = $('multiFilesLabel');
+  if (multiLabel) {
+    const files = $('multiFiles')?.files;
+    multiLabel.textContent = files?.length
+      ? [...files].map((f) => f.name).join(', ')
+      : I18nManager.t('noFileChosen');
+  }
+  const binLabel = $('binaryFileLabel');
+  if (binLabel) {
+    const file = $('binaryFile')?.files?.[0];
+    binLabel.textContent = file ? file.name : I18nManager.t('noFileChosen');
+  }
 }
 
 function isJsonBodyType(type = $('bodyType')?.value) {
@@ -823,7 +841,7 @@ async function sendCurrent() {
     try {
       runPreRequest(tab.preRequest, ctx);
     } catch (e) {
-      UIHelpers.showToast(`Pre-request: ${e.message}`, 'error');
+      UIHelpers.showToast(I18nManager.t('preRequestFailed').replace('{error}', e.message), 'error');
       return;
     }
   }
@@ -971,7 +989,7 @@ async function resolveOAuth(tab, variables) {
       timeout: state.timeout,
     });
     const json = JSON.parse(res.body || '{}');
-    if (!json.access_token) throw new Error('OAuth client credentials failed');
+    if (!json.access_token) throw new Error(I18nManager.t('oauthFailed'));
     tab.auth.token = json.access_token;
     tab.auth.refresh = json.refresh_token || '';
   }
@@ -983,7 +1001,7 @@ function renderResponse(tab) {
   const status = $('responseStatus');
   if (!res) {
     status.textContent = '—';
-    $('responseBody').textContent = 'Send a request to see the response';
+    $('responseBody').textContent = I18nManager.t('responseEmpty');
     return;
   }
   status.textContent = `${res.status} ${res.statusText || ''}`;
@@ -1003,7 +1021,8 @@ function renderResponse(tab) {
   }
   $('responseHeaders').textContent = JSON.stringify(res.headers || {}, null, 2);
   $('responseRedirects').textContent = JSON.stringify(res.redirects || [], null, 2);
-  $('respHint').textContent = hintForResponse(res);
+  const hintKey = hintForResponse(res);
+  $('respHint').textContent = hintKey ? I18nManager.t(hintKey) : '';
   const iframe = $('responsePreview');
   const ct = res.headers?.['content-type'] || res.contentType || '';
   if (ct.includes('text/html') && !res.truncated) {
@@ -1017,7 +1036,7 @@ function renderResponse(tab) {
   (tab.testResults || []).forEach((t) => {
     const div = document.createElement('div');
     div.className = `test-item ${t.pass ? 'pass' : 'fail'}`;
-    div.textContent = `${t.pass ? 'PASS' : 'FAIL'} ${t.name}${t.error ? ` — ${t.error}` : ''}`;
+    div.textContent = `${t.pass ? I18nManager.t('testPass') : I18nManager.t('testFail')} ${t.name}${t.error ? ` — ${t.error}` : ''}`;
     tests.appendChild(div);
   });
   const diff = $('diffView');
@@ -1030,7 +1049,7 @@ function renderResponse(tab) {
       diff.appendChild(line);
     });
   } else {
-    diff.textContent = 'Save a snapshot first';
+    diff.textContent = I18nManager.t('snapshotNeed');
   }
 }
 
@@ -1511,7 +1530,7 @@ function applyBodyJson(transform) {
   } catch (e) {
     const message = e.message || String(e);
     $('jsonError').textContent = message;
-    UIHelpers.showToast(`JSON: ${message}`, 'error');
+    UIHelpers.showToast(I18nManager.t('jsonErrorToast').replace('{error}', message), 'error');
   }
 }
 
@@ -1535,7 +1554,7 @@ async function runCollection() {
   if (!requirePro('collectionRun')) return;
   const id = state.selectedCollectionId;
   if (!id) {
-    UIHelpers.showToast('Select a collection in the sidebar', 'error');
+    UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
     return;
   }
   if (!collectionUnlocked(id)) {
@@ -1698,6 +1717,7 @@ $('methodSelect').onchange = () => {
   if (current()) current().method = method;
   closeSocket(true);
   syncWorkspaceMode();
+  renderTabs();
 };
 $('addQueryBtn').onclick = () => {
   current().params.push({ key: '', value: '', enabled: true });
@@ -1741,8 +1761,10 @@ $('binaryFile').onchange = async (e) => {
   if (!file) return;
   current().binary = await fileToBase64(file);
   current().binary.name = 'file';
-  UIHelpers.showToast(`Binary ${file.name}`, 'success');
+  UIHelpers.showToast(I18nManager.t('binaryLoaded').replace('{name}', file.name), 'success');
+  updateFileLabels();
 };
+$('pickMultiFilesBtn').onclick = () => $('multiFiles').click();
 $('multiFiles').onchange = async (e) => {
   current().files = [];
   for (const file of [...e.target.files]) {
@@ -1750,6 +1772,7 @@ $('multiFiles').onchange = async (e) => {
     encoded.name = file.name;
     current().files.push(encoded);
   }
+  updateFileLabels();
 };
 $('reqSubtabs').onclick = (e) => {
   const pane = e.target.dataset.pane;
@@ -1769,7 +1792,7 @@ $('copyResponseBtn').onclick = () => navigator.clipboard.writeText($('responseBo
 $('saveResponseBtn').onclick = () => UIHelpers.downloadText(`response_${Date.now()}.json`, $('responseBody').textContent);
 $('snapshotBtn').onclick = () => {
   current().snapshot = current().response?.body || '';
-  UIHelpers.showToast('Snapshot saved', 'success');
+  UIHelpers.showToast(I18nManager.t('snapshotSaved'), 'success');
 };
 $('copyAsCurlBtn').onclick = () => {
   readFormIntoTab();
@@ -1926,7 +1949,16 @@ $('importFile').onchange = async (e) => {
     renderCollections();
     UIHelpers.showToast(I18nManager.t('importedOk'), 'success');
   } catch (err) {
-    UIHelpers.showToast(err.message || I18nManager.t('importFailed'), 'error');
+    const key = {
+      'Unknown collection format': 'importUnknownFormat',
+      'Not a Bruno collection': 'importNotBruno',
+      'Not a PingTo JSON collection': 'importNotPingto',
+      'Not a Postman collection': 'importNotPostman',
+      'Not an Insomnia export': 'importNotInsomnia',
+      'Not an OpenAPI file': 'importNotOpenapi',
+      'Nothing to import': 'importNothing',
+    }[err.message];
+    UIHelpers.showToast(key ? I18nManager.t(key) : (err.message || I18nManager.t('importFailed')), 'error');
   }
   pendingImportFormat = 'pingto';
   e.target.value = '';
@@ -2005,6 +2037,8 @@ document.addEventListener('languageChanged', async () => {
   renderCollections();
   toggleAuth();
   syncWorkspaceMode();
+  updateFileLabels();
+  themeManager.apply();
   if (lastProFeatureId && !$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
 });
 $('openTabBtn').onclick = () => chrome.runtime.sendMessage({ type: 'openFullscreen' });
@@ -2046,7 +2080,7 @@ $('oauthLoginBtn').onclick = async () => {
   readFormIntoTab();
   const token = await resolveOAuth(current(), await envVars());
   $('authToken').value = token || '';
-  UIHelpers.showToast('Token ready', 'success');
+  UIHelpers.showToast(I18nManager.t('tokenReady'), 'success');
 };
 
 document.addEventListener('keydown', (e) => {

@@ -39,10 +39,8 @@ test.describe('Free vs Pro shell', () => {
 
   test('theme toggle flips data-theme', async ({ page }) => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await expect(page.locator('#themeToggle')).toHaveText('☀️');
     await page.locator('#themeToggle').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect(page.locator('#themeToggle')).toHaveText('🌙');
   });
 
   test('language button shows the target language', async ({ page }) => {

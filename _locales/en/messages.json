@@ -123,7 +123,7 @@
     "message": "Export cURL"
   },
   "generateCodeBtn": {
-    "message": "💻 Generate Code"
+    "message": "Generate code"
   },
   "saveToCollectionBtn": {
     "message": "Save to collection"
@@ -871,5 +871,101 @@
   },
   "wsNotConnected": {
     "message": "Not connected"
+  },
+  "responseEmpty": {
+    "message": "Send a request to see the response"
+  },
+  "snapshotNeed": {
+    "message": "Save a snapshot first"
+  },
+  "snapshotSaved": {
+    "message": "Snapshot saved"
+  },
+  "tokenReady": {
+    "message": "Token ready"
+  },
+  "oauthFailed": {
+    "message": "OAuth client credentials failed"
+  },
+  "preRequestFailed": {
+    "message": "Pre-request: {error}"
+  },
+  "jsonErrorToast": {
+    "message": "JSON: {error}"
+  },
+  "binaryLoaded": {
+    "message": "Binary: {name}"
+  },
+  "pickFilesBtn": {
+    "message": "Choose files"
+  },
+  "noFileChosen": {
+    "message": "No file chosen"
+  },
+  "kvKey": {
+    "message": "Key"
+  },
+  "kvValue": {
+    "message": "Value"
+  },
+  "testPass": {
+    "message": "PASS"
+  },
+  "testFail": {
+    "message": "FAIL"
+  },
+  "oauthClientIdPlaceholder": {
+    "message": "Client ID"
+  },
+  "oauthClientSecretPlaceholder": {
+    "message": "Client secret"
+  },
+  "oauthScopePlaceholder": {
+    "message": "Scope"
+  },
+  "oauthRefreshPlaceholder": {
+    "message": "Optional refresh token"
+  },
+  "hintTimeout": {
+    "message": "Request timed out or was cancelled. Increase timeout in Settings or check the server."
+  },
+  "hint401": {
+    "message": "401 Unauthorized — check Bearer/Basic/OAuth credentials and environment variables."
+  },
+  "hint403": {
+    "message": "403 Forbidden — the token may lack scope or the resource is protected."
+  },
+  "hint404": {
+    "message": "404 Not Found — verify the URL, path params and selected environment."
+  },
+  "hint429": {
+    "message": "429 Too Many Requests — back off and retry."
+  },
+  "hint5xx": {
+    "message": "Server error — the API is failing, not the client."
+  },
+  "hintNetwork": {
+    "message": "Network error. This is usually DNS, TLS, mixed content, or the server is down. Chrome cannot ignore invalid SSL certificates."
+  },
+  "importUnknownFormat": {
+    "message": "Unknown collection format"
+  },
+  "importNotBruno": {
+    "message": "Not a Bruno collection"
+  },
+  "importNotPingto": {
+    "message": "Not a PingTo JSON collection"
+  },
+  "importNotPostman": {
+    "message": "Not a Postman collection"
+  },
+  "importNotInsomnia": {
+    "message": "Not an Insomnia export"
+  },
+  "importNotOpenapi": {
+    "message": "Not an OpenAPI file"
+  },
+  "importNothing": {
+    "message": "Nothing to import"
   }
 }

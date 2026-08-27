@@ -1,4 +1,6 @@
 // modules/theme.js
+import { t } from './i18n.js';
+
 export class ThemeManager {
   constructor() {
     this.dark = true;
@@ -29,8 +31,8 @@ export class ThemeManager {
     document.documentElement.setAttribute('data-theme', this.dark ? 'dark' : 'light');
     const btn = document.getElementById('themeToggle');
     if (btn) {
-      btn.textContent = this.dark ? '☀️' : '🌙';
-      btn.title = this.dark ? 'Light' : 'Dark';
+      btn.title = this.dark ? t('themeLight') : t('themeDark');
+      btn.setAttribute('aria-label', btn.title);
     }
   }
 

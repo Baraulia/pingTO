@@ -26,8 +26,8 @@ describe('json-tools', () => {
   it('diffs lines and hints on status codes', () => {
     const rows = diffText('a\nb', 'a\nc');
     expect(rows[1].changed).toBe(true);
-    expect(hintForResponse({ status: 401 })).toMatch(/401/);
-    expect(hintForResponse({ status: 404 })).toMatch(/404/);
-    expect(hintForResponse({ statusText: 'Aborted', error: 'timeout' })).toMatch(/timed out/i);
+    expect(hintForResponse({ status: 401 })).toBe('hint401');
+    expect(hintForResponse({ status: 404 })).toBe('hint404');
+    expect(hintForResponse({ statusText: 'Aborted', error: 'timeout' })).toBe('hintTimeout');
   });
 });

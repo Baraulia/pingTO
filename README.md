@@ -57,6 +57,7 @@ Built for developers who need **speed**, **privacy**, and **convenience**. All d
 - 🧪 **Pre-request scripts, tests, snapshots, response diff**
 - ▶️ **Run collection**
 - 💻 **Code generation** (JavaScript, Python, PHP, Go)
+- 📈 **Load testing** via a local agent binary for your OS (`dist/loadtest/`)
 
 ### Pricing:
 - **Monthly:** $5/month
@@ -185,6 +186,13 @@ All data is stored locally in `chrome.storage.local`:
 go run -C testd .
 ```
 Base URL: `http://127.0.0.1:8787`. Catalog and credentials: `GET /`. Request list: `testd/REQUESTS.md`. Importable collection: `testd/pingto-testd-collection.json`.
+
+### Load agent (Pro tab Load test)
+The Chrome extension does **not** contain the native binary. Users download one file for their OS from a GitHub Release (catalog `latest.json` with SHA-256). The Load test tab detects the OS, shows the official link and hash, and checks `/health` version against the catalog.
+
+Publish: `git tag v1.0.0 && git push --tags` → workflow `.github/workflows/loadtest-release.yml` uploads six binaries + `latest.json`. Then paste `https://github.com/<org>/<repo>/releases/latest/download/latest.json` into **Release catalog URL** in the extension.
+
+Local build: `npm run build:loadtest` → `dist/loadtest/` (plus `latest.json` hashes). Agent: `http://127.0.0.1:8788`. Details: `dist/loadtest/README.md`.
 
 ### Automated tests
 ```bash

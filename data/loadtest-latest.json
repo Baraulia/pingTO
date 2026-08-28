@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "signed": false,
+  "listen": "http://127.0.0.1:8788",
+  "remoteManifest": "https://github.com/Baraulia/pingTO/releases/latest/download/latest.json",
+  "releasePage": "https://github.com/Baraulia/pingTO/releases/tag/v1.0.0",
+  "releaseBase": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0",
+  "assets": {
+    "windows-amd64": {
+      "file": "pingto-loadtest-windows-amd64.exe",
+      "sha256": "d9dfee795cbb22d4f3e2d2be2949ed5907ed35e6a52f25b6d9b0418e4c2caeb2",
+      "size": 9698816,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-windows-amd64.exe"
+    },
+    "windows-arm64": {
+      "file": "pingto-loadtest-windows-arm64.exe",
+      "sha256": "a0ebe80b7794fcb88cbf732506fff8a80ee460f28cd6c64ee57b7f432a099a4c",
+      "size": 8873472,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-windows-arm64.exe"
+    },
+    "macos-amd64": {
+      "file": "pingto-loadtest-macos-amd64",
+      "sha256": "ad4924ea1773c7de5b55225e72af2ec7eea7d935540de52687539a1f5eb400c0",
+      "size": 9822720,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-macos-amd64"
+    },
+    "macos-arm64": {
+      "file": "pingto-loadtest-macos-arm64",
+      "sha256": "84ea8da54bef1371cfd7a46d706ff2ae7133ba153fddbf0758c54a3847fbe69f",
+      "size": 9183410,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-macos-arm64"
+    },
+    "linux-amd64": {
+      "file": "pingto-loadtest-linux-amd64",
+      "sha256": "dd80e29657f698076867f0bf818e804390cd67d0564501a6c59dbc8c228792ad",
+      "size": 9629047,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-linux-amd64"
+    },
+    "linux-arm64": {
+      "file": "pingto-loadtest-linux-arm64",
+      "sha256": "5689580650ce2bb992631e5d5f091fe3121db1f6b169e3356f772bcd6bf9b90f",
+      "size": 8986610,
+      "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-linux-arm64"
+    }
+  }
+}

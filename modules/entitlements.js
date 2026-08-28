@@ -22,6 +22,7 @@ export const PRO_FEATURES = {
   collectionRun: 'runCollectionBtn',
   bruno: 'fmtBruno',
   importCollections: 'importAnyBtn',
+  loadtest: 'loadtestBtn',
 };
 
 export const FREE_AUTH = new Set(['none', 'bearer', 'basic', 'apikey']);

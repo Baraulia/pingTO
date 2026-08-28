@@ -6,13 +6,16 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "npm run test:unit && npm run test:testd && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:testd && npm run test:loadtest && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:testd": "go test -C testd .",
+    "test:loadtest": "go test -C loadtest .",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "testd": "go run -C testd ."
+    "testd": "go run -C testd .",
+    "loadtest": "go run -C loadtest .",
+    "build:loadtest": "node scripts/build-loadtest.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

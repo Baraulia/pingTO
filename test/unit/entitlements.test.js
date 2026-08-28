@@ -49,6 +49,7 @@ describe('entitlements', () => {
   it('maps Pro features to UI ids', () => {
     expect(PRO_FEATURES.importCollections).toBe('importAnyBtn');
     expect(PRO_FEATURES.bruno).toBe('fmtBruno');
+    expect(PRO_FEATURES.loadtest).toBe('loadtestBtn');
   });
 
   it('keeps extra Free collections locked instead of deleting them', () => {

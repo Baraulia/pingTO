@@ -28,6 +28,12 @@ go.work.sum
 testd/testd
 testd/testd.exe
 
+# Go loadtest agent (local go build and release binaries)
+loadtest/loadtest
+loadtest/loadtest.exe
+dist/loadtest/pingto-loadtest-*
+dist/loadtest/latest.json
+
 # Node / Playwright
 node_modules/
 test-results/

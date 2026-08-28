@@ -626,6 +626,18 @@
   "proItemCodegenDesc": {
     "message": "Copy the request as JavaScript, Python, PHP, or Go."
   },
+  "proDesc_loadtest": {
+    "message": "Load testing is not run inside Chrome — start the PingTo load agent for your OS (Windows .exe, macOS/Linux binary). It sends many parallel HTTP requests using the current URL, headers, auth and body, then streams RPS and latency percentiles back."
+  },
+  "proItemLoadtestTitle": {
+    "message": "Load testing"
+  },
+  "proItemLoadtestDesc": {
+    "message": "Local agent: ramp or hold profile, abort if the API fails or slows down, live p50/p95/p99. Open Load test."
+  },
+  "loadtestTab": {
+    "message": "Load test"
+  },
   "collectionHelp": {
     "message": "Create a collection, click its name to select it, then Save request. Click a request to open it. Double-click a collection to rename or delete."
   },
@@ -967,5 +979,193 @@
   },
   "importNothing": {
     "message": "Nothing to import"
-  }
+  },
+  "loadtestHelp": {
+    "message": "A load test repeats the current HTTP request many times in parallel. Chrome cannot open that many connections — download the PingTo agent for this OS, run it, then Check agent. The agent only listens on this computer (127.0.0.1)."
+  },
+  "loadtestAgentLabel": {
+    "message": "Agent URL"
+  },
+  "loadtestAgentHint": {
+    "message": "Address of the running agent on this computer. Default http://127.0.0.1:8788. Run the downloaded file, then Check agent."
+  },
+  "loadtestPingBtn": {
+    "message": "Check agent"
+  },
+  "loadtestWorkers": {
+    "message": "Peak parallel clients"
+  },
+  "loadtestWorkersHint": {
+    "message": "Maximum simultaneous clients (the top of the ramp, or the level to hold). Like N users clicking Send together. Max 200."
+  },
+  "loadtestProfile": {
+    "message": "How load grows"
+  },
+  "loadtestProfileRamp": {
+    "message": "Ramp 0 → peak, then stop"
+  },
+  "loadtestProfileHold": {
+    "message": "Reach target quickly, then hold"
+  },
+  "loadtestProfileHint": {
+    "message": "Ramp: clients increase evenly from 1 to the peak over the time you set; when the peak is reached the test stops. Hold: a short warmup to the peak, then that load is kept for the hold time."
+  },
+  "loadtestRamp": {
+    "message": "Time to reach peak (ms)"
+  },
+  "loadtestRampHint": {
+    "message": "For ramp: how long the climb from 0 to peak lasts (then stop). For hold: warmup before the plateau — 1000–2000 ms is a fast rise. Max 10 minutes."
+  },
+  "loadtestHold": {
+    "message": "Hold at peak (ms)"
+  },
+  "loadtestHoldHint": {
+    "message": "Only for “reach and hold”: how long to keep the peak after warmup. 30000 = 30 seconds at target load."
+  },
+  "loadtestDuration": {
+    "message": "Run for (milliseconds)"
+  },
+  "loadtestDurationHint": {
+    "message": "How long the test lasts. Used only by the constant profile."
+  },
+  "loadtestCount": {
+    "message": "Also stop after N requests"
+  },
+  "loadtestCountHint": {
+    "message": "0 = ignore. For example 1000 = stop after 1000 requests even if the ramp or hold is not finished."
+  },
+  "loadtestRps": {
+    "message": "Max requests per second"
+  },
+  "loadtestRpsHint": {
+    "message": "0 = as fast as current clients can go. The cap also ramps with the profile (0 → this number). Set 50 for a gentler, more predictable load."
+  },
+  "loadtestTimeout": {
+    "message": "Give up on one request after (ms)"
+  },
+  "loadtestTimeoutHint": {
+    "message": "If a single request has no response in this time, it is a timeout in the report. Does not stop the whole test by itself — use abort rules below for that."
+  },
+  "loadtestAbortTitle": {
+    "message": "Abort if the service cannot hold"
+  },
+  "loadtestAbortHelp": {
+    "message": "The test stops itself (status aborted) when the API is failing or too slow. 0 disables a rule. Checks start after the grace period and a minimum number of requests, so a couple of errors at the start do not trip it."
+  },
+  "loadtestAbortError": {
+    "message": "Stop if error rate ≥ %"
+  },
+  "loadtestAbortErrorHint": {
+    "message": "Share of failed + timed-out requests. 20 = stop if one in five is not HTTP 2xx/3xx. 0 = off."
+  },
+  "loadtestAbortP95": {
+    "message": "Stop if p95 latency ≥ ms"
+  },
+  "loadtestAbortP95Hint": {
+    "message": "95% of requests should be faster than this. If p95 grows past the limit, the service is saturated. 0 = off."
+  },
+  "loadtestAbortStreak": {
+    "message": "Stop after N failures in a row"
+  },
+  "loadtestAbortStreakHint": {
+    "message": "Emergency brake when the API is down (all 5xx/timeouts). 0 = off."
+  },
+  "loadtestAbortAfter": {
+    "message": "Min requests before abort"
+  },
+  "loadtestAbortAfterHint": {
+    "message": "Do not abort on the first errors. 20 = wait until 20 requests have finished, then apply the rules."
+  },
+  "loadtestAbortGrace": {
+    "message": "Abort grace period (ms)"
+  },
+  "loadtestAbortGraceHint": {
+    "message": "Ignore abort rules at the very beginning (cold start, TLS). 2000 = first 2 seconds never abort."
+  },
+  "loadtestStartBtn": {
+    "message": "Start test"
+  },
+  "loadtestStopBtn": {
+    "message": "Stop test"
+  },
+  "loadtestCopyBtn": {
+    "message": "Copy report"
+  },
+  "loadtestReportHint": {
+    "message": "The dashboard updates live: status, throughput, error rate, latency charts, outcome mix and HTTP codes. The text report is under the charts if you need exact numbers."
+  },
+  "loadtestAgentOk": {
+    "message": "Agent online ({service} {version})"
+  },
+  "loadtestAgentFail": {
+    "message": "Agent unavailable: {error}. Download the agent for this OS, run it, then Check agent again."
+  },
+  "loadtestNeedHttp": {
+    "message": "Load testing needs an HTTP method, not WS/SSE."
+  },
+  "loadtestBodySimple": {
+    "message": "Load testing supports none/json/form/text bodies. Multipart and binary are not sent through the agent."
+  },
+  "loadtestStartFail": {
+    "message": "Could not start run: {error}"
+  },
+  "loadtestCopied": {
+    "message": "Report copied"
+  },
+  "loadtestAborted": {
+    "message": "Test aborted: {reason}"
+  },
+  "loadReportStatus": { "message": "Status" },
+  "loadReportAbort": { "message": "Abort reason" },
+  "loadReportPhase": { "message": "Phase" },
+  "loadReportElapsed": { "message": "Elapsed" },
+  "loadReportClients": { "message": "Clients (current / peak)" },
+  "loadReportRequests": { "message": "Requests" },
+  "loadReportOk": { "message": "Success (HTTP < 400)" },
+  "loadReportFail": { "message": "Failures" },
+  "loadReportTimeout": { "message": "Timeouts" },
+  "loadReportErrorRate": { "message": "Error rate" },
+  "loadReportRps": { "message": "Throughput (req/s)" },
+  "loadReportBytes": { "message": "Bytes received" },
+  "loadReportLatency": { "message": "Latency (ms)" },
+  "loadReportCodes": { "message": "HTTP status codes" },
+  "loadStatus_running": { "message": "running" },
+  "loadStatus_done": { "message": "done" },
+  "loadStatus_stopped": { "message": "stopped (manual)" },
+  "loadStatus_aborted": { "message": "aborted (service could not hold)" },
+  "loadStatus_error": { "message": "error" },
+  "loadPhase_ramp": { "message": "ramping up" },
+  "loadPhase_hold": { "message": "holding peak" },
+  "loadPhase_steady": { "message": "steady" },
+  "loadAbort_error_rate": { "message": "error rate exceeded the limit" },
+  "loadAbort_p95": { "message": "p95 latency exceeded the limit" },
+  "loadAbort_consecutive": { "message": "too many failures in a row" },
+  "loadChartRps": { "message": "Throughput" },
+  "loadChartLatency": { "message": "Latency p50 / p95 / p99" },
+  "loadChartErrors": { "message": "Error rate" },
+  "loadChartClients": { "message": "Clients" },
+  "loadMixLabel": { "message": "Outcomes" },
+  "loadReportTextToggle": { "message": "Text report" },
+  "loadDlTitle": { "message": "Download the agent" },
+  "loadDlTrust": { "message": "The file is not inside the Chrome extension. Download it only with the button below (official release). The build is not code-signed yet: Windows SmartScreen or macOS Gatekeeper may warn. The agent accepts traffic only on 127.0.0.1. After download, compare SHA-256 with the catalog." },
+  "loadDlButton": { "message": "Download for {os}" },
+  "loadDlCopySha": { "message": "Copy SHA-256" },
+  "loadDlFile": { "message": "File" },
+  "loadDlShaPending": { "message": "Will appear in the release catalog after CI publishes a tag" },
+  "loadDlShaCopied": { "message": "SHA-256 copied" },
+  "loadDlVerify": { "message": "Check the file: {cmd}" },
+  "loadDlUnsigned": { "message": "This build is not Authenticode / notarized. Trust the official catalog URL and the hash, not a file from chat." },
+  "loadDlSigned": { "message": "This release is publisher-signed." },
+  "loadDlNoRelease": { "message": "If the file 404s, run scripts\\publish-loadtest.cmd in cmd.exe (Go, Node, gh auth), then Reload catalog." },
+  "loadDlOther": { "message": "Other OS / catalog URL" },
+  "loadDlCatalog": { "message": "Release catalog URL" },
+  "loadDlCatalogHint": { "message": "Leave empty to use https://github.com/Baraulia/pingTO/releases/latest/download/latest.json" },
+  "loadDlRefresh": { "message": "Reload catalog" },
+  "loadDlUpdate": { "message": "agent {current} is older than catalog {latest} — download again" },
+  "loadPlatform_windows-amd64": { "message": "Windows (x64)" },
+  "loadPlatform_windows-arm64": { "message": "Windows (ARM)" },
+  "loadPlatform_macos-amd64": { "message": "macOS (Intel)" },
+  "loadPlatform_macos-arm64": { "message": "macOS (Apple Silicon)" },
+  "loadPlatform_linux-amd64": { "message": "Linux (x64)" },
+  "loadPlatform_linux-arm64": { "message": "Linux (ARM)" }
 }

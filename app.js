@@ -35,6 +35,30 @@ import { toBrunoText, toInsomnia, toPingto, toPostman } from './modules/exporter
 import { exchangeCode, launchAuthCode, refreshToken } from './modules/oauth.js';
 import { runPreRequest, runTests } from './modules/sandbox.js';
 import {
+  checkLoadAgent,
+  clampLoadSpec,
+  DEFAULT_LOADTEST_AGENT,
+  formatLoadReport,
+  httpTone,
+  loadProgressPct,
+  mixShares,
+  pushLoadSample,
+  sparklinePoints,
+  startLoadRun,
+  stopLoadRun,
+  subscribeLoadRun,
+} from './modules/loadtest-client.js';
+import {
+  compareVersions,
+  DEFAULT_LOADTEST_MANIFEST_URL,
+  detectLoadAgentPlatformAsync,
+  fetchLoadManifest,
+  LOAD_AGENT_PLATFORMS,
+  mergeLoadManifest,
+  normalizeLoadManifest,
+  verifyCommand,
+} from './modules/loadtest-release.js';
+import {
   emptyRequest,
   findItem,
   findParentId,
@@ -118,6 +142,7 @@ const PRO_MODAL_ITEMS = [
   { id: 'scripts', titleKey: 'proItemScriptsTitle', descKey: 'proItemScriptsDesc' },
   { id: 'testsResp', titleKey: 'proItemTestsTitle', descKey: 'proItemTestsDesc' },
   { id: 'codegen', titleKey: 'proItemCodegenTitle', descKey: 'proItemCodegenDesc' },
+  { id: 'loadtest', titleKey: 'proItemLoadtestTitle', descKey: 'proItemLoadtestDesc' },
 ];
 
 const PRO_MODAL_HIGHLIGHT = {
@@ -127,6 +152,12 @@ const PRO_MODAL_HIGHLIGHT = {
 };
 
 let lastProFeatureId = null;
+let loadUnsub = null;
+let loadRunId = null;
+let lastLoadReport = null;
+let loadHistory = [];
+let loadManifest = null;
+let loadPlatformId = 'windows-amd64';
 
 function showProModal(featureId) {
   hideActionMenus();
@@ -816,25 +847,22 @@ function bodyFeatureId(type) {
   return 'binary';
 }
 
-async function sendCurrent() {
+async function buildHttpFields() {
   const tab = current();
   readFormIntoTab();
-  if (isSocketMethod(tab.method)) {
-    await connectSocket();
-    return;
-  }
+  if (isSocketMethod(tab.method)) return { socket: true, tab };
   let url = tab.url.trim();
   if (!url) {
     UIHelpers.showToast(I18nManager.t('enterUrl'), 'error');
-    return;
+    return null;
   }
   if (!state.isPro && !FREE_AUTH.has(tab.authType)) {
     requirePro(authFeatureId(tab.authType));
-    return;
+    return null;
   }
   if (!state.isPro && !FREE_BODY.has(tab.bodyType)) {
     requirePro(bodyFeatureId(tab.bodyType));
-    return;
+    return null;
   }
   const ctx = { variables: await envVars(), request: tab };
   if (state.isPro && tab.preRequest) {
@@ -842,14 +870,14 @@ async function sendCurrent() {
       runPreRequest(tab.preRequest, ctx);
     } catch (e) {
       UIHelpers.showToast(I18nManager.t('preRequestFailed').replace('{error}', e.message), 'error');
-      return;
+      return null;
     }
   }
   url = applyEnvVars(applyPathParams(applyParamsToUrl(url, tab.params), tab.pathParams), ctx.variables);
   tab.sentUrl = url;
   if (!isHttpUrl(url)) {
     UIHelpers.showToast(I18nManager.t('invalidUrl'), 'error');
-    return;
+    return null;
   }
   const headers = applyEnvToHeaders(
     Object.fromEntries((tab.headers || []).filter((h) => h.key && h.enabled !== false).map((h) => [h.key, h.value])),
@@ -881,7 +909,7 @@ async function sendCurrent() {
       JSON.parse(body || 'null');
     } catch {
       UIHelpers.showToast(I18nManager.t('invalidJson'), 'error');
-      return;
+      return null;
     }
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   } else if (tab.bodyType === 'form') {
@@ -895,6 +923,19 @@ async function sendCurrent() {
     binaryBody = tab.binary;
     body = null;
   } else if (tab.bodyType === 'none') body = null;
+
+  return { tab, ctx, url, headers, body, multipart, binaryBody };
+}
+
+async function sendCurrent() {
+  const built = await buildHttpFields();
+  if (!built) return;
+  const { tab } = built;
+  if (built.socket) {
+    await connectSocket();
+    return;
+  }
+  const { url, headers, body, multipart, binaryBody, ctx } = built;
 
   const requestId = newId();
   state.sendingId = requestId;
@@ -1647,6 +1688,277 @@ async function init() {
   writeTabToForm();
   syncWorkspaceMode();
   await updateEnvHint();
+  const savedAgent = await chrome.storage.local.get(['loadtest_agent', 'loadtest_manifest_url']);
+  if ($('loadAgentUrl') && savedAgent.loadtest_agent) $('loadAgentUrl').value = savedAgent.loadtest_agent;
+  if ($('loadManifestUrl') && savedAgent.loadtest_manifest_url) $('loadManifestUrl').value = savedAgent.loadtest_manifest_url;
+  await refreshLoadAgentDownload();
+}
+
+function loadAgentBase() {
+  return $('loadAgentUrl')?.value || DEFAULT_LOADTEST_AGENT;
+}
+
+function platformLabel(id) {
+  return I18nManager.t(`loadPlatform_${id}`);
+}
+
+function renderLoadDownload() {
+  if (!loadManifest) return;
+  const asset = loadManifest.assets[loadPlatformId] || loadManifest.assets['windows-amd64'];
+  const btn = $('loadDownloadBtn');
+  if (btn) {
+    btn.textContent = I18nManager.t('loadDlButton').replace('{os}', platformLabel(loadPlatformId));
+    if (asset?.url) {
+      btn.href = asset.url;
+      btn.classList.remove('is-disabled');
+    } else {
+      btn.href = loadManifest.releasePage || '#';
+      btn.classList.add('is-disabled');
+    }
+  }
+  if ($('loadDlFile')) $('loadDlFile').textContent = asset?.file || '—';
+  if ($('loadDlSha')) $('loadDlSha').textContent = asset?.sha256 || I18nManager.t('loadDlShaPending');
+  if ($('loadDlVerify') && asset?.file) {
+    $('loadDlVerify').textContent = I18nManager.t('loadDlVerify').replace('{cmd}', verifyCommand(loadPlatformId, asset.file));
+  }
+  const status = $('loadDlStatus');
+  if (status) {
+    if (loadManifest.signed) status.textContent = I18nManager.t('loadDlSigned');
+    else if (!asset?.url) status.textContent = I18nManager.t('loadDlNoRelease');
+    else status.textContent = I18nManager.t('loadDlUnsigned');
+  }
+  const list = $('loadDlOtherList');
+  if (list) {
+    list.replaceChildren();
+    for (const id of LOAD_AGENT_PLATFORMS) {
+      if (id === loadPlatformId) continue;
+      const item = loadManifest.assets[id];
+      const li = document.createElement('li');
+      const label = `${platformLabel(id)} — ${item.file}`;
+      if (item.url) {
+        const a = document.createElement('a');
+        a.href = item.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = label;
+        li.appendChild(a);
+      } else {
+        li.textContent = label;
+      }
+      list.appendChild(li);
+    }
+  }
+}
+
+async function refreshLoadAgentDownload() {
+  loadPlatformId = await detectLoadAgentPlatformAsync();
+  let bundled = {};
+  try {
+    bundled = await (await fetch(chrome.runtime.getURL('data/loadtest-latest.json'))).json();
+  } catch {
+    bundled = {};
+  }
+  loadManifest = normalizeLoadManifest(bundled);
+  const remoteUrl = String($('loadManifestUrl')?.value || loadManifest.remoteManifest || DEFAULT_LOADTEST_MANIFEST_URL).trim();
+  if (remoteUrl) {
+    try {
+      const remote = await fetchLoadManifest(remoteUrl);
+      loadManifest = mergeLoadManifest(loadManifest, remote);
+      await chrome.storage.local.set({ loadtest_manifest_url: remoteUrl });
+    } catch {
+      /* keep bundled */
+    }
+  }
+  renderLoadDownload();
+}
+
+async function pingLoadAgent() {
+  const status = $('loadAgentStatus');
+  try {
+    const info = await checkLoadAgent(loadAgentBase());
+    let line = I18nManager.t('loadtestAgentOk')
+      .replace('{service}', info.service || 'pingto-loadtest')
+      .replace('{version}', info.version || '—');
+    const latest = loadManifest?.version;
+    if (latest && info.version && compareVersions(info.version, latest) < 0) {
+      line += ` · ${I18nManager.t('loadDlUpdate').replace('{current}', info.version).replace('{latest}', latest)}`;
+    }
+    if (status) status.textContent = line;
+    await chrome.storage.local.set({ loadtest_agent: loadAgentBase() });
+  } catch (e) {
+    if (status) status.textContent = I18nManager.t('loadtestAgentFail').replace('{error}', e.message);
+  }
+}
+
+function syncLoadProfileFields() {
+  const hold = $('loadProfile')?.value === 'hold';
+  $('loadHoldWrap')?.classList.toggle('hidden', !hold);
+}
+
+function sparkPolylines(svg, series, maxVal) {
+  if (!svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.replaceChildren();
+  for (const line of series) {
+    const el = document.createElementNS(ns, 'polyline');
+    el.setAttribute('class', line.className);
+    el.setAttribute('points', sparklinePoints(line.values, 240, 64, maxVal));
+    svg.appendChild(el);
+  }
+}
+
+function renderLoadVisual(snap) {
+  const root = $('loadVisual');
+  if (!root || !snap) return;
+  root.classList.remove('hidden');
+  root.classList.toggle('is-aborted', snap.status === 'aborted');
+  root.classList.toggle('is-done', snap.status === 'done');
+  const t = (key) => I18nManager.t(key);
+  const lat = snap.latency || {};
+  const statusEl = $('loadKpiStatus');
+  statusEl?.classList.toggle('is-ok', snap.status === 'done');
+  statusEl?.classList.toggle('is-bad', snap.status === 'aborted' || snap.status === 'error');
+  statusEl?.classList.toggle('is-run', snap.status === 'running');
+  if ($('loadKpiStatusVal')) {
+    $('loadKpiStatusVal').textContent = snap.abort
+      ? `${t(`loadStatus_${snap.status}`)} · ${t(`loadAbort_${snap.abort}`)}`
+      : t(`loadStatus_${snap.status || 'running'}`);
+  }
+  if ($('loadKpiRps')) $('loadKpiRps').textContent = Number(snap.rps || 0).toFixed(1);
+  if ($('loadKpiErr')) $('loadKpiErr').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
+  if ($('loadKpiP95')) $('loadKpiP95').textContent = `${Number(lat.p95Ms || 0).toFixed(0)} ms`;
+  if ($('loadKpiTotal')) $('loadKpiTotal').textContent = String(snap.total || 0);
+  if ($('loadKpiClients')) $('loadKpiClients').textContent = `${snap.desiredWorkers || 0} / ${snap.spec?.workers || 0}`;
+  const pct = loadProgressPct(snap);
+  if ($('loadProgressFill')) $('loadProgressFill').style.width = `${pct}%`;
+  if ($('loadProgressLabel')) {
+    $('loadProgressLabel').textContent = `${t(`loadPhase_${snap.phase || 'steady'}`)} · ${snap.elapsedMs || 0} ms`;
+  }
+  const rps = loadHistory.map((s) => s.rps);
+  const p50 = loadHistory.map((s) => s.p50);
+  const p95 = loadHistory.map((s) => s.p95);
+  const p99 = loadHistory.map((s) => s.p99);
+  const err = loadHistory.map((s) => s.err);
+  const cli = loadHistory.map((s) => s.clients);
+  sparkPolylines($('loadChartRps'), [{ className: 's-rps', values: rps }]);
+  sparkPolylines($('loadChartLat'), [
+    { className: 's-p50', values: p50 },
+    { className: 's-p95', values: p95 },
+    { className: 's-p99', values: p99 },
+  ], Math.max(0, ...p50, ...p95, ...p99));
+  sparkPolylines($('loadChartErr'), [{ className: 's-err', values: err }], 100);
+  sparkPolylines($('loadChartCli'), [{ className: 's-cli', values: cli }], snap.spec?.workers || Math.max(1, ...cli));
+  if ($('loadChartRpsVal')) $('loadChartRpsVal').textContent = Number(snap.rps || 0).toFixed(1);
+  if ($('loadChartLatVal')) $('loadChartLatVal').textContent = `p95 ${Number(lat.p95Ms || 0).toFixed(0)}`;
+  if ($('loadChartErrVal')) $('loadChartErrVal').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
+  if ($('loadChartCliVal')) $('loadChartCliVal').textContent = String(snap.desiredWorkers || 0);
+  const mix = mixShares(snap.ok, snap.fail, snap.timeout);
+  const mixRoot = $('loadMix');
+  if (mixRoot) {
+    const [okBar, failBar, toBar] = mixRoot.querySelectorAll('i');
+    if (okBar) okBar.style.flex = String(mix.ok || 0.0001);
+    if (failBar) failBar.style.flex = String(mix.fail || 0.0001);
+    if (toBar) toBar.style.flex = String(mix.timeout || 0.0001);
+  }
+  if ($('loadMixLegend')) {
+    $('loadMixLegend').textContent = `${t('loadReportOk')} ${snap.ok || 0} · ${t('loadReportFail')} ${snap.fail || 0} · ${t('loadReportTimeout')} ${snap.timeout || 0}`;
+  }
+  const codesEl = $('loadCodes');
+  if (codesEl) {
+    const codes = snap.statusCodes || {};
+    const keys = Object.keys(codes).sort((a, b) => Number(a) - Number(b));
+    const max = Math.max(1, ...keys.map((k) => Number(codes[k]) || 0));
+    codesEl.replaceChildren();
+    for (const code of keys) {
+      const row = document.createElement('div');
+      row.className = 'load-code-row';
+      const label = document.createElement('b');
+      label.textContent = code;
+      const bar = document.createElement('div');
+      bar.className = `load-code-bar is-${httpTone(code)}`;
+      const fill = document.createElement('i');
+      fill.style.width = `${(100 * (Number(codes[code]) || 0)) / max}%`;
+      bar.appendChild(fill);
+      const n = document.createElement('em');
+      n.textContent = String(codes[code]);
+      row.append(label, bar, n);
+      codesEl.appendChild(row);
+    }
+  }
+}
+
+function renderLoadSnapshot(snap, sample = true) {
+  lastLoadReport = snap;
+  if (sample) loadHistory = pushLoadSample(loadHistory, snap);
+  const el = $('loadReport');
+  if (el) el.textContent = formatLoadReport(snap, (key) => I18nManager.t(key));
+  renderLoadVisual(snap);
+}
+
+async function startLoadTest() {
+  if (!requirePro('loadtest')) return;
+  const built = await buildHttpFields();
+  if (!built) return;
+  if (built.socket) {
+    UIHelpers.showToast(I18nManager.t('loadtestNeedHttp'), 'error');
+    return;
+  }
+  if (built.multipart || built.binaryBody) {
+    UIHelpers.showToast(I18nManager.t('loadtestBodySimple'), 'error');
+    return;
+  }
+  if (loadUnsub) {
+    loadUnsub();
+    loadUnsub = null;
+  }
+  loadHistory = [];
+  try {
+    const snap = await startLoadRun(loadAgentBase(), clampLoadSpec({
+      method: built.tab.method,
+      url: built.url,
+      headers: built.headers,
+      body: built.body || '',
+      workers: $('loadWorkers')?.value,
+      profile: $('loadProfile')?.value,
+      rampMs: $('loadRampMs')?.value,
+      holdMs: $('loadHoldMs')?.value,
+      count: $('loadCount')?.value,
+      rps: $('loadRps')?.value,
+      timeoutMs: $('loadTimeout')?.value,
+      abortErrorPct: $('loadAbortError')?.value,
+      abortP95Ms: $('loadAbortP95')?.value,
+      abortConsecutive: $('loadAbortStreak')?.value,
+      abortAfter: $('loadAbortAfter')?.value,
+      abortGraceMs: $('loadAbortGrace')?.value,
+      followRedirects: built.tab.followRedirects,
+    }));
+    loadRunId = snap.id;
+    renderLoadSnapshot(snap);
+    loadUnsub = subscribeLoadRun(loadAgentBase(), snap.id, (s) => {
+      renderLoadSnapshot(s);
+      if (s.status && s.status !== 'running') {
+        loadUnsub?.();
+        loadUnsub = null;
+        if (s.status === 'aborted') {
+          UIHelpers.showToast(I18nManager.t('loadtestAborted').replace('{reason}', I18nManager.t(`loadAbort_${s.abort || 'error_rate'}`)), 'error');
+        }
+      }
+    }, () => {});
+  } catch (e) {
+    UIHelpers.showToast(I18nManager.t('loadtestStartFail').replace('{error}', e.message), 'error');
+  }
+}
+
+async function stopLoadTest() {
+  if (loadRunId) {
+    try {
+      renderLoadSnapshot(await stopLoadRun(loadAgentBase(), loadRunId));
+    } catch (e) {
+      UIHelpers.showToast(e.message, 'error');
+    }
+  }
+  loadUnsub?.();
+  loadUnsub = null;
 }
 
 $('sendBtn').onclick = sendCurrent;
@@ -1809,6 +2121,26 @@ $('generateCodeBtn').onclick = generateCode;
 $('copyCodeBtn').onclick = () => {
   generateCode();
   navigator.clipboard.writeText($('codeOutput').textContent);
+};
+$('loadPingBtn').onclick = pingLoadAgent;
+$('loadStartBtn').onclick = startLoadTest;
+$('loadStopBtn').onclick = stopLoadTest;
+if ($('loadProfile')) $('loadProfile').onchange = syncLoadProfileFields;
+syncLoadProfileFields();
+$('loadManifestRefresh')?.addEventListener('click', refreshLoadAgentDownload);
+$('loadCopyShaBtn')?.addEventListener('click', () => {
+  const sha = loadManifest?.assets?.[loadPlatformId]?.sha256;
+  if (!sha) {
+    UIHelpers.showToast(I18nManager.t('loadDlShaPending'), 'info');
+    return;
+  }
+  navigator.clipboard.writeText(sha);
+  UIHelpers.showToast(I18nManager.t('loadDlShaCopied'), 'success');
+});
+$('loadCopyBtn').onclick = () => {
+  if (!lastLoadReport) return;
+  navigator.clipboard.writeText(formatLoadReport(lastLoadReport, (key) => I18nManager.t(key)));
+  UIHelpers.showToast(I18nManager.t('loadtestCopied'), 'success');
 };
 $('gqlPlayBtn').onclick = async () => {
   try {
@@ -2040,10 +2372,16 @@ document.addEventListener('languageChanged', async () => {
   updateFileLabels();
   themeManager.apply();
   if (lastProFeatureId && !$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
+  if (lastLoadReport) renderLoadSnapshot(lastLoadReport, false);
+  renderLoadDownload();
 });
 $('openTabBtn').onclick = () => chrome.runtime.sendMessage({ type: 'openFullscreen' });
 $('sidebarToggle').onclick = () => document.body.classList.toggle('sidebar-collapsed');
 $('wsBtn').onclick = () => openSocketWorkspace();
+$('loadtestBtn').onclick = () => {
+  if (!requirePro('loadtest')) return;
+  showPane('loadtest');
+};
 $('wsConnectBtn').onclick = () => connectSocket();
 $('wsDisconnectBtn').onclick = () => closeSocket(true);
 $('wsSendBtn').onclick = sendWsMessage;

@@ -73,6 +73,7 @@
             <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.3 1.5h3.4l.4 1.6a5 5 0 0 1 1.3.8l1.6-.5 1.7 2.9-1.2 1.2a5 5 0 0 1 0 1.6l1.2 1.2-1.7 2.9-1.6-.5a5 5 0 0 1-1.3.8l-.4 1.6H6.3l-.4-1.6a5 5 0 0 1-1.3-.8l-1.6.5L1.3 10l1.2-1.2a5 5 0 0 1 0-1.6L1.3 6l1.7-2.9 1.6.5a5 5 0 0 1 1.3-.8zm1.7 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5"/></svg>
           </button>
           <button id="wsBtn" class="icon-btn lang-btn" data-pro="websocket" data-i18n-title="websocketBtn">WS</button>
+          <button id="loadtestBtn" class="icon-btn lang-btn" data-pro="loadtest" data-i18n="loadtestTab" data-i18n-title="loadtestTab">Load test</button>
         </div>
       </header>
 
@@ -112,6 +113,7 @@
             <button data-pane="headers" data-i18n="headersTab">Headers</button>
             <button data-pane="body" data-i18n="bodyTab">Body</button>
             <button data-pane="auth" data-i18n="authTab">Auth</button>
+            <button data-pane="loadtest" data-pro="loadtest" data-i18n="loadtestTab">Load test</button>
             <button data-pane="scripts" data-pro="scripts" data-i18n="scriptsTab">Scripts</button>
             <button data-pane="graphql" data-pro="graphql" data-i18n="graphqlTab">GraphQL</button>
             <button data-pane="cookies" data-i18n="cookiesTab">Cookies</button>
@@ -296,6 +298,158 @@
                 <button id="copyCodeBtn" class="btn small" data-i18n="copyCodeBtn">Copy code</button>
               </div>
             </div>
+          </div>
+
+          <div id="pane-loadtest" class="subpane">
+            <p class="hint" data-i18n="loadtestHelp">A load test repeats the current HTTP request many times in parallel. Chrome cannot open that many connections — download the PingTo agent for this OS, run it, then Check agent. The agent only listens on this computer (127.0.0.1).</p>
+            <div class="load-download" id="loadDownloadCard">
+              <h4 data-i18n="loadDlTitle">Download the agent</h4>
+              <p class="hint" data-i18n="loadDlTrust">The file is not inside the Chrome extension. Download it only with the button below (official release). The build is not code-signed yet: Windows SmartScreen or macOS Gatekeeper may warn. The agent accepts traffic only on 127.0.0.1. After download, compare SHA-256 with the catalog.</p>
+              <div class="row">
+                <a id="loadDownloadBtn" class="btn primary" href="#" target="_blank" rel="noopener">Download</a>
+                <button type="button" id="loadCopyShaBtn" class="btn small" data-i18n="loadDlCopySha">Copy SHA-256</button>
+              </div>
+              <p class="load-sha-line"><span data-i18n="loadDlFile">File</span>: <code id="loadDlFile">—</code></p>
+              <p class="load-sha-line">SHA-256: <code id="loadDlSha">—</code></p>
+              <p class="hint" id="loadDlVerify"></p>
+              <p class="hint" id="loadDlStatus"></p>
+              <details class="load-other">
+                <summary data-i18n="loadDlOther">Other OS / catalog URL</summary>
+                <ul id="loadDlOtherList" class="load-other-list"></ul>
+                <label class="field">
+                  <span data-i18n="loadDlCatalog">Release catalog URL</span>
+                  <input id="loadManifestUrl" placeholder="https://github.com/Baraulia/pingTO/releases/latest/download/latest.json">
+                  <small class="field-hint" data-i18n="loadDlCatalogHint">Leave empty to use the catalog bundled in the extension. After the first GitHub Release, paste …/releases/latest/download/latest.json so the extension picks up URLs and hashes.</small>
+                </label>
+                <button type="button" id="loadManifestRefresh" class="btn small" data-i18n="loadDlRefresh">Reload catalog</button>
+              </details>
+            </div>
+            <label class="field">
+              <span data-i18n="loadtestAgentLabel">Agent URL</span>
+              <input id="loadAgentUrl" value="http://127.0.0.1:8788">
+              <small class="field-hint" data-i18n="loadtestAgentHint">Address of the running agent on this computer. Default http://127.0.0.1:8788. Run the downloaded file, then Check agent.</small>
+            </label>
+            <div class="row">
+              <button type="button" id="loadPingBtn" class="btn small" data-i18n="loadtestPingBtn">Check agent</button>
+              <span id="loadAgentStatus" class="hint"></span>
+            </div>
+            <div class="load-grid">
+              <label class="field">
+                <span data-i18n="loadtestProfile">How load grows</span>
+                <select id="loadProfile">
+                  <option value="ramp" data-i18n="loadtestProfileRamp">Ramp 0 → peak, then stop</option>
+                  <option value="hold" data-i18n="loadtestProfileHold">Reach target quickly, then hold</option>
+                </select>
+                <small class="field-hint" data-i18n="loadtestProfileHint">Ramp: clients increase evenly from 1 to the peak over the time you set; when the peak is reached the test stops. Hold: a short warmup to the peak, then that load is kept for the hold time.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestWorkers">Peak parallel clients</span>
+                <input id="loadWorkers" type="number" min="1" max="200" value="10">
+                <small class="field-hint" data-i18n="loadtestWorkersHint">Maximum simultaneous clients (the top of the ramp, or the level to hold). Like N users clicking Send together. Max 200.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestRamp">Time to reach peak (ms)</span>
+                <input id="loadRampMs" type="number" min="0" max="600000" value="10000">
+                <small class="field-hint" data-i18n="loadtestRampHint">For ramp: how long the climb from 0 to peak lasts (then stop). For hold: warmup before the plateau — 1000–2000 ms is a fast rise. Max 10 minutes.</small>
+              </label>
+              <label class="field hidden" id="loadHoldWrap">
+                <span data-i18n="loadtestHold">Hold at peak (ms)</span>
+                <input id="loadHoldMs" type="number" min="0" max="600000" value="10000">
+                <small class="field-hint" data-i18n="loadtestHoldHint">Only for “reach and hold”: how long to keep the peak after warmup. 30000 = 30 seconds at target load.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestCount">Also stop after N requests</span>
+                <input id="loadCount" type="number" min="0" max="1000000" value="0">
+                <small class="field-hint" data-i18n="loadtestCountHint">0 = ignore. For example 1000 = stop after 1000 requests even if the ramp or hold is not finished.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestRps">Max requests per second</span>
+                <input id="loadRps" type="number" min="0" max="10000" value="0">
+                <small class="field-hint" data-i18n="loadtestRpsHint">0 = as fast as current clients can go. The cap also ramps with the profile (0 → this number). Set 50 for a gentler, more predictable load.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestTimeout">Give up on one request after (ms)</span>
+                <input id="loadTimeout" type="number" min="50" max="120000" value="10000">
+                <small class="field-hint" data-i18n="loadtestTimeoutHint">If a single request has no response in this time, it is a timeout in the report. Does not stop the whole test by itself — use abort rules below for that.</small>
+              </label>
+            </div>
+            <h4 data-i18n="loadtestAbortTitle">Abort if the service cannot hold</h4>
+            <p class="hint" data-i18n="loadtestAbortHelp">The test stops itself (status aborted) when the API is failing or too slow. 0 disables a rule. Checks start after the grace period and a minimum number of requests, so a couple of errors at the start do not trip it.</p>
+            <div class="load-grid">
+              <label class="field">
+                <span data-i18n="loadtestAbortError">Stop if error rate ≥ %</span>
+                <input id="loadAbortError" type="number" min="0" max="100" step="0.1" value="20">
+                <small class="field-hint" data-i18n="loadtestAbortErrorHint">Share of failed + timed-out requests. 20 = stop if one in five is not HTTP 2xx/3xx. 0 = off.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestAbortP95">Stop if p95 latency ≥ ms</span>
+                <input id="loadAbortP95" type="number" min="0" max="120000" value="0">
+                <small class="field-hint" data-i18n="loadtestAbortP95Hint">95% of requests should be faster than this. If p95 grows past the limit, the service is saturated. 0 = off.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestAbortStreak">Stop after N failures in a row</span>
+                <input id="loadAbortStreak" type="number" min="0" max="100000" value="30">
+                <small class="field-hint" data-i18n="loadtestAbortStreakHint">Emergency brake when the API is down (all 5xx/timeouts). 0 = off.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestAbortAfter">Min requests before abort</span>
+                <input id="loadAbortAfter" type="number" min="0" max="1000000" value="20">
+                <small class="field-hint" data-i18n="loadtestAbortAfterHint">Do not abort on the first errors. 20 = wait until 20 requests have finished, then apply the rules.</small>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestAbortGrace">Abort grace period (ms)</span>
+                <input id="loadAbortGrace" type="number" min="0" max="600000" value="2000">
+                <small class="field-hint" data-i18n="loadtestAbortGraceHint">Ignore abort rules at the very beginning (cold start, TLS). 2000 = first 2 seconds never abort.</small>
+              </label>
+            </div>
+            <div class="row">
+              <button type="button" id="loadStartBtn" class="btn primary" data-pro="loadtest" data-i18n="loadtestStartBtn">Start test</button>
+              <button type="button" id="loadStopBtn" class="btn danger" data-i18n="loadtestStopBtn">Stop test</button>
+              <button type="button" id="loadCopyBtn" class="btn small" data-i18n="loadtestCopyBtn">Copy report</button>
+            </div>
+            <p class="hint" data-i18n="loadtestReportHint">The dashboard updates live: status, throughput, error rate, latency charts, outcome mix and HTTP codes. The text report is under the charts if you need exact numbers.</p>
+            <div id="loadVisual" class="load-visual hidden">
+              <div class="load-kpis">
+                <div class="load-kpi" id="loadKpiStatus"><span data-i18n="loadReportStatus">Status</span><strong id="loadKpiStatusVal">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportRps">Throughput (req/s)</span><strong id="loadKpiRps">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportErrorRate">Error rate</span><strong id="loadKpiErr">—</strong></div>
+                <div class="load-kpi"><span>p95</span><strong id="loadKpiP95">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportRequests">Requests</span><strong id="loadKpiTotal">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportClients">Clients (current / peak)</span><strong id="loadKpiClients">—</strong></div>
+              </div>
+              <div class="load-progress-wrap">
+                <div class="load-progress" aria-hidden="true"><i id="loadProgressFill"></i></div>
+                <span id="loadProgressLabel" class="load-progress-label"></span>
+              </div>
+              <div class="load-charts">
+                <figure>
+                  <figcaption><span data-i18n="loadChartRps">Throughput</span> <em id="loadChartRpsVal"></em></figcaption>
+                  <svg id="loadChartRps" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                </figure>
+                <figure>
+                  <figcaption><span data-i18n="loadChartLatency">Latency p50 / p95 / p99</span> <em id="loadChartLatVal"></em></figcaption>
+                  <svg id="loadChartLat" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                </figure>
+                <figure>
+                  <figcaption><span data-i18n="loadChartErrors">Error rate</span> <em id="loadChartErrVal"></em></figcaption>
+                  <svg id="loadChartErr" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                </figure>
+                <figure>
+                  <figcaption><span data-i18n="loadChartClients">Clients</span> <em id="loadChartCliVal"></em></figcaption>
+                  <svg id="loadChartCli" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                </figure>
+              </div>
+              <div class="load-mix-row">
+                <span data-i18n="loadMixLabel">Outcomes</span>
+                <div class="load-mix" id="loadMix"><i class="ok"></i><i class="fail"></i><i class="timeout"></i></div>
+                <small id="loadMixLegend"></small>
+              </div>
+              <div id="loadCodes" class="load-codes"></div>
+            </div>
+            <details id="loadReportDetails" class="load-report-details">
+              <summary data-i18n="loadReportTextToggle">Text report</summary>
+              <pre id="loadReport" class="code"></pre>
+            </details>
           </div>
         </div>
 

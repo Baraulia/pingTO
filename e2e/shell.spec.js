@@ -16,6 +16,14 @@ test.describe('Free vs Pro shell', () => {
     await expect(page.locator('#proModal')).toHaveClass(/hidden/);
   });
 
+  test('Load tab is Pro-gated', async ({ page }) => {
+    const load = page.locator('#reqSubtabs button[data-pane="loadtest"]');
+    await expect(load).toHaveAttribute('data-pro', 'loadtest');
+    await load.click();
+    await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#proModalList')).toContainText(/Load testing|Нагрузочн/i);
+  });
+
   test('Enable Pro from modal unlocks GraphQL', async ({ page }) => {
     await page.locator('#reqSubtabs button[data-pane="graphql"]').click();
     await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);

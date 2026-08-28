@@ -1162,10 +1162,10 @@
   "loadDlCatalogHint": { "message": "Leave empty to use https://github.com/Baraulia/pingTO/releases/latest/download/latest.json" },
   "loadDlRefresh": { "message": "Reload catalog" },
   "loadDlUpdate": { "message": "agent {current} is older than catalog {latest} — download again" },
-  "loadPlatform_windows-amd64": { "message": "Windows (x64)" },
-  "loadPlatform_windows-arm64": { "message": "Windows (ARM)" },
-  "loadPlatform_macos-amd64": { "message": "macOS (Intel)" },
-  "loadPlatform_macos-arm64": { "message": "macOS (Apple Silicon)" },
-  "loadPlatform_linux-amd64": { "message": "Linux (x64)" },
-  "loadPlatform_linux-arm64": { "message": "Linux (ARM)" }
+  "loadPlatform_windows_amd64": { "message": "Windows (x64)" },
+  "loadPlatform_windows_arm64": { "message": "Windows (ARM)" },
+  "loadPlatform_macos_amd64": { "message": "macOS (Intel)" },
+  "loadPlatform_macos_arm64": { "message": "macOS (Apple Silicon)" },
+  "loadPlatform_linux_amd64": { "message": "Linux (x64)" },
+  "loadPlatform_linux_arm64": { "message": "Linux (ARM)" }
 }

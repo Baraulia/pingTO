@@ -1699,7 +1699,7 @@ function loadAgentBase() {
 }
 
 function platformLabel(id) {
-  return I18nManager.t(`loadPlatform_${id}`);
+  return I18nManager.t(`loadPlatform_${String(id).replace(/-/g, '_')}`);
 }
 
 function renderLoadDownload() {

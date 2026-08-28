@@ -24,6 +24,7 @@ func TestMain(m *testing.M) {
 
 func testServer(t *testing.T) *httptest.Server {
 	t.Helper()
+	mem.Reset()
 	srv := httptest.NewServer(newHandler())
 	t.Cleanup(srv.Close)
 	return srv
@@ -434,5 +435,66 @@ func TestSSE(t *testing.T) {
 	}
 	if strings.Count(string(raw), "data:") < 8 {
 		t.Fatalf("sse %s", raw)
+	}
+}
+
+func TestInMemoryCRUD(t *testing.T) {
+	srv := testServer(t)
+
+	code, body := getJSON(t, srv, "/users/42")
+	if code != 200 || body["email"] != "user-42@pingto.local" {
+		t.Fatalf("seed user %#v", body)
+	}
+	code, _ = getJSON(t, srv, "/users/missing")
+	if code != 404 {
+		t.Fatalf("missing user %d", code)
+	}
+
+	code, body = doJSON(t, srv, http.MethodPost, "/v1/users", `{"id":"7","email":"a@b.c","name":"Ada"}`, map[string]string{"Content-Type": "application/json"})
+	if code != 201 || body["id"] != "7" {
+		t.Fatalf("create %d %#v", code, body)
+	}
+	code, body = doJSON(t, srv, http.MethodPost, "/v1/users", `{"id":"7","email":"dup@b.c"}`, map[string]string{"Content-Type": "application/json"})
+	if code != 409 {
+		t.Fatalf("dup want 409 got %d %#v", code, body)
+	}
+
+	code, _ = doJSON(t, srv, http.MethodDelete, "/v1/users/7", "", nil)
+	if code != 204 {
+		t.Fatalf("delete %d", code)
+	}
+	code, _ = doJSON(t, srv, http.MethodDelete, "/v1/users/7", "", nil)
+	if code != 404 {
+		t.Fatalf("delete missing %d", code)
+	}
+
+	code, body = getJSON(t, srv, "/v1/sessions/s-alpha")
+	if code != 200 || body["user"] != "alpha" {
+		t.Fatalf("session %#v", body)
+	}
+	code, _ = doJSON(t, srv, http.MethodDelete, "/v1/sessions/s-alpha", "", nil)
+	if code != 204 {
+		t.Fatal(code)
+	}
+	code, body = doJSON(t, srv, http.MethodPost, "/v1/sessions", `{"id":"s-alpha","user":"alpha"}`, map[string]string{"Content-Type": "application/json"})
+	if code != 201 {
+		t.Fatalf("restore %d %#v", code, body)
+	}
+
+	code, _ = doJSON(t, srv, http.MethodDelete, "/users/42", "", nil)
+	if code != 204 {
+		t.Fatal(code)
+	}
+	code, body = doJSON(t, srv, http.MethodPost, "/v1/reset", "", nil)
+	if code != 200 || body["ok"] != true {
+		t.Fatalf("reset %#v", body)
+	}
+	code, _ = getJSON(t, srv, "/users/42")
+	if code != 200 {
+		t.Fatalf("reseed %d", code)
+	}
+	code, body = getJSON(t, srv, "/v1/stats")
+	if code != 200 || body["users"] != float64(1) || body["sessions"] != float64(3) {
+		t.Fatalf("stats %#v", body)
 	}
 }

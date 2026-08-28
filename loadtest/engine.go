@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	mrand "math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,6 +35,7 @@ type Snapshot struct {
 	Phase          string    `json:"phase"`
 	DesiredWorkers int       `json:"desiredWorkers"`
 	Abort          string    `json:"abort,omitempty"`
+	AmmoCount      int       `json:"ammoCount,omitempty"`
 	Spec           RunSpec   `json:"spec"`
 	StatsView
 }
@@ -50,6 +53,7 @@ type run struct {
 	cancel  context.CancelFunc
 	stats   *runStats
 	done    chan struct{}
+	ammoSeq atomic.Int64
 }
 
 type Engine struct {
@@ -120,6 +124,9 @@ func (e *Engine) Snapshot(id string) *Snapshot {
 	}
 	elapsed := time.Since(rn.started)
 	view := rn.stats.snapshot(elapsed)
+	spec := rn.spec
+	ammoN := len(spec.Ammo)
+	spec.Ammo = nil
 	return &Snapshot{
 		ID:             rn.id,
 		Status:         rn.status,
@@ -129,7 +136,8 @@ func (e *Engine) Snapshot(id string) *Snapshot {
 		Phase:          rn.phase,
 		DesiredWorkers: int(atomic.LoadInt32(&rn.desired)),
 		Abort:          rn.abort,
-		Spec:           rn.spec,
+		AmmoCount:      ammoN,
+		Spec:           spec,
 		StatsView:      view,
 	}
 }
@@ -266,33 +274,118 @@ func (p *pacer) wait(ctx context.Context, rps float64) error {
 }
 
 func (e *Engine) fire(ctx context.Context, client *http.Client, rn *run) {
-	var body io.Reader
-	if rn.spec.Body != "" && rn.spec.Method != "GET" && rn.spec.Method != "HEAD" {
-		body = strings.NewReader(rn.spec.Body)
-	}
-	req, err := http.NewRequestWithContext(ctx, rn.spec.Method, rn.spec.URL, body)
-	if err != nil {
-		rn.stats.record(0, 0, 0, false, false)
+	seq := rn.ammoSeq.Add(1)
+	method, rawURL, body, headers, comp := pickShot(rn, seq)
+	ok := e.doHTTP(ctx, client, rn, method, rawURL, body, headers, true)
+	if !ok || ctx.Err() != nil || comp == nil {
 		return
 	}
-	for k, v := range rn.spec.Headers {
+	cMethod := firstNonEmpty(comp.Method, "DELETE")
+	cURL := firstNonEmpty(comp.URL, rn.spec.URL)
+	cBody := comp.Body
+	cHeaders := mergeHeaders(rn.spec.Headers, comp.Headers)
+	okComp := e.doHTTP(ctx, client, rn, cMethod, applyN(cURL, seq), applyN(cBody, seq), cHeaders, false)
+	if okComp {
+		rn.stats.compOK.Add(1)
+	} else if ctx.Err() == nil {
+		rn.stats.compFail.Add(1)
+	}
+}
+
+func pickShot(rn *run, seq int64) (method, rawURL, body string, headers map[string]string, comp *AmmoRound) {
+	method = rn.spec.Method
+	rawURL = rn.spec.URL
+	body = rn.spec.Body
+	headers = rn.spec.Headers
+	comp = rn.spec.Compensate
+	n := len(rn.spec.Ammo)
+	if n == 0 {
+		return method, applyN(rawURL, seq), applyN(body, seq), headers, comp
+	}
+	idx := int((seq - 1) % int64(n))
+	if rn.spec.AmmoMode == "random" {
+		idx = mrand.Intn(n)
+	}
+	a := rn.spec.Ammo[idx]
+	if a.Method != "" {
+		method = a.Method
+	}
+	if a.URL != "" {
+		rawURL = a.URL
+	}
+	if a.Body != "" {
+		body = a.Body
+	}
+	headers = mergeHeaders(headers, a.Headers)
+	if a.Compensate != nil {
+		comp = a.Compensate
+	}
+	return method, applyN(rawURL, seq), applyN(body, seq), headers, comp
+}
+
+func mergeHeaders(base, extra map[string]string) map[string]string {
+	if len(extra) == 0 {
+		return base
+	}
+	out := map[string]string{}
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	return out
+}
+
+func applyN(s string, n int64) string {
+	if s == "" || !strings.Contains(s, "{n}") {
+		return s
+	}
+	return strings.ReplaceAll(s, "{n}", strconv.FormatInt(n, 10))
+}
+
+func firstNonEmpty(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}
+
+func (e *Engine) doHTTP(ctx context.Context, client *http.Client, rn *run, method, rawURL, bodyRaw string, headers map[string]string, countRPS bool) bool {
+	var body io.Reader
+	if bodyRaw != "" && method != "GET" && method != "HEAD" {
+		body = strings.NewReader(bodyRaw)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
+	if err != nil {
+		if countRPS {
+			rn.stats.record(0, 0, 0, false, false, true)
+		}
+		return false
+	}
+	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
 	start := time.Now()
 	res, err := client.Do(req)
 	lat := time.Since(start)
 	if err != nil {
-		timedOut := ctx.Err() == nil && (strings.Contains(err.Error(), "Timeout") || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline"))
 		if ctx.Err() != nil {
-			return
+			return false
 		}
-		rn.stats.record(0, lat, 0, timedOut, false)
-		return
+		timedOut := strings.Contains(err.Error(), "Timeout") || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline")
+		if countRPS {
+			rn.stats.record(0, lat, 0, timedOut, false, true)
+		}
+		return false
 	}
 	n, _ := io.Copy(io.Discard, io.LimitReader(res.Body, maxBodyRead))
 	res.Body.Close()
 	ok := res.StatusCode < 400
-	rn.stats.record(res.StatusCode, lat, n, false, ok)
+	if countRPS {
+		rn.stats.record(res.StatusCode, lat, n, false, ok, true)
+	}
+	return ok
 }
 
 func newID() string {

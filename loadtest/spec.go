@@ -13,11 +13,21 @@ const (
 	maxRPS        = 10_000
 	maxTimeoutMS  = 120_000
 	minTimeoutMS  = 50
+	maxAmmo       = 2_000
 )
 
 var allowedMethods = map[string]bool{
 	"GET": true, "POST": true, "PUT": true, "PATCH": true,
 	"DELETE": true, "OPTIONS": true, "HEAD": true,
+}
+
+// AmmoRound is one cartridge: optional overrides plus optional compensating request.
+type AmmoRound struct {
+	Method     string            `json:"method,omitempty"`
+	URL        string            `json:"url,omitempty"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	Body       string            `json:"body,omitempty"`
+	Compensate *AmmoRound        `json:"compensate,omitempty"`
 }
 
 // RunSpec is the JSON body of POST /v1/runs.
@@ -40,6 +50,9 @@ type RunSpec struct {
 	AbortConsecutive int64             `json:"abortConsecutive"`
 	AbortAfter       int64             `json:"abortAfter"`
 	AbortGraceMS     int               `json:"abortGraceMs"`
+	Ammo             []AmmoRound       `json:"ammo,omitempty"`
+	AmmoMode         string            `json:"ammoMode,omitempty"`
+	Compensate       *AmmoRound        `json:"compensate,omitempty"`
 }
 
 func normalizeSpec(s RunSpec) (RunSpec, error) {
@@ -129,5 +142,53 @@ func normalizeSpec(s RunSpec) (RunSpec, error) {
 	if s.Headers == nil {
 		s.Headers = map[string]string{}
 	}
+	s.AmmoMode = strings.ToLower(strings.TrimSpace(s.AmmoMode))
+	if s.AmmoMode == "" {
+		s.AmmoMode = "roundrobin"
+	}
+	if s.AmmoMode != "roundrobin" && s.AmmoMode != "random" {
+		return s, fmt.Errorf("ammoMode must be roundrobin or random")
+	}
+	if len(s.Ammo) > maxAmmo {
+		return s, fmt.Errorf("ammo max is %d", maxAmmo)
+	}
+	for i := range s.Ammo {
+		if err := normalizeAmmo(&s.Ammo[i], false); err != nil {
+			return s, fmt.Errorf("ammo[%d]: %w", i, err)
+		}
+	}
+	if s.Compensate != nil {
+		if err := normalizeAmmo(s.Compensate, true); err != nil {
+			return s, fmt.Errorf("compensate: %w", err)
+		}
+		if s.Compensate.Method == "" && s.Compensate.URL == "" && s.Compensate.Body == "" {
+			s.Compensate = nil
+		}
+	}
 	return s, nil
+}
+
+func normalizeAmmo(a *AmmoRound, requireMethod bool) error {
+	a.Method = strings.ToUpper(strings.TrimSpace(a.Method))
+	if a.Method != "" && !allowedMethods[a.Method] {
+		return fmt.Errorf("method %s is not allowed", a.Method)
+	}
+	if requireMethod && a.Method == "" && (strings.TrimSpace(a.URL) != "" || a.Body != "") {
+		return fmt.Errorf("method is required")
+	}
+	a.URL = strings.TrimSpace(a.URL)
+	if a.URL != "" {
+		u, err := url.Parse(a.URL)
+		if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+			if !strings.Contains(a.URL, "{n}") {
+				return fmt.Errorf("url must be http(s)")
+			}
+		}
+	}
+	if a.Compensate != nil {
+		if err := normalizeAmmo(a.Compensate, true); err != nil {
+			return err
+		}
+	}
+	return nil
 }

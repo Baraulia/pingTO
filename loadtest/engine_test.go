@@ -253,3 +253,98 @@ func TestEngineAbortErrorRate(t *testing.T) {
 		t.Fatalf("got status=%s abort=%s total=%d", cur.Status, cur.Abort, cur.Total)
 	}
 }
+
+func TestAmmoNAndCompensate(t *testing.T) {
+	var posts, deletes int
+	var seen strings.Builder
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			posts++
+			buf, _ := io.ReadAll(r.Body)
+			seen.Write(buf)
+			seen.WriteByte('|')
+			w.WriteHeader(201)
+			return
+		}
+		if r.Method == http.MethodDelete {
+			deletes++
+			w.WriteHeader(204)
+			return
+		}
+		w.WriteHeader(405)
+	}))
+	defer srv.Close()
+	eng := newEngine()
+	snap, err := eng.Start(RunSpec{
+		Method: "POST", URL: srv.URL + "/items/{n}", Body: `{"id":{n}}`,
+		Count: 8, Workers: 2, TimeoutMS: 1000,
+		Compensate: &AmmoRound{Method: "DELETE", URL: srv.URL + "/items/{n}"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := waitStatus(t, eng, snap.ID, 3*time.Second)
+	if cur.Status != StatusDone || cur.OK != 8 {
+		t.Fatalf("status=%s ok=%d", cur.Status, cur.OK)
+	}
+	if posts != 8 || deletes != 8 {
+		t.Fatalf("posts=%d deletes=%d", posts, deletes)
+	}
+	if cur.CompensateOK != 8 {
+		t.Fatalf("compensateOk=%d", cur.CompensateOK)
+	}
+	if !strings.Contains(seen.String(), `{"id":1}`) {
+		t.Fatalf("ammo body %s", seen.String())
+	}
+}
+
+func TestDeleteAmmoRestoreCompensate(t *testing.T) {
+	var deletes, posts int
+	bodies := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			deletes++
+			w.WriteHeader(204)
+			return
+		}
+		if r.Method == http.MethodPost {
+			posts++
+			buf, _ := io.ReadAll(r.Body)
+			bodies[string(buf)]++
+			w.WriteHeader(201)
+			return
+		}
+		w.WriteHeader(405)
+	}))
+	defer srv.Close()
+	eng := newEngine()
+	snap, err := eng.Start(RunSpec{
+		Method: "GET", URL: srv.URL, Count: 4, Workers: 1, TimeoutMS: 1000,
+		Ammo: []AmmoRound{
+			{
+				Method: "DELETE", URL: srv.URL + "/sessions/s-alpha",
+				Compensate: &AmmoRound{Method: "POST", URL: srv.URL + "/sessions", Body: `{"id":"s-alpha"}`},
+			},
+			{
+				Method: "DELETE", URL: srv.URL + "/sessions/s-beta",
+				Compensate: &AmmoRound{Method: "POST", URL: srv.URL + "/sessions", Body: `{"id":"s-beta"}`},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := waitStatus(t, eng, snap.ID, 3*time.Second)
+	if cur.Status != StatusDone || cur.OK != 4 {
+		t.Fatalf("status=%s ok=%d", cur.Status, cur.OK)
+	}
+	if deletes != 4 || posts != 4 {
+		t.Fatalf("deletes=%d posts=%d", deletes, posts)
+	}
+	if bodies[`{"id":"s-alpha"}`] != 2 || bodies[`{"id":"s-beta"}`] != 2 {
+		t.Fatalf("bodies %#v", bodies)
+	}
+	if cur.CompensateOK != 4 {
+		t.Fatalf("compensateOk=%d", cur.CompensateOK)
+	}
+}

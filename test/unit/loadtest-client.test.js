@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampLoadSpec, DEFAULT_LOADTEST_AGENT, formatLoadReport, loadProgressPct, mixShares, normalizeAgentUrl, pushLoadSample, sparklinePoints } from '../../modules/loadtest-client.js';
+import { buildLoadReportHtml, clampLoadSpec, DEFAULT_LOADTEST_AGENT, formatLoadReport, formatMs, loadProgressPct, mixShares, normalizeAgentUrl, parseAmmoJson, parseCompensate, pushLoadSample, sparklinePoints } from '../../modules/loadtest-client.js';
 
 describe('loadtest-client', () => {
   it('normalizes agent origin', () => {
@@ -47,6 +47,22 @@ describe('loadtest-client', () => {
     }, (k) => k);
     expect(text).toContain('loadAbort_error_rate');
     expect(text).toContain('503: 40');
+    expect(text).toContain('loadReportRpsAvg');
+    expect(formatMs(0.04)).toBe('0.040');
+    expect(formatMs(1.6)).toBe('1.60');
+    expect(text).toContain('loadReportRpsMax');
+  });
+
+  it('parses ammo and builds html with svg', () => {
+    expect(parseAmmoJson('["a","b"]')).toEqual([{ body: 'a' }, { body: 'b' }]);
+    const del = parseAmmoJson('[{"method":"DELETE","url":"http://x/s-alpha","compensate":{"method":"POST","url":"http://x/sessions","body":"{\\"id\\":\\"s-alpha\\"}"}}]');
+    expect(del[0].method).toBe('DELETE');
+    expect(del[0].compensate.body).toContain('s-alpha');
+    expect(parseCompensate('POST', '')).toBeNull();
+    expect(parseCompensate('POST', 'http://x/v1/users/{n}')).toEqual({ method: 'POST', url: 'http://x/v1/users/{n}' });
+    const html = buildLoadReportHtml({ status: 'done', rps: 10, rpsMax: 40, latency: {} }, [{ rps: 1, p50: 1, p95: 2, p99: 3, err: 0, clients: 2 }], (k) => k);
+    expect(html).toContain('<svg');
+    expect(html).toContain('loadReportCharts');
   });
 
   it('builds sparkline samples and mix shares', () => {

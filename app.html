@@ -363,14 +363,61 @@
                 <small class="field-hint" data-i18n="loadtestCountHint">0 = ignore. For example 1000 = stop after 1000 requests even if the ramp or hold is not finished.</small>
               </label>
               <label class="field">
-                <span data-i18n="loadtestRps">Max requests per second</span>
+                <span data-i18n="loadtestRps">Target requests per second</span>
                 <input id="loadRps" type="number" min="0" max="10000" value="0">
-                <small class="field-hint" data-i18n="loadtestRpsHint">0 = as fast as current clients can go. The cap also ramps with the profile (0 → this number). Set 50 for a gentler, more predictable load.</small>
+                <small class="field-hint" data-i18n="loadtestRpsHint">0 = no limit (as fast as current clients can go). 1000 = the agent aims for about 1000 requests/s at the peak of the profile. The report shows now (last second), average (whole run), and max (best 1-second window). Average is pulled down by the ramp. If now stays well below the target, add parallel clients or the server cannot keep up.</small>
               </label>
               <label class="field">
                 <span data-i18n="loadtestTimeout">Give up on one request after (ms)</span>
                 <input id="loadTimeout" type="number" min="50" max="120000" value="10000">
                 <small class="field-hint" data-i18n="loadtestTimeoutHint">If a single request has no response in this time, it is a timeout in the report. Does not stop the whole test by itself — use abort rules below for that.</small>
+              </label>
+            </div>
+            <h4 data-i18n="loadtestAmmoTitle">Ammo and compensation (POST, DELETE, PUT, PATCH)</h4>
+            <p class="hint" data-i18n="loadtestAmmoHelp">Same POST or DELETE without unique cartridges will collide: duplicate keys, 404 after the first delete, dirty data. Ammo is a JSON array of shots. Empty object fields inherit the current request. {n} is the 1-based shot index for this run. Compensation runs only after a successful main request and is not counted in RPS. Global compensate is method + URL with {n} only — a single body cannot describe thousands of different shots; put compensate.body on the cartridge.</p>
+            <label class="field">
+              <span data-i18n="loadtestAmmo">Ammo JSON</span>
+              <textarea id="loadAmmo" rows="14" spellcheck="false" placeholder='[
+  {"body":"{\"id\":\"{n}\",\"email\":\"user-{n}@load.test\",\"name\":\"User {n}\"}","compensate":{"method":"DELETE","url":"http://127.0.0.1:8787/v1/users/{n}"}},
+  {"method":"DELETE","url":"http://127.0.0.1:8787/v1/sessions/s-alpha","compensate":{"method":"POST","url":"http://127.0.0.1:8787/v1/sessions","body":"{\"id\":\"s-alpha\",\"user\":\"alpha\"}"}},
+  {"method":"DELETE","url":"http://127.0.0.1:8787/v1/sessions/s-beta","compensate":{"method":"POST","url":"http://127.0.0.1:8787/v1/sessions","body":"{\"id\":\"s-beta\",\"user\":\"beta\"}"}}
+]'></textarea>
+              <pre class="field-hint load-ammo-doc" data-i18n="loadtestAmmoHint">Empty = current request as-is (GET is fine with no ammo).
+
+POST create, then DELETE the same {n}:
+[{"body":"{\"id\":\"{n}\",\"email\":\"user-{n}@load.test\",\"name\":\"User {n}\"}","compensate":{"method":"DELETE","url":"http://127.0.0.1:8787/v1/users/{n}"}}]
+
+DELETE a pool of real ids, then POST each one back (body lives on the cartridge, not in a global field):
+[
+  {"method":"DELETE","url":"http://127.0.0.1:8787/v1/sessions/s-alpha","compensate":{"method":"POST","url":"http://127.0.0.1:8787/v1/sessions","body":"{\"id\":\"s-alpha\",\"user\":\"alpha\"}"}},
+  {"method":"DELETE","url":"http://127.0.0.1:8787/v1/sessions/s-beta","compensate":{"method":"POST","url":"http://127.0.0.1:8787/v1/sessions","body":"{\"id\":\"s-beta\",\"user\":\"beta\"}"}},
+  {"method":"DELETE","url":"http://127.0.0.1:8787/v1/sessions/s-gamma","compensate":{"method":"POST","url":"http://127.0.0.1:8787/v1/sessions","body":"{\"id\":\"s-gamma\",\"user\":\"gamma\"}"}}
+]
+
+DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
+[{"url":"http://127.0.0.1:8787/v1/users/{n}"}]</pre>
+            </label>
+            <div class="load-grid">
+              <label class="field">
+                <span data-i18n="loadtestAmmoMode">Ammo order</span>
+                <select id="loadAmmoMode">
+                  <option value="roundrobin" data-i18n="loadtestAmmoRound">Round-robin</option>
+                  <option value="random" data-i18n="loadtestAmmoRandom">Random</option>
+                </select>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestCompMethod">Compensate method</span>
+                <select id="loadCompMethod">
+                  <option value="DELETE">DELETE</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+              </label>
+              <label class="field">
+                <span data-i18n="loadtestCompUrl">Compensate URL</span>
+                <input id="loadCompUrl" placeholder="http://127.0.0.1:8787/v1/users/{n}">
+                <small class="field-hint" data-i18n="loadtestCompHint">Optional global second request: same method and URL template for every shot ({n} only). Use after POST/PUT when cleanup is always DELETE /resource/{n}. Leave empty if each cartridge has its own compensate (typical for DELETE → restore POST with a unique body).</small>
               </label>
             </div>
             <h4 data-i18n="loadtestAbortTitle">Abort if the service cannot hold</h4>
@@ -406,14 +453,17 @@
               <button type="button" id="loadStartBtn" class="btn primary" data-pro="loadtest" data-i18n="loadtestStartBtn">Start test</button>
               <button type="button" id="loadStopBtn" class="btn danger" data-i18n="loadtestStopBtn">Stop test</button>
               <button type="button" id="loadCopyBtn" class="btn small" data-i18n="loadtestCopyBtn">Copy report</button>
+              <button type="button" id="loadDownloadBtnReport" class="btn small" data-i18n="loadtestDownloadBtn">Download report (HTML + charts)</button>
             </div>
             <p class="hint" data-i18n="loadtestReportHint">The dashboard updates live: status, throughput, error rate, latency charts, outcome mix and HTTP codes. The text report is under the charts if you need exact numbers.</p>
             <div id="loadVisual" class="load-visual hidden">
               <div class="load-kpis">
                 <div class="load-kpi" id="loadKpiStatus"><span data-i18n="loadReportStatus">Status</span><strong id="loadKpiStatusVal">—</strong></div>
-                <div class="load-kpi"><span data-i18n="loadReportRps">Throughput (req/s)</span><strong id="loadKpiRps">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadKpiRpsAvg">Average RPS</span><strong id="loadKpiRpsAvg">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadKpiRpsMax">Max RPS</span><strong id="loadKpiRpsMax">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportRpsLive">Now (req/s)</span><strong id="loadKpiRps">—</strong></div>
                 <div class="load-kpi"><span data-i18n="loadReportErrorRate">Error rate</span><strong id="loadKpiErr">—</strong></div>
-                <div class="load-kpi"><span>p95</span><strong id="loadKpiP95">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadKpiP95">Response p95</span><strong id="loadKpiP95">—</strong></div>
                 <div class="load-kpi"><span data-i18n="loadReportRequests">Requests</span><strong id="loadKpiTotal">—</strong></div>
                 <div class="load-kpi"><span data-i18n="loadReportClients">Clients (current / peak)</span><strong id="loadKpiClients">—</strong></div>
               </div>
@@ -423,11 +473,11 @@
               </div>
               <div class="load-charts">
                 <figure>
-                  <figcaption><span data-i18n="loadChartRps">Throughput</span> <em id="loadChartRpsVal"></em></figcaption>
+                  <figcaption><span data-i18n="loadChartRps">Requests per second (now)</span> <em id="loadChartRpsVal"></em></figcaption>
                   <svg id="loadChartRps" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
                 </figure>
                 <figure>
-                  <figcaption><span data-i18n="loadChartLatency">Latency p50 / p95 / p99</span> <em id="loadChartLatVal"></em></figcaption>
+                  <figcaption><span data-i18n="loadChartLatency">Response time p50 / p95 / p99</span> <em id="loadChartLatVal"></em></figcaption>
                   <svg id="loadChartLat" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
                 </figure>
                 <figure>

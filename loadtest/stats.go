@@ -14,8 +14,15 @@ type runStats struct {
 	ok      atomic.Int64
 	fail    atomic.Int64
 	timeout atomic.Int64
-	bytesIn atomic.Int64
+	bytesIn    atomic.Int64
 	failStreak atomic.Int64
+
+	rpsMu   sync.Mutex
+	rpsAt   []int64
+	rpsPeak float64
+
+	compOK   atomic.Int64
+	compFail atomic.Int64
 
 	codesMu sync.Mutex
 	codes   map[int]int64
@@ -34,7 +41,7 @@ func newRunStats() *runStats {
 	return &runStats{codes: map[int]int64{}, minNS: -1, sample: make([]int64, 0, sampleCap)}
 }
 
-func (s *runStats) record(status int, lat time.Duration, n int64, timedOut, ok bool) {
+func (s *runStats) record(status int, lat time.Duration, n int64, timedOut, ok, countRPS bool) {
 	s.total.Add(1)
 	if timedOut {
 		s.timeout.Add(1)
@@ -48,6 +55,12 @@ func (s *runStats) record(status int, lat time.Duration, n int64, timedOut, ok b
 		s.failStreak.Add(1)
 	} else {
 		s.failStreak.Store(0)
+	}
+	if countRPS {
+		now := time.Now().UnixMilli()
+		s.rpsMu.Lock()
+		s.rpsAt = append(s.rpsAt, now)
+		s.rpsMu.Unlock()
 	}
 	if status > 0 {
 		s.codesMu.Lock()
@@ -92,6 +105,12 @@ func (s *runStats) snapshot(elapsed time.Duration) StatsView {
 	if sec > 0 {
 		view.RPS = float64(total) / sec
 	}
+	view.RPSLive = s.liveRPS()
+	s.rpsMu.Lock()
+	view.RPSMax = s.rpsPeak
+	s.rpsMu.Unlock()
+	view.CompensateOK = s.compOK.Load()
+	view.CompensateFail = s.compFail.Load()
 	s.codesMu.Lock()
 	for code, n := range s.codes {
 		view.StatusCodes[strconv.Itoa(code)] = n
@@ -112,6 +131,25 @@ func (s *runStats) snapshot(elapsed time.Duration) StatsView {
 		P99MS: percentile(s.sample, 99),
 	}
 	return view
+}
+
+func (s *runStats) liveRPS() float64 {
+	now := time.Now().UnixMilli()
+	cutoff := now - 1000
+	s.rpsMu.Lock()
+	defer s.rpsMu.Unlock()
+	i := 0
+	for i < len(s.rpsAt) && s.rpsAt[i] < cutoff {
+		i++
+	}
+	if i > 0 {
+		s.rpsAt = append(s.rpsAt[:0], s.rpsAt[i:]...)
+	}
+	live := float64(len(s.rpsAt))
+	if live > s.rpsPeak {
+		s.rpsPeak = live
+	}
+	return live
 }
 
 func percentile(sample []int64, p int) float64 {
@@ -138,9 +176,13 @@ type StatsView struct {
 	OK          int64            `json:"ok"`
 	Fail        int64            `json:"fail"`
 	Timeout     int64            `json:"timeout"`
-	RPS         float64          `json:"rps"`
-	BytesIn     int64            `json:"bytesIn"`
-	ErrorRate   float64          `json:"errorRate"`
-	Latency     LatencyView      `json:"latency"`
+	RPS            float64          `json:"rps"`
+	RPSLive        float64          `json:"rpsLive"`
+	RPSMax         float64          `json:"rpsMax"`
+	BytesIn        int64            `json:"bytesIn"`
+	ErrorRate      float64          `json:"errorRate"`
+	CompensateOK   int64            `json:"compensateOk"`
+	CompensateFail int64            `json:"compensateFail"`
+	Latency        LatencyView      `json:"latency"`
 	StatusCodes map[string]int64 `json:"statusCodes"`
 }

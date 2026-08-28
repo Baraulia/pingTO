@@ -39,9 +39,13 @@ import {
   clampLoadSpec,
   DEFAULT_LOADTEST_AGENT,
   formatLoadReport,
+  formatMs,
   httpTone,
   loadProgressPct,
   mixShares,
+  parseAmmoJson,
+  parseCompensate,
+  buildLoadReportHtml,
   pushLoadSample,
   sparklinePoints,
   startLoadRun,
@@ -1824,9 +1828,15 @@ function renderLoadVisual(snap) {
       ? `${t(`loadStatus_${snap.status}`)} · ${t(`loadAbort_${snap.abort}`)}`
       : t(`loadStatus_${snap.status || 'running'}`);
   }
-  if ($('loadKpiRps')) $('loadKpiRps').textContent = Number(snap.rps || 0).toFixed(1);
+  const target = Number(snap.spec?.rps) || 0;
+  const live = Number.isFinite(Number(snap.rpsLive)) ? Number(snap.rpsLive) : Number(snap.rps) || 0;
+  if ($('loadKpiRpsAvg')) $('loadKpiRpsAvg').textContent = Number(snap.rps || 0).toFixed(1);
+  if ($('loadKpiRpsMax')) $('loadKpiRpsMax').textContent = (Number(snap.rpsMax) || 0).toFixed(0);
+  if ($('loadKpiRps')) {
+    $('loadKpiRps').textContent = target > 0 ? `${live.toFixed(0)} / ${target}` : live.toFixed(0);
+  }
   if ($('loadKpiErr')) $('loadKpiErr').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
-  if ($('loadKpiP95')) $('loadKpiP95').textContent = `${Number(lat.p95Ms || 0).toFixed(0)} ms`;
+  if ($('loadKpiP95')) $('loadKpiP95').textContent = `${formatMs(lat.p95Ms)} ms`;
   if ($('loadKpiTotal')) $('loadKpiTotal').textContent = String(snap.total || 0);
   if ($('loadKpiClients')) $('loadKpiClients').textContent = `${snap.desiredWorkers || 0} / ${snap.spec?.workers || 0}`;
   const pct = loadProgressPct(snap);
@@ -1848,8 +1858,8 @@ function renderLoadVisual(snap) {
   ], Math.max(0, ...p50, ...p95, ...p99));
   sparkPolylines($('loadChartErr'), [{ className: 's-err', values: err }], 100);
   sparkPolylines($('loadChartCli'), [{ className: 's-cli', values: cli }], snap.spec?.workers || Math.max(1, ...cli));
-  if ($('loadChartRpsVal')) $('loadChartRpsVal').textContent = Number(snap.rps || 0).toFixed(1);
-  if ($('loadChartLatVal')) $('loadChartLatVal').textContent = `p95 ${Number(lat.p95Ms || 0).toFixed(0)}`;
+  if ($('loadChartRpsVal')) $('loadChartRpsVal').textContent = live.toFixed(0);
+  if ($('loadChartLatVal')) $('loadChartLatVal').textContent = `p95 ${formatMs(lat.p95Ms)} ms`;
   if ($('loadChartErrVal')) $('loadChartErrVal').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
   if ($('loadChartCliVal')) $('loadChartCliVal').textContent = String(snap.desiredWorkers || 0);
   const mix = mixShares(snap.ok, snap.fail, snap.timeout);
@@ -1912,6 +1922,13 @@ async function startLoadTest() {
     loadUnsub = null;
   }
   loadHistory = [];
+  let ammo = [];
+  try {
+    ammo = parseAmmoJson($('loadAmmo')?.value);
+  } catch (e) {
+    UIHelpers.showToast(I18nManager.t('loadtestAmmoBad').replace('{error}', e.message), 'error');
+    return;
+  }
   try {
     const snap = await startLoadRun(loadAgentBase(), clampLoadSpec({
       method: built.tab.method,
@@ -1930,6 +1947,9 @@ async function startLoadTest() {
       abortConsecutive: $('loadAbortStreak')?.value,
       abortAfter: $('loadAbortAfter')?.value,
       abortGraceMs: $('loadAbortGrace')?.value,
+      ammo,
+      ammoMode: $('loadAmmoMode')?.value,
+      compensate: parseCompensate($('loadCompMethod')?.value, $('loadCompUrl')?.value),
       followRedirects: built.tab.followRedirects,
     }));
     loadRunId = snap.id;
@@ -2142,6 +2162,17 @@ $('loadCopyBtn').onclick = () => {
   navigator.clipboard.writeText(formatLoadReport(lastLoadReport, (key) => I18nManager.t(key)));
   UIHelpers.showToast(I18nManager.t('loadtestCopied'), 'success');
 };
+$('loadDownloadBtnReport')?.addEventListener('click', () => {
+  if (!lastLoadReport) return;
+  const html = buildLoadReportHtml(lastLoadReport, loadHistory, (key) => I18nManager.t(key));
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pingto-load-${Date.now()}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  UIHelpers.showToast(I18nManager.t('loadtestDownloaded'), 'success');
+});
 $('gqlPlayBtn').onclick = async () => {
   try {
     const q = GraphQLManager.formatQuery($('graphqlQuery').value);

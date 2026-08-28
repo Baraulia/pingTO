@@ -81,16 +81,65 @@
 
 ---
 
-## 4. GET `/users/{id}`
+## 4. In-memory users and sessions (CRUD)
 
-Path-параметр.
+Не echo: объекты живут в памяти процесса testd. Нужны, чтобы нагрузочный агент реально ловил **409** на повторный POST и **404** на повторный DELETE. После рестарта testd всё сбрасывается. Лимит 200 000 записей на коллекцию → **507**.
 
-- Path: `id` — строка, например `42` → `/users/42`
-- Query / headers / body: не нужны
-- Auth: нет
-- Ответ: **200** `{ "id", "name": "user-{id}", "email": "user-{id}@pingto.local" }`
+Сиды при старте и после `POST /v1/reset`:
 
-В PingTo URL: `{{base_url}}/users/:id`, Path `id=42`
+| Коллекция | id |
+|---|---|
+| users | `42` → `{ id, name: user-42, email: user-42@pingto.local }` |
+| sessions | `s-alpha`, `s-beta`, `s-gamma` |
+
+Алиасы: `/users` = `/v1/users`, `/sessions` = `/v1/sessions`.
+
+### POST `/v1/users` или `/v1/sessions`
+
+Создать. JSON-объект. Если в теле есть `id` — он ключ; иначе testd выдаёт 1, 2, 3… Для компенсации `{n}` **передайте `"id":"{n}"`**, иначе DELETE `/v1/users/{n}` не совпадёт с авто-id.
+
+- Повтор того же `id` → **409** `{ "error": "exists", "id" }`
+- Успех → **201** объект + заголовок `Location`
+- Битый JSON → **400**
+
+Пример: `POST {{base_url}}/v1/users` body `{"id":"7","email":"ada@load.test","name":"Ada"}`
+
+### GET `/v1/users/{id}` / `/v1/sessions/{id}`
+
+- Есть → **200** JSON
+- Нет → **404** `{ "error": "not found", "id" }`
+
+Path-параметр в PingTo: `{{base_url}}/users/:id`, Path `id=42` (сид).
+
+### GET `/v1/users` / `/v1/sessions`
+
+**200** `{ "count", "items" }` — не больше 50 элементов в `items` (count полный).
+
+### DELETE `/v1/users/{id}` / `/v1/sessions/{id}`
+
+- Была запись → **204** пустое тело
+- Не было → **404**
+
+### PUT `/v1/{collection}/{id}`
+
+Upsert: было → **200**, не было → **201**. `id` берётся из path.
+
+### PATCH `/v1/{collection}/{id}`
+
+Слияние полей, `id` не меняется. Нет записи → **404**.
+
+### GET `/v1/stats`
+
+**200** `{ "users": <n>, "sessions": <n> }`. После прогона POST+compensate DELETE `users` должен остаться около 1 (сид `42`), если компенсации отработали.
+
+### POST `/v1/reset`
+
+Полный сброс и повторный сид. **200** `{ "ok": true, "users": 1, "sessions": 3 }`.
+
+Нагрузка:
+
+1. Текущий запрос POST `http://127.0.0.1:8787/v1/users`, ammo `[{"body":"{\"id\":\"{n}\",\"email\":\"user-{n}@load.test\",\"name\":\"User {n}\"}"}]`, compensate DELETE `http://127.0.0.1:8787/v1/users/{n}`. Без патронов второй POST того же тела даст 409.
+2. Текущий DELETE, ammo три сессии + compensate POST с телом каждой. Без компенсации второй круг — 404.
 
 ---
 
@@ -520,7 +569,7 @@ CORS preflight. Метод OPTIONS обрабатывается до хендл�
 ## Быстрый набор в PingTo (после env `base_url`)
 
 1. GET `{{base_url}}/`  
-2. GET `{{base_url}}/users/:id` path `id=1`  
+2. GET `{{base_url}}/users/:id` path `id=42` (in-memory seed; unknown id → 404)  
 3. POST `{{base_url}}/json` JSON `{"a":1}`  
 4. POST `{{base_url}}/form`  
 5. GET `{{base_url}}/delay/8000` + Cancel  

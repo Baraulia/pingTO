@@ -97,7 +97,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Path :id → /users/42. 200 { id, name, email }.",
+              "docs": "Сид user 42 в памяти. Чужой id → 404. POST /v1/users создаёт; тот же id повторно → 409.",
               "followRedirects": true
             },
             {
@@ -154,6 +154,109 @@
               "authType": "none",
               "auth": {},
               "docs": "Любой путь OPTIONS → 204, CORS *.",
+              "followRedirects": true
+            }
+          ]
+        },
+        {
+          "type": "folder",
+          "id": "testd-folder-crud",
+          "name": "CRUD in-memory (load ammo)",
+          "items": [
+            {
+              "type": "request",
+              "id": "testd-user-create",
+              "name": "POST user",
+              "method": "POST",
+              "url": "http://127.0.0.1:8787/v1/users",
+              "headers": [{ "key": "Content-Type", "value": "application/json", "enabled": true }],
+              "params": [],
+              "pathParams": [],
+              "bodyType": "json",
+              "body": "{\"id\":\"7\",\"email\":\"ada@load.test\",\"name\":\"Ada\"}",
+              "authType": "none",
+              "auth": {},
+              "docs": "201. Повтор того же id → 409. Для loadtest в id должно быть {n}.",
+              "followRedirects": true
+            },
+            {
+              "type": "request",
+              "id": "testd-user-delete",
+              "name": "DELETE user",
+              "method": "DELETE",
+              "url": "http://127.0.0.1:8787/v1/users/:id",
+              "headers": [],
+              "params": [],
+              "pathParams": [{ "key": "id", "value": "7" }],
+              "bodyType": "none",
+              "body": "",
+              "authType": "none",
+              "auth": {},
+              "docs": "204 если был, 404 если нет. Компенсация после POST.",
+              "followRedirects": true
+            },
+            {
+              "type": "request",
+              "id": "testd-session-delete",
+              "name": "DELETE session",
+              "method": "DELETE",
+              "url": "http://127.0.0.1:8787/v1/sessions/:id",
+              "headers": [],
+              "params": [],
+              "pathParams": [{ "key": "id", "value": "s-alpha" }],
+              "bodyType": "none",
+              "body": "",
+              "authType": "none",
+              "auth": {},
+              "docs": "Сид s-alpha. Повтор без compensate POST → 404.",
+              "followRedirects": true
+            },
+            {
+              "type": "request",
+              "id": "testd-session-restore",
+              "name": "POST session restore",
+              "method": "POST",
+              "url": "http://127.0.0.1:8787/v1/sessions",
+              "headers": [{ "key": "Content-Type", "value": "application/json", "enabled": true }],
+              "params": [],
+              "pathParams": [],
+              "bodyType": "json",
+              "body": "{\"id\":\"s-alpha\",\"user\":\"alpha\"}",
+              "authType": "none",
+              "auth": {},
+              "docs": "Компенсация DELETE сессии. 201 или 409 если ещё жива.",
+              "followRedirects": true
+            },
+            {
+              "type": "request",
+              "id": "testd-store-stats",
+              "name": "Store stats",
+              "method": "GET",
+              "url": "http://127.0.0.1:8787/v1/stats",
+              "headers": [{ "key": "Accept", "value": "application/json", "enabled": true }],
+              "params": [],
+              "pathParams": [],
+              "bodyType": "none",
+              "body": "",
+              "authType": "none",
+              "auth": {},
+              "docs": "После POST+DELETE compensate users ≈ 1, sessions ≈ 3.",
+              "followRedirects": true
+            },
+            {
+              "type": "request",
+              "id": "testd-store-reset",
+              "name": "Reset store",
+              "method": "POST",
+              "url": "http://127.0.0.1:8787/v1/reset",
+              "headers": [],
+              "params": [],
+              "pathParams": [],
+              "bodyType": "none",
+              "body": "",
+              "authType": "none",
+              "auth": {},
+              "docs": "Сид заново: user 42, три сессии.",
               "followRedirects": true
             }
           ]

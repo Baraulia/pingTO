@@ -55,7 +55,18 @@ export function clampLoadSpec(input = {}) {
     abortConsecutive: Math.floor(num(input.abortConsecutive, 0, 0, 100000)),
     abortAfter: Math.floor(num(input.abortAfter, 0, 0, 1000000)),
     abortGraceMs: Math.floor(num(input.abortGraceMs, 0, 0, 600000)),
+    ammo: Array.isArray(input.ammo) ? input.ammo.slice(0, 2000) : [],
+    ammoMode: String(input.ammoMode || 'roundrobin').toLowerCase() === 'random' ? 'random' : 'roundrobin',
+    compensate: input.compensate && typeof input.compensate === 'object' ? input.compensate : null,
   };
+}
+
+export function formatMs(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '0';
+  if (n < 1) return n.toFixed(3);
+  if (n < 10) return n.toFixed(2);
+  return n.toFixed(1);
 }
 
 export function formatLoadReport(snap, t = (key) => key) {
@@ -63,6 +74,9 @@ export function formatLoadReport(snap, t = (key) => key) {
   const lat = snap.latency || {};
   const codes = snap.statusCodes || {};
   const pct = ((Number(snap.errorRate) || 0) * 100).toFixed(1);
+  const target = Number(snap.spec?.rps) || 0;
+  const live = Number(snap.rpsLive);
+  const avg = Number(snap.rps) || 0;
   const lines = [
     `${t('loadReportStatus')}: ${t(`loadStatus_${snap.status || 'running'}`)}`,
   ];
@@ -79,12 +93,17 @@ export function formatLoadReport(snap, t = (key) => key) {
     `${t('loadReportFail')}: ${snap.fail || 0}`,
     `${t('loadReportTimeout')}: ${snap.timeout || 0}`,
     `${t('loadReportErrorRate')}: ${pct}%`,
-    `${t('loadReportRps')}: ${Number(snap.rps || 0).toFixed(1)}`,
+    `${t('loadReportRpsTarget')}: ${target > 0 ? target : t('loadReportRpsUncapped')}`,
+    `${t('loadReportRpsLive')}: ${Number.isFinite(live) ? live.toFixed(0) : '—'}`,
+    `${t('loadReportRpsAvg')}: ${avg.toFixed(1)}`,
+    `${t('loadReportRpsMax')}: ${(Number(snap.rpsMax) || 0).toFixed(0)}`,
     `${t('loadReportBytes')}: ${snap.bytesIn || 0}`,
+    `${t('loadReportCompensate')}: ${snap.compensateOk || 0} / ${snap.compensateFail || 0}`,
     '',
     `${t('loadReportLatency')}:`,
-    `  min ${Number(lat.minMs || 0).toFixed(1)}  avg ${Number(lat.avgMs || 0).toFixed(1)}  p50 ${Number(lat.p50Ms || 0).toFixed(1)}`,
-    `  p95 ${Number(lat.p95Ms || 0).toFixed(1)}  p99 ${Number(lat.p99Ms || 0).toFixed(1)}  max ${Number(lat.maxMs || 0).toFixed(1)}`,
+    `  ${t('loadReportLatMin')} ${formatMs(lat.minMs)}  ${t('loadReportLatAvg')} ${formatMs(lat.avgMs)}  p50 ${formatMs(lat.p50Ms)}`,
+    `  p95 ${formatMs(lat.p95Ms)}  p99 ${formatMs(lat.p99Ms)}  ${t('loadReportLatMax')} ${formatMs(lat.maxMs)}`,
+    t('loadReportLatencyHint'),
   );
   const keys = Object.keys(codes).sort((a, b) => Number(a) - Number(b));
   if (keys.length) {
@@ -100,7 +119,7 @@ export function pushLoadSample(history, snap, max = SAMPLE_CAP) {
   const lat = snap?.latency || {};
   const next = (Array.isArray(history) ? history : []).concat({
     t: Number(snap?.elapsedMs) || 0,
-    rps: Number(snap?.rps) || 0,
+    rps: Number(snap?.rpsLive != null ? snap.rpsLive : snap?.rps) || 0,
     p50: Number(lat.p50Ms) || 0,
     p95: Number(lat.p95Ms) || 0,
     p99: Number(lat.p99Ms) || 0,
@@ -145,6 +164,84 @@ export function httpTone(code) {
   if (n >= 300 && n < 400) return 'redir';
   if (n >= 400 && n < 500) return 'warn';
   return 'err';
+}
+
+export function parseAmmoJson(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return [];
+  const data = JSON.parse(raw);
+  if (!Array.isArray(data)) throw new Error('ammo must be a JSON array');
+  return data.slice(0, 2000).map((item, i) => {
+    if (typeof item === 'string') return { body: item };
+    if (!item || typeof item !== 'object') throw new Error(`ammo[${i}]`);
+    const round = {};
+    if (item.method) round.method = String(item.method).toUpperCase();
+    if (item.url) round.url = String(item.url);
+    if (item.body != null) round.body = String(item.body);
+    if (item.headers && typeof item.headers === 'object') round.headers = item.headers;
+    if (item.compensate && typeof item.compensate === 'object') {
+      round.compensate = {
+        method: String(item.compensate.method || 'DELETE').toUpperCase(),
+        url: String(item.compensate.url || ''),
+        body: item.compensate.body == null ? '' : String(item.compensate.body),
+      };
+    }
+    return round;
+  });
+}
+
+export function parseCompensate(method, url) {
+  const u = String(url || '').trim();
+  if (!u) return null;
+  const m = String(method || '').trim().toUpperCase();
+  return { method: m || 'DELETE', url: u };
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function sparkSvg(values, color, maxVal) {
+  const pts = sparklinePoints(values, 240, 64, maxVal);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" width="100%" height="72"><polyline fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" points="${pts}"/></svg>`;
+}
+
+export function buildLoadReportHtml(snap, history, t = (key) => key) {
+  const h = Array.isArray(history) ? history : [];
+  const rps = h.map((s) => s.rps);
+  const p50 = h.map((s) => s.p50);
+  const p95 = h.map((s) => s.p95);
+  const p99 = h.map((s) => s.p99);
+  const err = h.map((s) => s.err);
+  const cli = h.map((s) => s.clients);
+  const latMax = Math.max(0, ...p50, ...p95, ...p99);
+  const cliMax = Math.max(1, ...cli, Number(snap?.spec?.workers) || 1);
+  const text = formatLoadReport(snap, t);
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>PingTo load report</title>
+<style>
+body{font:13px/1.45 system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:24px;max-width:900px}
+h1,h2{font-size:16px} pre{white-space:pre-wrap;background:#161b22;padding:12px;border-radius:8px}
+figure{margin:0 0 16px;background:#161b22;padding:10px;border-radius:8px}
+figcaption{color:#8b949e;font-size:12px;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+<h1>PingTo</h1>
+<pre>${escapeHtml(text)}</pre>
+<h2>${escapeHtml(t('loadReportCharts'))}</h2>
+<div class="grid">
+<figure><figcaption>${escapeHtml(t('loadChartRps'))}</figcaption>${sparkSvg(rps, '#3b82f6')}</figure>
+<figure><figcaption>${escapeHtml(t('loadChartLatency'))}</figcaption>
+${sparkSvg(p50, '#22c55e', latMax)}${sparkSvg(p95, '#d29922', latMax)}${sparkSvg(p99, '#ef4444', latMax)}
+</figure>
+<figure><figcaption>${escapeHtml(t('loadChartErrors'))}</figcaption>${sparkSvg(err, '#ef4444', 100)}</figure>
+<figure><figcaption>${escapeHtml(t('loadChartClients'))}</figcaption>${sparkSvg(cli, '#a371f7', cliMax)}</figure>
+</div>
+</body></html>`;
 }
 
 export async function checkLoadAgent(base) {

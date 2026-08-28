@@ -53,9 +53,59 @@ Spec JSON:
 
 Abort (0 = off): error rate %, p95 ms, consecutive failures. Evaluated after `abortGraceMs` and at least `abortAfter` requests. Status `aborted` with `abort` = `error_rate` | `p95` | `consecutive`.
 
-Snapshot: phase, desiredWorkers, totals, errorRate, RPS, latency percentiles, status histogram.
+Snapshot: phase, desiredWorkers, totals, errorRate, `rps` (average over the run), `rpsLive` (last 1 s), `rpsMax` (peak of the 1 s window), latency percentiles, status histogram. Compensations: `compensateOk` / `compensateFail` (not counted in RPS).
 
-Caps: 200 workers, 600s, 1e6 requests, 10k RPS.
+## Ammo and compensation
+
+Works for **POST, DELETE, PUT, PATCH** (any allowed method). The current request is the default cartridge; ammo overrides per shot.
+
+- `ammo`: JSON array, max 2000. A string is `{ "body": "..." }`. Object fields: `method`, `url`, `headers`, `body`, `compensate`. Omitted fields inherit the current request.
+- `{n}` in URL or body → 1-based shot index for this run (not unique across runs).
+- `ammoMode`: `roundrobin` (default) or `random`.
+- `compensate` on a **cartridge**: second request after a **successful** main shot. Put restore **body** here — one global body cannot describe thousands of different ids.
+- Spec-level `compensate`: only `method` + `url` with `{n}` (typical: POST create → `DELETE /v1/users/{n}`). No body. Cartridge `compensate` overrides it.
+
+POST create then delete:
+
+```json
+[{
+  "body": "{\"id\":\"{n}\",\"email\":\"user-{n}@load.test\",\"name\":\"User {n}\"}",
+  "compensate": { "method": "DELETE", "url": "http://127.0.0.1:8787/v1/users/{n}" }
+}]
+```
+
+DELETE a pool, then restore each row (round-robin the same ids):
+
+```json
+[
+  {
+    "method": "DELETE",
+    "url": "http://127.0.0.1:8787/v1/sessions/s-alpha",
+    "compensate": {
+      "method": "POST",
+      "url": "http://127.0.0.1:8787/v1/sessions",
+      "body": "{\"id\":\"s-alpha\",\"user\":\"alpha\"}"
+    }
+  },
+  {
+    "method": "DELETE",
+    "url": "http://127.0.0.1:8787/v1/sessions/s-beta",
+    "compensate": {
+      "method": "POST",
+      "url": "http://127.0.0.1:8787/v1/sessions",
+      "body": "{\"id\":\"s-beta\",\"user\":\"beta\"}"
+    }
+  }
+]
+```
+
+DELETE pre-seeded `1…N` (only user `42` exists until you create others, else 404): `[{"url":"http://127.0.0.1:8787/v1/users/{n}"}]`.
+
+Check leftovers: `GET http://127.0.0.1:8787/v1/stats`. Reseed: `POST /v1/reset`.
+
+Compensation is best-effort, not a transaction. Failed restore leaves a hole in the pool. Prefer GET when you only need throughput.
+
+Caps: 200 workers, 600s, 1e6 requests, 10k RPS, 2000 ammo. POST `/v1/runs` body up to 8 MiB.
 
 ```bash
 go test -C loadtest .

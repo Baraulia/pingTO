@@ -25,15 +25,6 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleUser(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id":    id,
-		"name":  "user-" + id,
-		"email": "user-" + id + "@pingto.local",
-	})
-}
-
 func handleQuery(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"query": queryMap(r)})
 }

@@ -14,7 +14,7 @@ func newAgentMux(eng *Engine) http.Handler {
 	})
 	mux.HandleFunc("POST /v1/runs", func(w http.ResponseWriter, r *http.Request) {
 		var spec RunSpec
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&spec); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<20)).Decode(&spec); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 			return
 		}

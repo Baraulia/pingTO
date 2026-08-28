@@ -366,6 +366,7 @@ html[data-theme="light"] .icon-when-dark { display: none; }
 .subpane h4 { margin: 8px 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; }
 .field-hint { color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.4; }
+pre.load-ammo-doc { white-space: pre-wrap; font-family: ui-monospace, monospace; margin: 4px 0 0; }
 .auth-fields { margin-top: 4px; }
 #collectionTree .tree-collection.locked,
 #collectionTree .tree-collection-wrap.is-locked .tree-item {

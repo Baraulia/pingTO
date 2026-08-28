@@ -1035,16 +1035,37 @@
     "message": "0 = ignore. For example 1000 = stop after 1000 requests even if the ramp or hold is not finished."
   },
   "loadtestRps": {
-    "message": "Max requests per second"
+    "message": "Target requests per second"
   },
   "loadtestRpsHint": {
-    "message": "0 = as fast as current clients can go. The cap also ramps with the profile (0 → this number). Set 50 for a gentler, more predictable load."
+    "message": "0 = no limit (as fast as current clients can go). 1000 = the agent aims for about 1000 requests/s at the peak of the profile. The report shows now (last second), average (whole run), and max (best 1-second window). Average is pulled down by the ramp. If now stays well below the target, add parallel clients or the server cannot keep up."
   },
   "loadtestTimeout": {
     "message": "Give up on one request after (ms)"
   },
   "loadtestTimeoutHint": {
     "message": "If a single request has no response in this time, it is a timeout in the report. Does not stop the whole test by itself — use abort rules below for that."
+  },
+  "loadtestAmmoTitle": {
+    "message": "Ammo and compensation (POST, DELETE, PUT, PATCH)"
+  },
+  "loadtestAmmoHelp": {
+    "message": "The same POST or DELETE without unique cartridges will collide: duplicate keys, 404 after the first delete, leftover rows. Ammo is a JSON array of shots. Omitted method/url/headers/body inherit the current request. {n} is the 1-based shot index for this run. Compensation runs only after a successful main request and is not counted in RPS. Global compensate is method + URL with {n} only — one body cannot describe thousands of different shots; put compensate.body on the cartridge."
+  },
+  "loadtestAmmo": {
+    "message": "Ammo JSON"
+  },
+  "loadtestAmmoHint": {
+    "message": "Empty = current request as-is (GET needs no ammo).\n\nPOST create, then DELETE the same {n}:\n[{\"body\":\"{\\\"id\\\":\\\"{n}\\\",\\\"email\\\":\\\"user-{n}@load.test\\\",\\\"name\\\":\\\"User {n}\\\"}\",\"compensate\":{\"method\":\"DELETE\",\"url\":\"http://127.0.0.1:8787/v1/users/{n}\"}}]\n\nDELETE a pool of real ids, then POST each one back (restore body belongs on the cartridge):\n[\n  {\"method\":\"DELETE\",\"url\":\"http://127.0.0.1:8787/v1/sessions/s-alpha\",\"compensate\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:8787/v1/sessions\",\"body\":\"{\\\"id\\\":\\\"s-alpha\\\",\\\"user\\\":\\\"alpha\\\"}\"}},\n  {\"method\":\"DELETE\",\"url\":\"http://127.0.0.1:8787/v1/sessions/s-beta\",\"compensate\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:8787/v1/sessions\",\"body\":\"{\\\"id\\\":\\\"s-beta\\\",\\\"user\\\":\\\"beta\\\"}\"}},\n  {\"method\":\"DELETE\",\"url\":\"http://127.0.0.1:8787/v1/sessions/s-gamma\",\"compensate\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:8787/v1/sessions\",\"body\":\"{\\\"id\\\":\\\"s-gamma\\\",\\\"user\\\":\\\"gamma\\\"}\"}}\n]\n\nAfter POST+compensate, GET http://127.0.0.1:8787/v1/stats (users ≈ 1). POST /v1/reset reseeds."
+  },
+  "loadtestAmmoMode": { "message": "Ammo order" },
+  "loadtestAmmoRound": { "message": "Round-robin" },
+  "loadtestAmmoRandom": { "message": "Random" },
+  "loadtestAmmoBad": { "message": "Ammo JSON is invalid: {error}" },
+  "loadtestCompMethod": { "message": "Compensate method" },
+  "loadtestCompUrl": { "message": "Compensate URL" },
+  "loadtestCompHint": {
+    "message": "Optional global second request: same method and URL template for every shot ({n} only). Typical after POST: DELETE http://host/v1/users/{n}. Leave empty when each cartridge has its own compensate — that is the DELETE → restore POST case, where every body is different."
   },
   "loadtestAbortTitle": {
     "message": "Abort if the service cannot hold"
@@ -1112,6 +1133,12 @@
   "loadtestCopied": {
     "message": "Report copied"
   },
+  "loadtestDownloaded": {
+    "message": "HTML report downloaded (includes charts)"
+  },
+  "loadtestDownloadBtn": {
+    "message": "Download report (HTML + charts)"
+  },
   "loadtestAborted": {
     "message": "Test aborted: {reason}"
   },
@@ -1126,8 +1153,22 @@
   "loadReportTimeout": { "message": "Timeouts" },
   "loadReportErrorRate": { "message": "Error rate" },
   "loadReportRps": { "message": "Throughput (req/s)" },
+  "loadReportRpsTarget": { "message": "Target req/s" },
+  "loadReportRpsLive": { "message": "Now (last 1 s), req/s" },
+  "loadReportRpsAvg": { "message": "Average over the whole run, req/s" },
+  "loadReportRpsMax": { "message": "Max req/s (best 1-second window)" },
+  "loadReportRpsUncapped": { "message": "no limit" },
+  "loadReportCompensate": { "message": "Compensations (ok / fail)" },
+  "loadReportCharts": { "message": "Charts" },
+  "loadKpiRpsAvg": { "message": "Average RPS" },
+  "loadKpiRpsMax": { "message": "Max RPS" },
   "loadReportBytes": { "message": "Bytes received" },
-  "loadReportLatency": { "message": "Latency (ms)" },
+  "loadReportLatency": { "message": "Server response time (ms)" },
+  "loadReportLatencyHint": { "message": "How long the server took to answer one request. p50 = typical; p95/p99 = slower tail. Below 1 ms extra digits are shown (localhost is often 0.05–0.5 ms, so 0.0 was only rounding)." },
+  "loadReportLatMin": { "message": "min" },
+  "loadReportLatAvg": { "message": "avg" },
+  "loadReportLatMax": { "message": "max" },
+  "loadKpiP95": { "message": "Response p95" },
   "loadReportCodes": { "message": "HTTP status codes" },
   "loadStatus_running": { "message": "running" },
   "loadStatus_done": { "message": "done" },
@@ -1140,8 +1181,8 @@
   "loadAbort_error_rate": { "message": "error rate exceeded the limit" },
   "loadAbort_p95": { "message": "p95 latency exceeded the limit" },
   "loadAbort_consecutive": { "message": "too many failures in a row" },
-  "loadChartRps": { "message": "Throughput" },
-  "loadChartLatency": { "message": "Latency p50 / p95 / p99" },
+  "loadChartRps": { "message": "Requests per second (now)" },
+  "loadChartLatency": { "message": "Response time p50 / p95 / p99" },
   "loadChartErrors": { "message": "Error rate" },
   "loadChartClients": { "message": "Clients" },
   "loadMixLabel": { "message": "Outcomes" },

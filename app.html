@@ -617,6 +617,18 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
     </div>
   </div>
 
+  <div id="unsavedModal" class="modal hidden" data-testid="unsaved-modal">
+    <div class="modal-card">
+      <h3 data-i18n="unsavedTitle">Unsaved changes</h3>
+      <p id="unsavedText"></p>
+      <div class="row">
+        <button id="unsavedSaveBtn" class="btn primary" data-i18n="unsavedSave">Save</button>
+        <button id="unsavedDiscardBtn" class="btn" data-i18n="unsavedDiscard">Don't save</button>
+        <button id="unsavedCancelBtn" class="btn ghost" data-i18n="unsavedCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div id="runModal" class="modal hidden">
     <div class="modal-card wide">
       <h3 data-i18n="runTitle">Collection run</h3>

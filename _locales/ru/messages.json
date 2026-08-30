@@ -131,6 +131,24 @@
   "saveRequestBtn": {
     "message": "Сохранить"
   },
+  "unsavedTitle": {
+    "message": "Несохранённые изменения"
+  },
+  "unsavedMessage": {
+    "message": "«{name}» изменён. Сохранить его в коллекцию?"
+  },
+  "unsavedSave": {
+    "message": "Сохранить"
+  },
+  "unsavedDiscard": {
+    "message": "Не сохранять"
+  },
+  "unsavedCancel": {
+    "message": "Отмена"
+  },
+  "unsavedBadge": {
+    "message": "Не сохранено"
+  },
   "saveAsEnvBtn": {
     "message": "🔑 Сохранить как переменную"
   },

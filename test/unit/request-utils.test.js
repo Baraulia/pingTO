@@ -5,6 +5,7 @@ import {
   isHttpUrl,
   isWebSocketUrl,
   parseMultipartFields,
+  requestEditFingerprint,
   sanitizeHeadersForStorage,
   utf8ToBase64,
 } from '../../modules/request-utils.js';
@@ -47,5 +48,13 @@ describe('request-utils', () => {
       { key: 'Authorization', value: '***' },
     ]);
     expect(sanitizeHeadersForStorage({ 'X-API-Key': 'k' })['X-API-Key']).toBe('***');
+  });
+
+  it('fingerprints saved request fields and ignores response noise', () => {
+    const a = requestEditFingerprint({ name: 'Health', method: 'GET', url: '/health', response: { status: 200 } });
+    const b = requestEditFingerprint({ name: 'Health', method: 'GET', url: '/health', testResults: [] });
+    const c = requestEditFingerprint({ name: 'Health', method: 'POST', url: '/health' });
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
   });
 });

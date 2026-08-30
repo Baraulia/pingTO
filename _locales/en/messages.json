@@ -131,6 +131,24 @@
   "saveRequestBtn": {
     "message": "Save"
   },
+  "unsavedTitle": {
+    "message": "Unsaved changes"
+  },
+  "unsavedMessage": {
+    "message": "“{name}” has unsaved changes. Save it to a collection?"
+  },
+  "unsavedSave": {
+    "message": "Save"
+  },
+  "unsavedDiscard": {
+    "message": "Don't save"
+  },
+  "unsavedCancel": {
+    "message": "Cancel"
+  },
+  "unsavedBadge": {
+    "message": "Unsaved changes"
+  },
   "saveAsEnvBtn": {
     "message": "🔑 Save as Variable"
   },

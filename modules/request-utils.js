@@ -139,3 +139,48 @@ export function debounce(fn, wait = 150) {
     timer = setTimeout(() => fn(...args), wait);
   };
 }
+
+function normKvList(list) {
+  return (list || []).map((row) => ({
+    key: String(row?.key || ''),
+    value: String(row?.value || ''),
+    enabled: row?.enabled !== false,
+  }));
+}
+
+/** Stable snapshot of fields that belong in a saved collection request. */
+export function requestEditFingerprint(src = {}) {
+  const auth = src.auth || {};
+  return JSON.stringify({
+    name: String(src.name || ''),
+    method: String(src.method || 'GET'),
+    url: String(src.url || ''),
+    headers: normKvList(src.headers),
+    params: normKvList(src.params),
+    pathParams: normKvList(src.pathParams),
+    bodyType: String(src.bodyType || 'none'),
+    body: String(src.body || ''),
+    authType: String(src.authType || 'none'),
+    auth: {
+      token: String(auth.token || ''),
+      user: String(auth.user || ''),
+      pass: String(auth.pass || ''),
+      apiKeyName: String(auth.apiKeyName || 'X-API-Key'),
+      apiKeyValue: String(auth.apiKeyValue || ''),
+      apiKeyIn: String(auth.apiKeyIn || 'header'),
+      grant: String(auth.grant || 'client_credentials'),
+      authUrl: String(auth.authUrl || ''),
+      tokenUrl: String(auth.tokenUrl || ''),
+      clientId: String(auth.clientId || ''),
+      clientSecret: String(auth.clientSecret || ''),
+      scope: String(auth.scope || ''),
+      refresh: String(auth.refresh || ''),
+    },
+    preRequest: String(src.preRequest || ''),
+    tests: String(src.tests || ''),
+    docs: String(src.docs || ''),
+    graphqlQuery: String(src.graphqlQuery || ''),
+    graphqlVariables: String(src.graphqlVariables || ''),
+    followRedirects: src.followRedirects !== false,
+  });
+}

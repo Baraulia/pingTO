@@ -14,6 +14,7 @@ import {
   applyEnvVars,
   debounce,
   isHttpUrl,
+  requestEditFingerprint,
   isWebSocketUrl,
   parseMultipartFields,
   sanitizeHeadersForStorage,
@@ -113,6 +114,7 @@ const socketSession = { ws: null, sse: null, reconnectTimer: null, manualClose: 
 
 const ENV_SELECT_NEW = '__env_new__';
 const ENV_SELECT_MANAGE = '__env_manage__';
+const COLLECTION_RUN_TAB_ID = '__collection_run__';
 
 function isEnvSelectAction(value) {
   return value === ENV_SELECT_NEW || value === ENV_SELECT_MANAGE;
@@ -262,7 +264,7 @@ function current() {
 }
 
 function tabFromDraft(partial = {}) {
-  return {
+  const tab = {
     ...emptyRequest(partial),
     name: partial.name || I18nManager.t('defaultRequestName'),
     id: partial.id || newId(),
@@ -291,7 +293,10 @@ function tabFromDraft(partial = {}) {
     testResults: [],
     collectionId: partial.collectionId || null,
     collectionItemId: partial.collectionItemId || null,
+    savedFingerprint: partial.savedFingerprint || null,
   };
+  if (!tab.savedFingerprint) markTabClean(tab);
+  return tab;
 }
 
 async function persistWorkspace() {
@@ -328,17 +333,45 @@ function totalSavedRequests() {
   return collectionsManager.collections.reduce((n, coll) => n + flattenRequests(coll.items).length, 0);
 }
 
+function markTabClean(tab) {
+  if (!tab) return;
+  tab.savedFingerprint = requestEditFingerprint(tab);
+}
+
+function fingerprintFromSavedItem(item) {
+  return requestEditFingerprint(tabFromDraft({ ...item, savedFingerprint: '__baseline__' }));
+}
+
+function isTabDirty(tab) {
+  if (!tab || tab.id === COLLECTION_RUN_TAB_ID) return false;
+  if (!tab.savedFingerprint) markTabClean(tab);
+  return requestEditFingerprint(tab) !== tab.savedFingerprint;
+}
+
+function updateDirtyUi() {
+  const active = current();
+  const saveBtn = $('saveRequestBtn');
+  if (saveBtn) {
+    const dirty = Boolean(active && isTabDirty(active));
+    saveBtn.classList.toggle('needs-save', dirty);
+    saveBtn.title = dirty ? I18nManager.t('unsavedBadge') : '';
+  }
+}
+
 async function saveCurrentRequest() {
   readFormIntoTab();
-  const tab = current();
-  if (!tab) return;
+  return saveTab(current());
+}
+
+async function saveTab(tab) {
+  if (!tab || tab.id === COLLECTION_RUN_TAB_ID) return false;
   if (!state.selectedCollectionId && !tab.collectionId) {
     if (!canAddCollection(state.isPro, collectionsManager.collections.length)) {
       UIHelpers.showToast(I18nManager.t('freeCollectionLimit'), 'error');
-      return;
+      return false;
     }
     const name = prompt(I18nManager.t('newCollectionNamePlaceholder'), I18nManager.t('defaultCollectionName'));
-    if (!name?.trim()) return;
+    if (!name?.trim()) return false;
     const created = await collectionsManager.create(name.trim());
     activateCollection(created.id);
   }
@@ -348,7 +381,7 @@ async function saveCurrentRequest() {
   if (collectionId && !collectionUnlocked(collectionId)) {
     UIHelpers.showToast(I18nManager.t('freeCollectionLocked'), 'error');
     requirePro('collections');
-    return;
+    return false;
   }
   const folderId = String(collectionId) === String(state.selectedCollectionId) ? state.selectedFolderId : null;
   if (tab.collectionItemId && tab.collectionId && String(tab.collectionId) === String(collectionId)) {
@@ -357,7 +390,7 @@ async function saveCurrentRequest() {
   } else {
     if (!canAddRequest(state.isPro, totalSavedRequests())) {
       UIHelpers.showToast(I18nManager.t('freeRequestLimit'), 'error');
-      return;
+      return false;
     }
     const saved = await collectionsManager.addRequest(
       collectionId,
@@ -367,10 +400,12 @@ async function saveCurrentRequest() {
     tab.collectionId = collectionId;
     tab.collectionItemId = saved.id;
   }
+  markTabClean(tab);
   persistWorkspace();
   renderTabs();
   renderCollections();
   UIHelpers.showToast(I18nManager.t('requestSaved'), 'success');
+  return true;
 }
 
 function findOpenCollectionTab(collectionId, itemId) {
@@ -488,17 +523,20 @@ function renderKvs() {
   bindKv($('queryList'), tab.params, ['key', 'value'], () => {
     tab.url = applyParamsToUrl(tab.url.split('?')[0], tab.params);
     $('urlInput').value = tab.url;
+    noteRequestEdited();
   });
-  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => {});
-  bindKv($('headersList'), tab.headers, ['key', 'value'], () => {});
+  bindKv($('pathList'), tab.pathParams, ['key', 'value'], () => noteRequestEdited());
+  bindKv($('headersList'), tab.headers, ['key', 'value'], () => noteRequestEdited());
 }
 
 function renderTabs() {
   const box = $('reqTabs');
   box.replaceChildren();
   state.tabs.forEach((tab) => {
+    const dirty = isTabDirty(tab);
     const chip = document.createElement('div');
-    chip.className = `tab-chip${tab.id === state.activeId ? ' active' : ''}`;
+    chip.className = `tab-chip${tab.id === state.activeId ? ' active' : ''}${dirty ? ' dirty' : ''}`;
+    if (dirty) chip.title = I18nManager.t('unsavedBadge');
     const m = document.createElement('span');
     m.className = `method ${tab.method}`;
     m.textContent = tab.method;
@@ -516,12 +554,21 @@ function renderTabs() {
       input.select();
     };
     const close = document.createElement('span');
+    close.className = 'tab-close';
     close.textContent = '×';
     close.onclick = (e) => {
       e.stopPropagation();
-      closeTab(tab.id);
+      requestCloseTab(tab.id);
     };
-    chip.append(m, name, close);
+    chip.append(m, name);
+    if (dirty) {
+      const dot = document.createElement('span');
+      dot.className = 'dirty-dot';
+      dot.dataset.testid = 'dirty-dot';
+      dot.title = I18nManager.t('unsavedBadge');
+      chip.appendChild(dot);
+    }
+    chip.appendChild(close);
     chip.onclick = () => {
       if (tab.id !== state.activeId) closeSocket(true);
       readFormIntoTab();
@@ -535,6 +582,7 @@ function renderTabs() {
   add.textContent = '+';
   add.onclick = () => openTab();
   box.appendChild(add);
+  updateDirtyUi();
 }
 
 function replaceActiveTab(partial) {
@@ -550,8 +598,6 @@ function replaceActiveTab(partial) {
   writeTabToForm();
   persistWorkspace();
 }
-
-const COLLECTION_RUN_TAB_ID = '__collection_run__';
 
 function loadCollectionRunTab(partial) {
   const prev = current();
@@ -586,12 +632,59 @@ function openTab(partial) {
   persistWorkspace();
 }
 
-function closeTab(id) {
+function removeTab(id) {
   if (state.tabs.length === 1) return;
+  if (state.activeId === id) closeSocket(true);
   state.tabs = state.tabs.filter((t) => t.id !== id);
   if (state.activeId === id) state.activeId = state.tabs[0].id;
   writeTabToForm();
+  persistWorkspace();
 }
+
+let unsavedChoiceResolve = null;
+
+function confirmUnsaved(tab) {
+  return new Promise((resolve) => {
+    unsavedChoiceResolve = resolve;
+    const label = tab.name || I18nManager.t('defaultRequestName');
+    $('unsavedText').textContent = I18nManager.t('unsavedMessage').replace('{name}', label);
+    $('unsavedModal').classList.remove('hidden');
+    $('unsavedSaveBtn')?.focus();
+  });
+}
+
+function finishUnsavedChoice(choice) {
+  $('unsavedModal')?.classList.add('hidden');
+  const resolve = unsavedChoiceResolve;
+  unsavedChoiceResolve = null;
+  resolve?.(choice);
+}
+
+async function requestCloseTab(id) {
+  if (state.tabs.length === 1) return;
+  const tab = state.tabs.find((t) => t.id === id);
+  if (!tab) return;
+  if (tab.id === state.activeId) readFormIntoTab();
+  if (isTabDirty(tab)) {
+    const choice = await confirmUnsaved(tab);
+    if (choice === 'cancel') return;
+    if (choice === 'save') {
+      const ok = await saveTab(tab);
+      if (!ok) return;
+    }
+  }
+  removeTab(id);
+}
+
+function syncRequestDirty() {
+  const tab = current();
+  if (!tab || tab.id === COLLECTION_RUN_TAB_ID) return;
+  readFormIntoTab();
+  renderTabs();
+  if (tab.collectionId && tab.collectionItemId) renderCollections();
+}
+
+const noteRequestEdited = debounce(syncRequestDirty, 80);
 
 function collectionUnlocked(collectionId) {
   return isCollectionUnlocked(state.isPro, collectionsManager.collections, collectionId);
@@ -1204,17 +1297,27 @@ function renderCollections() {
         } else if (!q || `${item.name} ${item.url}`.toLowerCase().includes(q)) {
           const r = document.createElement('div');
           const isOpen = Boolean(findOpenCollectionTab(coll.id, item.id));
-          r.className = `tree-item${isOpen ? ' open-req' : ''}`;
+          const openTabForItem = findOpenCollectionTab(coll.id, item.id);
+          const dirty = Boolean(openTabForItem && isTabDirty(openTabForItem));
+          r.className = `tree-item${isOpen ? ' open-req' : ''}${dirty ? ' dirty' : ''}`;
           r.dataset.testid = 'tree-request';
           r.dataset.requestId = String(item.id);
           r.dataset.requestName = item.name || item.url || 'request';
           r.style.paddingLeft = `${pad}px`;
-          r.title = I18nManager.t('collectionOpenHint');
+          r.title = dirty ? I18nManager.t('unsavedBadge') : I18nManager.t('collectionOpenHint');
           const m = document.createElement('span');
           m.className = `method ${item.method || 'GET'}`;
           m.textContent = item.method || 'GET';
           I18nManager.markNoTranslate(m);
-          r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
+          r.appendChild(m);
+          if (dirty) {
+            const dot = document.createElement('span');
+            dot.className = 'dirty-dot';
+            dot.dataset.testid = 'dirty-dot';
+            dot.title = I18nManager.t('unsavedBadge');
+            r.appendChild(dot);
+          }
+          r.appendChild(document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
             if (locked) {
               requirePro('collections');
@@ -1575,6 +1678,7 @@ function applyBodyJson(transform) {
     $('jsonError').textContent = '';
     const tab = current();
     if (tab) tab.body = next;
+    noteRequestEdited();
   } catch (e) {
     const message = e.message || String(e);
     $('jsonError').textContent = message;
@@ -1675,6 +1779,12 @@ async function init() {
   } else {
     openTab();
   }
+  state.tabs.forEach((tab) => {
+    if (!tab.collectionId || !tab.collectionItemId) return;
+    const coll = collectionsManager.collections.find((c) => String(c.id) === String(tab.collectionId));
+    const item = coll ? findItem(coll.items, tab.collectionItemId) : null;
+    if (item) tab.savedFingerprint = fingerprintFromSavedItem(item);
+  });
   CodeGenerator.getLanguages().forEach((lang) => {
     const o = document.createElement('option');
     o.value = lang;
@@ -2058,20 +2168,24 @@ $('methodSelect').onchange = () => {
 $('addQueryBtn').onclick = () => {
   current().params.push({ key: '', value: '', enabled: true });
   renderKvs();
+  noteRequestEdited();
 };
 $('addPathBtn').onclick = () => {
   current().pathParams.push({ key: '', value: '', enabled: true });
   renderKvs();
+  noteRequestEdited();
 };
 $('addHeaderBtn').onclick = () => {
   current().headers.push({ key: '', value: '', enabled: true });
   renderKvs();
+  noteRequestEdited();
 };
 $('addCommonHeadersBtn').onclick = () => {
   [['Accept', 'application/json'], ['Content-Type', 'application/json']].forEach(([key, value]) => {
     if (!current().headers.find((h) => h.key === key)) current().headers.push({ key, value, enabled: true });
   });
   renderKvs();
+  noteRequestEdited();
 };
 $('urlInput').oninput = debounce(() => {
   const tab = current();
@@ -2332,6 +2446,27 @@ $('importFile').onchange = async (e) => {
 };
 $('saveRequestBtn').onclick = saveCurrentRequest;
 $('saveToCollectionBtn').onclick = saveCurrentRequest;
+$('unsavedSaveBtn').onclick = () => finishUnsavedChoice('save');
+$('unsavedDiscardBtn').onclick = () => finishUnsavedChoice('discard');
+$('unsavedCancelBtn').onclick = () => finishUnsavedChoice('cancel');
+$('unsavedModal').addEventListener('click', (e) => {
+  if (e.target.id === 'unsavedModal') finishUnsavedChoice('cancel');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('unsavedModal')?.classList.contains('hidden')) return;
+  e.preventDefault();
+  finishUnsavedChoice('cancel');
+});
+const DIRTY_IGNORE = '#pane-loadtest, #pane-cookies, #palette, .sidebar, .modal, #environmentSelect, #codeLanguage, #codeOutput, #jsonPath';
+$('app')?.addEventListener('input', (e) => {
+  if (e.target.closest(DIRTY_IGNORE)) return;
+  noteRequestEdited();
+});
+$('app')?.addEventListener('change', (e) => {
+  if (e.target.closest(DIRTY_IGNORE)) return;
+  noteRequestEdited();
+});
 $('duplicateBtn').onclick = () => {
   readFormIntoTab();
   openTab({
@@ -2340,6 +2475,7 @@ $('duplicateBtn').onclick = () => {
     id: undefined,
     collectionId: null,
     collectionItemId: null,
+    savedFingerprint: null,
   });
 };
 $('runCollectionBtn').onclick = runCollection;

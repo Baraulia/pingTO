@@ -63,9 +63,63 @@ export function getCurrentLanguage() {
   return currentLang;
 }
 
+/** Keep Chrome / Google Translate off our UI and request data (GET ≠ «Получать»). */
+export function markNoTranslate(el) {
+  if (!el) return el;
+  el.setAttribute('translate', 'no');
+  el.classList.add('notranslate');
+  return el;
+}
+
+const TECHNICAL_SELECTORS = [
+  '#methodSelect',
+  '#loadCompMethod',
+  '#requestMethod',
+  '#urlInput',
+  '#reqName',
+  '#bodyEditor',
+  '#preRequest',
+  '#tests',
+  '#graphqlQuery',
+  '#graphqlVariables',
+  '#curlInput',
+  '#codeOutput',
+  '#codeLanguage',
+  '#responseBody',
+  '#responsePretty',
+  '#responseHeaders',
+  '#responseRedirects',
+  '#jsonPath',
+  '#jsonPathOut',
+  '#gqlSchema',
+  '#cookieList',
+  '#loadAmmo',
+  '#loadReport',
+  '#loadCompUrl',
+  '#wsMessageInput',
+  'pre',
+  'code',
+  'textarea',
+  '.method',
+  '.h-method',
+];
+
+function lockBrowserTranslate() {
+  markNoTranslate(document.documentElement);
+  markNoTranslate(document.body);
+  if (document.head && !document.querySelector('meta[name="google"][content="notranslate"]')) {
+    const meta = document.createElement('meta');
+    meta.setAttribute('name', 'google');
+    meta.setAttribute('content', 'notranslate');
+    document.head.prepend(meta);
+  }
+  document.querySelectorAll(TECHNICAL_SELECTORS.join(',')).forEach(markNoTranslate);
+}
+
 // Применение переводов к DOM
 export function applyTranslations() {
   document.documentElement.lang = currentLang;
+  lockBrowserTranslate();
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
@@ -127,5 +181,6 @@ export const I18nManager = {
   setLanguage,
   getCurrentLanguage,
   toggle: toggleLanguage,
-  apply: applyTranslations
+  apply: applyTranslations,
+  markNoTranslate
 };

@@ -606,6 +606,7 @@ function renderHistory() {
     const methodSpan = document.createElement('span');
     methodSpan.className = 'h-method';
     methodSpan.textContent = item.method;
+    I18nManager.markNoTranslate(methodSpan);
 
     const urlSpan = document.createElement('span');
     urlSpan.className = 'h-url';
@@ -776,6 +777,7 @@ async function renderCollections() {
         const reqInfo = document.createElement('span');
         const methodStrong = document.createElement('strong');
         methodStrong.textContent = req.method || 'GET';
+        I18nManager.markNoTranslate(methodStrong);
         reqInfo.append(methodStrong, document.createTextNode(` ${req.url || ''}`));
 
         const runBtn = document.createElement('button');

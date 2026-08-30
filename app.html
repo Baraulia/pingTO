@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" translate="no" class="notranslate">
 <head>
   <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n="appName">PingTo</title>
   <link rel="stylesheet" href="app.css">
 </head>
-<body>
+<body translate="no" class="notranslate">
   <div id="app" class="workspace">
     <aside class="sidebar">
       <div class="brand">
@@ -84,9 +85,9 @@
       </div>
 
       <div class="urlbar">
-        <select id="methodSelect">
-          <option>GET</option><option selected>POST</option><option>PUT</option>
-          <option>PATCH</option><option>DELETE</option><option>OPTIONS</option><option>HEAD</option>
+        <select id="methodSelect" translate="no" class="notranslate">
+          <option value="GET">GET</option><option value="POST" selected>POST</option><option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option><option value="DELETE">DELETE</option><option value="OPTIONS">OPTIONS</option><option value="HEAD">HEAD</option>
           <option value="WS" data-pro="websocket">WS</option>
           <option value="SSE" data-pro="websocket">SSE</option>
         </select>
@@ -407,7 +408,7 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
               </label>
               <label class="field">
                 <span data-i18n="loadtestCompMethod">Compensate method</span>
-                <select id="loadCompMethod">
+                <select id="loadCompMethod" translate="no" class="notranslate">
                   <option value="DELETE">DELETE</option>
                   <option value="POST">POST</option>
                   <option value="PUT">PUT</option>

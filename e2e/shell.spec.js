@@ -61,6 +61,17 @@ test.describe('Free vs Pro shell', () => {
     await expect(btn).toHaveText('RU');
   });
 
+  test('HTTP methods stay English and are not offered to the browser translator', async ({ page }) => {
+    await expect(page.locator('html')).toHaveAttribute('translate', 'no');
+    await expect(page.locator('html')).toHaveClass(/notranslate/);
+    const getOpt = page.locator('#methodSelect option[value="GET"]');
+    await expect(getOpt).toHaveText('GET');
+    await page.locator('#languageToggle').click();
+    await expect(page.locator('#sendBtn')).toContainText(/Отправ/i);
+    await expect(getOpt).toHaveText('GET');
+    await expect(page.locator('#methodSelect')).toHaveAttribute('translate', 'no');
+  });
+
   test('sidebar collapse and palette', async ({ page }) => {
     await page.locator('#sidebarToggle').click();
     await expect(page.locator('body')).toHaveClass(/sidebar-collapsed/);

@@ -502,6 +502,7 @@ function renderTabs() {
     const m = document.createElement('span');
     m.className = `method ${tab.method}`;
     m.textContent = tab.method;
+    I18nManager.markNoTranslate(m);
     const name = document.createElement('span');
     name.className = 'tab-chip-name';
     name.textContent = tab.name || I18nManager.t('defaultRequestName');
@@ -1212,6 +1213,7 @@ function renderCollections() {
           const m = document.createElement('span');
           m.className = `method ${item.method || 'GET'}`;
           m.textContent = item.method || 'GET';
+          I18nManager.markNoTranslate(m);
           r.append(m, document.createTextNode(` ${item.name || item.url || 'request'}`));
           r.onclick = () => {
             if (locked) {
@@ -1309,6 +1311,7 @@ function renderHistory() {
     const m = document.createElement('span');
     m.className = `method ${item.method || ''}`;
     m.textContent = item.method || '';
+    I18nManager.markNoTranslate(m);
     const name = document.createElement('span');
     name.className = 'history-name';
     name.textContent = item.name || I18nManager.t('defaultRequestName');
@@ -1623,6 +1626,7 @@ async function runCollection() {
     const shownUrl = tab.sentUrl || tab.url;
     const passedTests = tests.filter((t) => t.pass).length;
     line.textContent = `${tab.method} ${shownUrl} → ${status ?? '—'} tests ${passedTests}/${tests.length}`;
+    I18nManager.markNoTranslate(line);
     report.appendChild(line);
     if (failed && $('stopOnFail').checked) break;
   }

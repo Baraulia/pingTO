@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html translate="no" class="notranslate">
 <head>
   <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Collections Manager</title>
   <style>
@@ -225,7 +226,7 @@
   <div class="modal" id="requestModal">
     <div class="modal-content">
       <h2 id="requestModalTitle">Add Request</h2>
-      <select id="requestMethod">
+      <select id="requestMethod" translate="no" class="notranslate">
         <option value="GET">GET</option>
         <option value="POST">POST</option>
         <option value="PUT">PUT</option>
@@ -326,7 +327,7 @@
           <div class="requests-list">
             ${coll.requests && coll.requests.length > 0 ? coll.requests.map(req => `
               <div class="request-item" data-coll-id="${esc(coll.id)}" data-req-id="${esc(req.id)}">
-                <span class="method">${esc(req.method)}</span>
+                <span class="method notranslate" translate="no">${esc(req.method)}</span>
                 <span class="url">${esc(req.url)}</span>
                 <div>
                   <button class="btn btn-secondary btn-sm edit-request-btn" data-coll-id="${esc(coll.id)}" data-req-id="${esc(req.id)}">Edit</button>

@@ -222,7 +222,7 @@ export function buildLoadReportHtml(snap, history, t = (key) => key) {
   const cliMax = Math.max(1, ...cli, Number(snap?.spec?.workers) || 1);
   const text = formatLoadReport(snap, t);
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>PingTo load report</title>
+<html lang="en" translate="no" class="notranslate"><head><meta charset="utf-8"><meta name="google" content="notranslate"><title>PingTo load report</title>
 <style>
 body{font:13px/1.45 system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:24px;max-width:900px}
 h1,h2{font-size:16px} pre{white-space:pre-wrap;background:#161b22;padding:12px;border-radius:8px}

@@ -649,7 +649,7 @@ function confirmUnsaved(tab) {
     const label = tab.name || I18nManager.t('defaultRequestName');
     $('unsavedText').textContent = I18nManager.t('unsavedMessage').replace('{name}', label);
     $('unsavedModal').classList.remove('hidden');
-    $('unsavedSaveBtn')?.focus();
+    $('unsavedDiscardBtn')?.focus();
   });
 }
 
@@ -660,6 +660,38 @@ function finishUnsavedChoice(choice) {
   resolve?.(choice);
 }
 
+async function revertCollectionItem(tab) {
+  if (!tab?.collectionId || !tab?.collectionItemId || !tab.savedFingerprint) return;
+  const coll = collectionsManager.collections.find((c) => String(c.id) === String(tab.collectionId));
+  const item = coll ? findItem(coll.items, tab.collectionItemId) : null;
+  if (!item) return;
+  let snap;
+  try {
+    snap = JSON.parse(tab.savedFingerprint);
+  } catch {
+    return;
+  }
+  Object.assign(item, {
+    name: snap.name,
+    method: snap.method,
+    url: snap.url,
+    headers: (snap.headers || []).map((row) => ({ ...row })),
+    params: (snap.params || []).map((row) => ({ ...row })),
+    pathParams: (snap.pathParams || []).map((row) => ({ ...row })),
+    bodyType: snap.bodyType,
+    body: snap.body,
+    authType: snap.authType,
+    auth: { ...(snap.auth || {}) },
+    preRequest: snap.preRequest,
+    tests: snap.tests,
+    docs: snap.docs,
+    graphqlQuery: snap.graphqlQuery,
+    graphqlVariables: snap.graphqlVariables,
+    followRedirects: snap.followRedirects,
+  });
+  await collectionsManager.save();
+}
+
 async function requestCloseTab(id) {
   if (state.tabs.length === 1) return;
   const tab = state.tabs.find((t) => t.id === id);
@@ -667,10 +699,12 @@ async function requestCloseTab(id) {
   if (tab.id === state.activeId) readFormIntoTab();
   if (isTabDirty(tab)) {
     const choice = await confirmUnsaved(tab);
-    if (choice === 'cancel') return;
+    if (choice === 'cancel' || choice == null) return;
     if (choice === 'save') {
       const ok = await saveTab(tab);
       if (!ok) return;
+    } else {
+      await revertCollectionItem(tab);
     }
   }
   removeTab(id);
@@ -2446,9 +2480,16 @@ $('importFile').onchange = async (e) => {
 };
 $('saveRequestBtn').onclick = saveCurrentRequest;
 $('saveToCollectionBtn').onclick = saveCurrentRequest;
-$('unsavedSaveBtn').onclick = () => finishUnsavedChoice('save');
-$('unsavedDiscardBtn').onclick = () => finishUnsavedChoice('discard');
-$('unsavedCancelBtn').onclick = () => finishUnsavedChoice('cancel');
+const bindUnsavedChoice = (id, choice) => {
+  $(id)?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    finishUnsavedChoice(choice);
+  });
+};
+bindUnsavedChoice('unsavedSaveBtn', 'save');
+bindUnsavedChoice('unsavedDiscardBtn', 'discard');
+bindUnsavedChoice('unsavedCancelBtn', 'cancel');
 $('unsavedModal').addEventListener('click', (e) => {
   if (e.target.id === 'unsavedModal') finishUnsavedChoice('cancel');
 });

@@ -36,6 +36,22 @@ test.describe('Collections and environments', () => {
     await sendAndExpectStatus(page, 200);
   });
 
+  test('discarding a new request does not add it to the collection', async ({ page }) => {
+    page.once('dialog', (dialog) => dialog.accept('Keep clean'));
+    await page.locator('#newCollectionBtn').click();
+    await expect(page.locator('[data-testid="tree-collection"]')).toContainText('Keep clean');
+    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#urlInput').fill(`${testdUrl}/should-not-save`);
+    await page.locator('#reqName').fill('Ghost request');
+    await expect(page.locator('.tab-chip.active')).toHaveClass(/dirty/);
+    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('.tab-chip', { hasText: 'Ghost request' }).locator('.tab-close').click();
+    await page.locator('#unsavedDiscardBtn').click();
+    await expect(page.locator('#unsavedModal')).toHaveClass(/hidden/);
+    await expect(page.locator('[data-testid="tree-request"]')).toHaveCount(0);
+    await expect(page.locator('.tab-chip', { hasText: 'Ghost request' })).toHaveCount(0);
+  });
+
   test('unsaved edits can be saved from the close dialog', async ({ page }) => {
     page.once('dialog', (dialog) => dialog.accept('Dirty save'));
     await page.locator('#newCollectionBtn').click();

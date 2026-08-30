@@ -22,6 +22,17 @@ describe('collection-tree', () => {
     expect(emptyRequest({ name: 'N' }).name).toBe('N');
   });
 
+  it('does not keep shared references when opening a request', () => {
+    const headers = [{ key: 'X', value: '1' }];
+    const auth = { token: 'abc' };
+    const req = emptyRequest({ name: 'N', headers, auth, params: [{ key: 'q', value: '1' }] });
+    req.headers[0].value = 'changed';
+    req.auth.token = 'zzz';
+    req.params[0].value = '2';
+    expect(headers[0].value).toBe('1');
+    expect(auth.token).toBe('abc');
+  });
+
   it('adds, finds, flattens and removes nested items', () => {
     const items = [];
     addItem(items, null, { type: 'folder', id: 'f1', name: 'F', items: [] });

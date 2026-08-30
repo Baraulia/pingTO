@@ -2,6 +2,13 @@ function newId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function clonePlain(value, fallback) {
+  if (value == null) return fallback;
+  if (Array.isArray(value)) return value.map((row) => (row && typeof row === 'object' ? { ...row } : row));
+  if (typeof value === 'object') return { ...value };
+  return value;
+}
+
 export function emptyRequest(partial = {}) {
   return {
     type: 'request',
@@ -9,13 +16,15 @@ export function emptyRequest(partial = {}) {
     name: partial.name || 'New request',
     method: partial.method || 'GET',
     url: partial.url || '',
-    headers: partial.headers || [{ key: 'Accept', value: 'application/json' }],
-    params: partial.params || [],
-    pathParams: partial.pathParams || [],
+    headers: Array.isArray(partial.headers)
+      ? clonePlain(partial.headers, [])
+      : [{ key: 'Accept', value: 'application/json' }],
+    params: clonePlain(partial.params, []),
+    pathParams: clonePlain(partial.pathParams, []),
     bodyType: partial.bodyType || 'none',
     body: partial.body || '',
     authType: partial.authType || 'none',
-    auth: partial.auth || {},
+    auth: clonePlain(partial.auth, {}),
     preRequest: partial.preRequest || '',
     tests: partial.tests || '',
     docs: partial.docs || '',

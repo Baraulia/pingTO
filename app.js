@@ -639,6 +639,7 @@ function removeTab(id) {
   if (state.activeId === id) state.activeId = state.tabs[0].id;
   writeTabToForm();
   persistWorkspace();
+  renderCollections();
 }
 
 let unsavedChoiceResolve = null;

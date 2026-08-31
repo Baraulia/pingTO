@@ -10,9 +10,24 @@ func desiredAt(spec RunSpec, elapsed time.Duration) (desired int, phase string, 
 	if peak < 1 {
 		peak = 1
 	}
+	// When RPS is set, workers are a connection pool kept at peak; the pacer ramps rate.
+	rpsDriven := spec.RPS > 0
 	switch spec.Profile {
 	case "ramp":
 		ramp := time.Duration(spec.RampMS) * time.Millisecond
+		if rpsDriven {
+			dwell := time.Duration(rampPeakDwellMS) * time.Millisecond
+			if ramp < 0 {
+				ramp = 0
+			}
+			if elapsed >= ramp+dwell {
+				return peak, "hold", true
+			}
+			if elapsed >= ramp {
+				return peak, "hold", false
+			}
+			return peak, "ramp", false
+		}
 		if ramp <= 0 || elapsed >= ramp {
 			return peak, "ramp", true
 		}
@@ -24,6 +39,9 @@ func desiredAt(spec RunSpec, elapsed time.Duration) (desired int, phase string, 
 			return peak, "hold", true
 		}
 		if ramp > 0 && elapsed < ramp {
+			if rpsDriven {
+				return peak, "ramp", false
+			}
 			return scaleWorkers(peak, float64(elapsed)/float64(ramp)), "ramp", false
 		}
 		return peak, "hold", false
@@ -49,14 +67,30 @@ func scaleWorkers(peak int, frac float64) int {
 	return n
 }
 
-func currentRPS(spec RunSpec, desired, peak int) float64 {
+func currentRPS(spec RunSpec, elapsed time.Duration) float64 {
 	if spec.RPS <= 0 {
-		return 0
+		return -1
 	}
-	if peak <= 0 || desired >= peak {
+	switch spec.Profile {
+	case "ramp":
+		ramp := time.Duration(spec.RampMS) * time.Millisecond
+		if ramp <= 0 || elapsed >= ramp {
+			return spec.RPS
+		}
+		frac := float64(elapsed) / float64(ramp)
+		if frac < 0 {
+			frac = 0
+		}
+		return spec.RPS * frac
+	case "hold":
+		ramp := time.Duration(spec.RampMS) * time.Millisecond
+		if ramp > 0 && elapsed < ramp {
+			return spec.RPS * float64(elapsed) / float64(ramp)
+		}
+		return spec.RPS
+	default:
 		return spec.RPS
 	}
-	return spec.RPS * float64(desired) / float64(peak)
 }
 
 func checkAbort(spec RunSpec, st *runStats, elapsed time.Duration) string {

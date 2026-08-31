@@ -82,7 +82,9 @@
         <input id="reqName" class="tab-name-input" data-i18n-placeholder="reqNamePlaceholder" placeholder="Request name" spellcheck="false">
         <button id="saveRequestBtn" class="btn primary" data-i18n="saveRequestBtn">Save</button>
         <div id="reqTabs" class="req-tabs"></div>
+        <button type="button" id="addTabBtn" class="btn small" aria-label="+">+</button>
       </div>
+      <p id="noRequestHint" class="empty-workspace hidden" data-testid="no-request-hint" data-i18n="noOpenRequest">No open request. Press + or open one from a collection.</p>
 
       <div class="urlbar">
         <select id="methodSelect" translate="no" class="notranslate">
@@ -249,6 +251,7 @@
           </div>
 
           <div id="pane-scripts" class="subpane">
+            <p class="hint" data-i18n="scriptsHelp">Pro. Pre-request is JavaScript that runs before Send. Tests run after Send and check the response; pass/fail is in the Tests tab on the right.</p>
             <h4 data-i18n="preRequestLabel">Pre-request</h4>
             <textarea id="preRequest" rows="6" placeholder="pm.environment.set('token', 'abc')"></textarea>
             <h4 data-i18n="testsLabel">Tests</h4>
@@ -341,12 +344,7 @@
                   <option value="ramp" data-i18n="loadtestProfileRamp">Ramp 0 → peak, then stop</option>
                   <option value="hold" data-i18n="loadtestProfileHold">Reach target quickly, then hold</option>
                 </select>
-                <small class="field-hint" data-i18n="loadtestProfileHint">Ramp: clients increase evenly from 1 to the peak over the time you set; when the peak is reached the test stops. Hold: a short warmup to the peak, then that load is kept for the hold time.</small>
-              </label>
-              <label class="field">
-                <span data-i18n="loadtestWorkers">Peak parallel clients</span>
-                <input id="loadWorkers" type="number" min="1" max="200" value="10">
-                <small class="field-hint" data-i18n="loadtestWorkersHint">Maximum simultaneous clients (the top of the ramp, or the level to hold). Like N users clicking Send together. Max 200.</small>
+                <small class="field-hint" data-i18n="loadtestProfileHint">Ramp: target req/s climbs from 0 to the goal, then the test stops. Hold: short warmup, then keep the goal. Use Hold if you need a full interval at 10 000 req/s — a ramp only touches the peak at the last moment.</small>
               </label>
               <label class="field">
                 <span data-i18n="loadtestRamp">Time to reach peak (ms)</span>
@@ -365,8 +363,8 @@
               </label>
               <label class="field">
                 <span data-i18n="loadtestRps">Target requests per second</span>
-                <input id="loadRps" type="number" min="0" max="10000" value="0">
-                <small class="field-hint" data-i18n="loadtestRpsHint">0 = no limit (as fast as current clients can go). 1000 = the agent aims for about 1000 requests/s at the peak of the profile. The report shows now (last second), average (whole run), and max (best 1-second window). Average is pulled down by the ramp. If now stays well below the target, add parallel clients or the server cannot keep up.</small>
+                <input id="loadRps" type="number" min="0" max="1000000" value="0">
+                <small class="field-hint" data-i18n="loadtestRpsHint">0 = no rate cap (as fast as this machine can go). 100000 = 100 000 req/s, 1000000 = 1 000 000. The agent does not invent a client limit — in-flight requests grow with latency. The only hard cap is RAM/CPU (and a 500 000 in-flight safety valve). Average is pulled down by a ramp from 0. If max stays far below the target, the server cannot keep up.</small>
               </label>
               <label class="field">
                 <span data-i18n="loadtestTimeout">Give up on one request after (ms)</span>
@@ -436,8 +434,8 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
               </label>
               <label class="field">
                 <span data-i18n="loadtestAbortStreak">Stop after N failures in a row</span>
-                <input id="loadAbortStreak" type="number" min="0" max="100000" value="30">
-                <small class="field-hint" data-i18n="loadtestAbortStreakHint">Emergency brake when the API is down (all 5xx/timeouts). 0 = off.</small>
+                <input id="loadAbortStreak" type="number" min="0" max="100000" value="0">
+                <small class="field-hint" data-i18n="loadtestAbortStreakHint">Emergency brake when the API is down (HTTP 4xx/5xx or timeouts in a row). Connection resets under load do not trip this. 0 = off.</small>
               </label>
               <label class="field">
                 <span data-i18n="loadtestAbortAfter">Min requests before abort</span>
@@ -466,7 +464,7 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
                 <div class="load-kpi"><span data-i18n="loadReportErrorRate">Error rate</span><strong id="loadKpiErr">—</strong></div>
                 <div class="load-kpi"><span data-i18n="loadKpiP95">Response p95</span><strong id="loadKpiP95">—</strong></div>
                 <div class="load-kpi"><span data-i18n="loadReportRequests">Requests</span><strong id="loadKpiTotal">—</strong></div>
-                <div class="load-kpi"><span data-i18n="loadReportClients">Clients (current / peak)</span><strong id="loadKpiClients">—</strong></div>
+                <div class="load-kpi"><span data-i18n="loadReportClients">In-flight requests</span><strong id="loadKpiClients">—</strong></div>
               </div>
               <div class="load-progress-wrap">
                 <div class="load-progress" aria-hidden="true"><i id="loadProgressFill"></i></div>
@@ -475,19 +473,19 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
               <div class="load-charts">
                 <figure>
                   <figcaption><span data-i18n="loadChartRps">Requests per second (now)</span> <em id="loadChartRpsVal"></em></figcaption>
-                  <svg id="loadChartRps" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                  <svg id="loadChartRps" class="load-chart" viewBox="0 0 400 176" preserveAspectRatio="xMidYMid meet"></svg>
                 </figure>
                 <figure>
                   <figcaption><span data-i18n="loadChartLatency">Response time p50 / p95 / p99</span> <em id="loadChartLatVal"></em></figcaption>
-                  <svg id="loadChartLat" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                  <svg id="loadChartLat" class="load-chart" viewBox="0 0 400 176" preserveAspectRatio="xMidYMid meet"></svg>
                 </figure>
                 <figure>
                   <figcaption><span data-i18n="loadChartErrors">Error rate</span> <em id="loadChartErrVal"></em></figcaption>
-                  <svg id="loadChartErr" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                  <svg id="loadChartErr" class="load-chart" viewBox="0 0 400 176" preserveAspectRatio="xMidYMid meet"></svg>
                 </figure>
                 <figure>
                   <figcaption><span data-i18n="loadChartClients">Clients</span> <em id="loadChartCliVal"></em></figcaption>
-                  <svg id="loadChartCli" class="load-spark" viewBox="0 0 240 64" preserveAspectRatio="none"></svg>
+                  <svg id="loadChartCli" class="load-chart" viewBox="0 0 400 176" preserveAspectRatio="xMidYMid meet"></svg>
                 </figure>
               </div>
               <div class="load-mix-row">

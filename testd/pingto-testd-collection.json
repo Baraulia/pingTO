@@ -5,7 +5,7 @@
     {
       "id": "pingto-testd",
       "name": "PingTo testd",
-      "description": "Все маршруты локального testd (go run . в testd/). База http://127.0.0.1:8787. Импорт: Collections → Import (PingTo JSON доступен в Free). Для папки Env создайте Environment testd: base_url=http://127.0.0.1:8787, ws_url=ws://127.0.0.1:8787 и выберите его. Учётки: pingto/pingto, Bearer pingto-token, X-API-Key pingto-key, OAuth pingto / pingto-secret.",
+      "description": "All testd routes (go run . in testd/). Base http://127.0.0.1:8787. Import: Collections → Import (PingTo JSON is available on Free). For the Env folder create Environment testd: base_url=http://127.0.0.1:8787, ws_url=ws://127.0.0.1:8787 and select it. Accounts: pingto / pingto, Bearer pingto-token, X-API-Key pingto-key, OAuth pingto / pingto-secret.",
       "created": "2026-08-21T00:00:00.000Z",
       "items": [
         {
@@ -26,7 +26,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Каталог маршрутов и учёток. Параметры не нужны. 200 JSON.",
+              "docs": "Route catalog and credentials. No params. 200 JSON.",
               "followRedirects": true
             },
             {
@@ -42,7 +42,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Liveness без искусственной задержки. 200 { ok, ts }.",
+              "docs": "Liveness with no extra delay. 200 { ok, ts }.",
               "followRedirects": true
             }
           ]
@@ -65,7 +65,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Эхо method/url/query/headers. Query любые.",
+              "docs": "Echoes method, URL, query, and headers. Any query keys.",
               "followRedirects": true
             },
             {
@@ -81,7 +81,7 @@
               "body": "hello testd",
               "authType": "none",
               "auth": {},
-              "docs": "Тело вернётся в JSON поле body. Лимит 2 МиБ.",
+              "docs": "Body comes back in JSON field body. Limit 2 MiB.",
               "followRedirects": true
             },
             {
@@ -97,7 +97,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Сид user 42 в памяти. Чужой id → 404. POST /v1/users создаёт; тот же id повторно → 409.",
+              "docs": "Seeded user 42 in memory. Unknown id → 404. POST /v1/users creates; same id again → 409.",
               "followRedirects": true
             },
             {
@@ -116,7 +116,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Вкладка Params. 200 { query }.",
+              "docs": "Params tab. 200 { query }.",
               "followRedirects": true
             },
             {
@@ -135,7 +135,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Эхо входящих заголовков. Добавьте любые X-*.",
+              "docs": "Echoes incoming headers. Add any X-* headers.",
               "followRedirects": true
             },
             {
@@ -153,7 +153,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Любой путь OPTIONS → 204, CORS *.",
+              "docs": "Any path OPTIONS → 204, CORS *.",
               "followRedirects": true
             }
           ]
@@ -176,7 +176,7 @@
               "body": "{\"id\":\"7\",\"email\":\"ada@load.test\",\"name\":\"Ada\"}",
               "authType": "none",
               "auth": {},
-              "docs": "201. Повтор того же id → 409. Для loadtest в id должно быть {n}.",
+              "docs": "201. Same id again → 409. For load tests put {n} in id.",
               "followRedirects": true
             },
             {
@@ -192,7 +192,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "204 если был, 404 если нет. Компенсация после POST.",
+              "docs": "204 if it existed, 404 if not. Compensation after POST.",
               "followRedirects": true
             },
             {
@@ -208,7 +208,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Сид s-alpha. Повтор без compensate POST → 404.",
+              "docs": "Seeded s-alpha. Repeat without compensate POST → 404.",
               "followRedirects": true
             },
             {
@@ -224,7 +224,7 @@
               "body": "{\"id\":\"s-alpha\",\"user\":\"alpha\"}",
               "authType": "none",
               "auth": {},
-              "docs": "Компенсация DELETE сессии. 201 или 409 если ещё жива.",
+              "docs": "Compensation for DELETE session. 201, or 409 if it still exists.",
               "followRedirects": true
             },
             {
@@ -240,7 +240,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "После POST+DELETE compensate users ≈ 1, sessions ≈ 3.",
+              "docs": "After POST+DELETE compensate, users ≈ 1, sessions ≈ 3.",
               "followRedirects": true
             },
             {
@@ -256,7 +256,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Сид заново: user 42, три сессии.",
+              "docs": "Reseed: user 42 and three sessions.",
               "followRedirects": true
             }
           ]
@@ -279,7 +279,7 @@
               "body": "{\n  \"name\": \"ada\",\n  \"n\": 1\n}",
               "authType": "none",
               "auth": {},
-              "docs": "Валидный JSON обязателен. 200 { method, json }. Битый JSON → 400.",
+              "docs": "Valid JSON required. 200 { method, json }. Broken JSON → 400.",
               "followRedirects": true
             },
             {
@@ -295,7 +295,7 @@
               "body": "{ \"patch\": false }",
               "authType": "none",
               "auth": {},
-              "docs": "Тот же /json, метод PUT.",
+              "docs": "Same /json, PUT method.",
               "followRedirects": true
             },
             {
@@ -327,7 +327,7 @@
               "body": "title=demo\nnote=from-pingto",
               "authType": "none",
               "auth": {},
-              "docs": "Pro. Строки key=value + опционально файлы multiFiles. Content-Type выставит клиент. 200 { fields, files }.",
+              "docs": "Pro. key=value lines plus optional multiFiles. The client sets Content-Type. 200 { fields, files }.",
               "followRedirects": true
             },
             {
@@ -343,7 +343,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Pro. После открытия запроса выберите файл (Choose file). Без файла тело пустое. 200 { bytes, content_type }.",
+              "docs": "Pro. After opening the request, pick a file (Choose file). No file → empty body. 200 { bytes, content_type }.",
               "followRedirects": true
             }
           ]
@@ -366,7 +366,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "200 text/plain, две строки.",
+              "docs": "200 text/plain, two lines.",
               "followRedirects": true
             },
             {
@@ -382,7 +382,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "200 text/html. Вкладка Preview.",
+              "docs": "200 text/html. Preview tab.",
               "followRedirects": true
             },
             {
@@ -398,7 +398,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "200 application/xml. Pretty.",
+              "docs": "200 application/xml. Pretty tab.",
               "followRedirects": true
             },
             {
@@ -462,7 +462,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Только HEAD. 200 без тела, заголовок X-PingTo: head.",
+              "docs": "HEAD only. 200 with no body, header X-PingTo: head.",
               "followRedirects": true
             }
           ]
@@ -485,7 +485,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Сон ms (0–60000). Send → Cancel. Таймаут в Settings меньше 8s.",
+              "docs": "Sleeps ms (0–60000). Send → Cancel. Set timeout in Settings below 8s.",
               "followRedirects": true
             },
             {
@@ -501,7 +501,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "302 цепочка. Follow redirects включён → вкладка Redirects, финал 200.",
+              "docs": "302 chain. Follow redirects on → Redirects tab, final 200.",
               "followRedirects": true
             },
             {
@@ -517,7 +517,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Follow выключен → остаётесь на 302 Location: /redirect/2.",
+              "docs": "Follow off → you stay on 302 Location: /redirect/2.",
               "followRedirects": false
             },
             {
@@ -533,7 +533,7 @@
               "body": "keep-me",
               "authType": "none",
               "auth": {},
-              "docs": "307 на /echo, метод и тело сохраняются. Follow on.",
+              "docs": "307 to /echo; method and body are kept. Follow on.",
               "followRedirects": true
             },
             {
@@ -549,7 +549,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "n байт 'A', max 3 МиБ. octet-stream.",
+              "docs": "n bytes of 'A', max 3 MiB. octet-stream.",
               "followRedirects": true
             },
             {
@@ -565,7 +565,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Максимум сервера. В расширении ответ может обрезаться ~2 МиБ.",
+              "docs": "Server maximum. The extension may truncate the response around 2 MiB.",
               "followRedirects": true
             },
             {
@@ -582,7 +582,7 @@
               "authType": "none",
               "auth": {},
               "tests": "pm.test('status 200', () => pm.expect(pm.response.code).toBe(200))\npm.test('ok true', () => pm.expect(pm.response.json().ok).toBe(true))\npm.test('message', () => pm.expect(pm.response.json().message).toBe('slow-json'))",
-              "docs": "После имитации работы. Pro Tests. 200 { ok, code, message, items }.",
+              "docs": "After simulated work. Pro Tests. 200 { ok, code, message, items }.",
               "followRedirects": true
             }
           ]
@@ -608,7 +608,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Set-Cookie sid=abc Path=/. Затем GET cookies.",
+              "docs": "Set-Cookie sid=abc Path=/. Then GET cookies.",
               "followRedirects": true
             },
             {
@@ -624,7 +624,7 @@
               "body": "{ \"name\": \"pingto\", \"value\": \"ok\" }",
               "authType": "none",
               "auth": {},
-              "docs": "Если query name пуст — имя/значение из JSON.",
+              "docs": "If query name is empty, name/value come from JSON.",
               "followRedirects": true
             },
             {
@@ -640,7 +640,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Прочитайте Cookie для origin. В PingTo: Cookies → Load for URL.",
+              "docs": "Read Cookie for this origin. In PingTo: Cookies → Load for URL.",
               "followRedirects": true
             }
           ]
@@ -663,7 +663,7 @@
               "body": "",
               "authType": "bearer",
               "auth": { "token": "pingto-token" },
-              "docs": "Authorization: Bearer pingto-token. Без токена 401.",
+              "docs": "Authorization: Bearer pingto-token. Without a token → 401.",
               "followRedirects": true
             },
             {
@@ -695,7 +695,7 @@
               "body": "",
               "authType": "digest",
               "auth": { "user": "pingto", "pass": "pingto" },
-              "docs": "Pro. PingTo шлёт X-Digest-User / X-Digest-Pass (pingto/pingto). RFC Digest тоже принимается.",
+              "docs": "Pro. PingTo sends X-Digest-User / X-Digest-Pass (pingto/pingto). RFC Digest is also accepted.",
               "followRedirects": true
             },
             {
@@ -751,7 +751,7 @@
               "body": "grant_type=client_credentials&client_id=pingto&client_secret=pingto-secret&scope=api",
               "authType": "none",
               "auth": {},
-              "docs": "200 access_token. Можно вместо form: Auth OAuth2 grant client_credentials + Login / Get token на /auth/oauth.",
+              "docs": "200 access_token. Or use Auth OAuth2 grant client_credentials + Login / Get token against /auth/oauth.",
               "followRedirects": true
             },
             {
@@ -767,7 +767,7 @@
               "body": "grant_type=refresh_token&client_id=pingto&client_secret=pingto-secret&refresh_token=any-nonempty",
               "authType": "none",
               "auth": {},
-              "docs": "Сервер проверяет только непустой refresh_token. 200 новый access_token.",
+              "docs": "Server only checks that refresh_token is non-empty. 200 new access_token.",
               "followRedirects": true
             },
             {
@@ -783,7 +783,7 @@
               "body": "",
               "authType": "bearer",
               "auth": { "token": "pingto-token" },
-              "docs": "Принимает pingto-token или access_token с /oauth/token. Для PKCE: Auth OAuth2, grant authorization_code, Auth URL /oauth/authorize, Token URL /oauth/token, client pingto / pingto-secret, затем Login.",
+              "docs": "Accepts pingto-token or an access_token from /oauth/token. For PKCE: Auth OAuth2, grant authorization_code, Auth URL /oauth/authorize, Token URL /oauth/token, client pingto / pingto-secret, then Login.",
               "followRedirects": true
             },
             {
@@ -807,7 +807,7 @@
                 "scope": "api",
                 "refresh": ""
               },
-              "docs": "Pro. Login / Get token → chrome.identity редирект на /oauth/authorize (client_id, redirect_uri, code_challenge). Затем GET /auth/oauth с выданным Bearer.",
+              "docs": "Pro. Login / Get token → chrome.identity redirects to /oauth/authorize (client_id, redirect_uri, code_challenge). Then GET /auth/oauth with the issued Bearer.",
               "followRedirects": true
             },
             {
@@ -831,7 +831,7 @@
                 "scope": "api",
                 "refresh": ""
               },
-              "docs": "Pro. Login / Get token без браузера: POST /oauth/token, затем Send на этот URL.",
+              "docs": "Pro. Login / Get token without a browser: POST /oauth/token, then Send this URL.",
               "followRedirects": true
             }
           ]
@@ -874,7 +874,7 @@
               "graphqlVariables": "{ \"id\": \"7\" }",
               "authType": "none",
               "auth": {},
-              "docs": "id из variables, иначе 1.",
+              "docs": "id from variables, otherwise 1.",
               "followRedirects": true
             },
             {
@@ -892,7 +892,7 @@
               "graphqlVariables": "{}",
               "authType": "none",
               "auth": {},
-              "docs": "Список Ada / Linus.",
+              "docs": "List of Ada / Linus.",
               "followRedirects": true
             },
             {
@@ -910,7 +910,7 @@
               "graphqlVariables": "{}",
               "authType": "none",
               "auth": {},
-              "docs": "Или кнопка Introspect в UI. query содержит __schema или IntrospectionQuery.",
+              "docs": "Or use Introspect in the UI. Query contains __schema or IntrospectionQuery.",
               "followRedirects": true
             }
           ]
@@ -933,7 +933,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Метод WS, не HTTP. Connect. Upgrade/Sec-WebSocket-* ставит браузер. Текст эхом, ping→pong.",
+              "docs": "WS method, not HTTP. Connect. The browser sets Upgrade/Sec-WebSocket-*. Text is echoed, ping→pong.",
               "followRedirects": true
             },
             {
@@ -949,7 +949,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Метод SSE. 8 событий data: {n,ts} с паузой 400 мс. Send недоступен.",
+              "docs": "SSE method. 8 events data: {n,ts} with a 400 ms pause. Send is disabled.",
               "followRedirects": true
             }
           ]
@@ -974,7 +974,7 @@
               "body": "",
               "authType": "none",
               "auth": {},
-              "docs": "Нужно Environment: base_url=http://127.0.0.1:8787 и выбрать его. Иначе invalid URL.",
+              "docs": "Requires Environment: base_url=http://127.0.0.1:8787 and that env selected. Otherwise invalid URL.",
               "followRedirects": true
             },
             {

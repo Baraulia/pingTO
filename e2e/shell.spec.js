@@ -40,8 +40,8 @@ test.describe('Free vs Pro shell', () => {
   });
 
   test('Free allows extra tabs', async ({ page }) => {
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
+    await page.locator('#addTabBtn').click();
     await expect(page.locator('.tab-chip')).toHaveCount(3);
   });
 
@@ -92,5 +92,14 @@ test.describe('Free vs Pro shell', () => {
     await page.locator('#reqName').fill('Smoke ping');
     await page.locator('#reqName').blur();
     await expect(page.locator('#reqTabs')).toContainText('Smoke ping');
+  });
+
+  test('the last request tab can be closed', async ({ page }) => {
+    await page.locator('.tab-chip .tab-close').click();
+    await expect(page.locator('[data-testid="no-request-hint"]')).toBeVisible();
+    await expect(page.locator('#urlInput')).toBeHidden();
+    await page.locator('#addTabBtn').click();
+    await expect(page.locator('#urlInput')).toBeVisible();
+    await expect(page.locator('.tab-chip')).toHaveCount(1);
   });
 });

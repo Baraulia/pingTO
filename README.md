@@ -185,7 +185,7 @@ All data is stored locally in `chrome.storage.local`:
 ```bash
 go run -C testd .
 ```
-Base URL: `http://127.0.0.1:8787`. Catalog: `GET /`. In-memory CRUD: `POST /v1/users` (duplicate id → 409), `DELETE /v1/users/{id}` (missing → 404); seed user `42` and sessions `s-alpha`/`s-beta`/`s-gamma`. Reset: `POST /v1/reset`. Request list: `testd/REQUESTS.md`. Collection: `testd/pingto-testd-collection.json`.
+Base URL: `http://127.0.0.1:8787`. Default `-latency 0` skips injected sleep/CPU. Catalog: `GET /`. In-memory CRUD: `POST /v1/users` (duplicate id → 409), `DELETE /v1/users/{id}` (missing → 404); seed user `42` and sessions `s-alpha`/`s-beta`/`s-gamma`. Reset: `POST /v1/reset`. Request list: `testd/REQUESTS.md`. Collection: `testd/pingto-testd-collection.json`.
 
 ### Load agent (Pro tab Load test)
 The Chrome extension does **not** contain the native binary. Users download one file for their OS from a GitHub Release (catalog `latest.json` with SHA-256). The Load test tab detects the OS, shows the official link and hash, and checks `/health` version against the catalog.

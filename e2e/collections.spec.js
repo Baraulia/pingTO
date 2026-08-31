@@ -12,12 +12,14 @@ test.describe('Collections and environments', () => {
     await expect(page.locator('[data-testid="tree-request"]')).toContainText('Saved health');
     await page.locator('#urlInput').fill('https://example.invalid/reset');
     await expect(page.locator('.tab-chip.active')).toHaveClass(/dirty/);
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
     await page.locator('.tab-chip', { hasText: 'Saved health' }).locator('.tab-close').click();
     await expect(page.locator('#unsavedModal')).not.toHaveClass(/hidden/);
     await page.locator('#unsavedDiscardBtn').click();
     await page.locator('[data-testid="tree-request"]').filter({ hasText: 'Saved health' }).click();
     await expect(page.locator('#urlInput')).toHaveValue(`${testdUrl}/health`);
+    await expect(page.locator('[data-testid="tree-request"]').filter({ hasText: 'Saved health' })).toHaveClass(/selected/);
+    await expect(page.locator('[data-testid="tree-collection"]')).toHaveClass(/selected/);
     await sendAndExpectStatus(page, 200);
   });
 
@@ -33,6 +35,9 @@ test.describe('Collections and environments', () => {
     await page.locator('#closeEnvBtn').click();
     await page.locator('#environmentSelect').selectOption({ label: 'testd' });
     await openRequest(page, 'testd-env-health');
+    await expect(page.locator('[data-testid="tree-request"][data-request-id="testd-env-health"]')).toHaveClass(/selected/);
+    await expect(page.locator('[data-testid="tree-folder"]').filter({ hasText: 'Env' })).toHaveClass(/selected/);
+    await expect(page.locator('[data-testid="tree-collection"]')).toHaveClass(/selected/);
     await sendAndExpectStatus(page, 200);
   });
 
@@ -40,11 +45,11 @@ test.describe('Collections and environments', () => {
     page.once('dialog', (dialog) => dialog.accept('Keep clean'));
     await page.locator('#newCollectionBtn').click();
     await expect(page.locator('[data-testid="tree-collection"]')).toContainText('Keep clean');
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
     await page.locator('#urlInput').fill(`${testdUrl}/should-not-save`);
     await page.locator('#reqName').fill('Ghost request');
     await expect(page.locator('.tab-chip.active')).toHaveClass(/dirty/);
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
     await page.locator('.tab-chip', { hasText: 'Ghost request' }).locator('.tab-close').click();
     await page.locator('#unsavedDiscardBtn').click();
     await expect(page.locator('#unsavedModal')).toHaveClass(/hidden/);
@@ -55,12 +60,12 @@ test.describe('Collections and environments', () => {
   test('unsaved edits can be saved from the close dialog', async ({ page }) => {
     page.once('dialog', (dialog) => dialog.accept('Dirty save'));
     await page.locator('#newCollectionBtn').click();
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
     await page.locator('#urlInput').fill(`${testdUrl}/health`);
     await page.locator('#reqName').fill('Keep me');
     await expect(page.locator('.tab-chip.active')).toHaveClass(/dirty/);
     await expect(page.locator('#saveRequestBtn')).toHaveClass(/needs-save/);
-    await page.locator('#reqTabs button', { hasText: '+' }).click();
+    await page.locator('#addTabBtn').click();
     await page.locator('.tab-chip', { hasText: 'Keep me' }).locator('.tab-close').click();
     await page.locator('#unsavedSaveBtn').click();
     await expect(page.locator('[data-testid="tree-request"]')).toContainText('Keep me');

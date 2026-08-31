@@ -99,6 +99,22 @@ export function findParentId(items, childId, parentId = null) {
   return undefined;
 }
 
+export function ancestorFolderIds(items, childId) {
+  const path = [];
+  const walk = (list) => {
+    for (const item of list || []) {
+      if (String(item.id) === String(childId)) return true;
+      if (item.type === 'folder') {
+        path.push(item.id);
+        if (walk(item.items)) return true;
+        path.pop();
+      }
+    }
+    return false;
+  };
+  return walk(items) ? path : [];
+}
+
 export function moveItem(items, itemId, targetFolderId = null) {
   const item = findItem(items, itemId);
   if (!item) return false;

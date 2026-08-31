@@ -389,6 +389,9 @@
   "testsLabel": {
     "message": "Тесты"
   },
+  "scriptsHelp": {
+    "message": "Pro. Pre-request — JavaScript до Send: переменные и подписи через pm.environment.set('token', 'abc'). Тесты выполняются после Send и проверяют ответ; pass/fail на вкладке «Тесты» справа. Пример: pm.test('status 200', () => pm.expect(pm.response.code).toBe(200)). Ещё: pm.response.json(), .text(), pm.expect(x).toEqual / toContain / toBeTruthy, pm.environment.get/set."
+  },
   "gqlExecuteBtn": {
     "message": "Выполнить"
   },
@@ -658,6 +661,9 @@
   },
   "collectionHelp": {
     "message": "Создайте коллекцию, кликните по имени чтобы выбрать, затем «Сохранить запрос». Клик по запросу открывает его. Двойной клик по коллекции — переименовать или удалить."
+  },
+  "noOpenRequest": {
+    "message": "Нет открытого запроса. Нажмите + или откройте запрос из коллекции."
   },
   "newCollectionNamePlaceholder": {
     "message": "Имя коллекции"
@@ -1010,12 +1016,6 @@
   "loadtestPingBtn": {
     "message": "Проверить агент"
   },
-  "loadtestWorkers": {
-    "message": "Пик параллельных клиентов"
-  },
-  "loadtestWorkersHint": {
-    "message": "Максимум одновременных клиентов (вершина разгона или уровень удержания). Как N пользователей жмут Send вместе. Максимум 200."
-  },
   "loadtestProfile": {
     "message": "Как растёт нагрузка"
   },
@@ -1026,7 +1026,7 @@
     "message": "Быстро выйти на уровень и держать"
   },
   "loadtestProfileHint": {
-    "message": "Разгон: клиенты равномерно растут от 1 до пика за указанное время; на пике тест останавливается. Удержание: короткий разгон до пика, затем нагрузка держится заданное время."
+    "message": "Разгон: целевые req/s растут от 0 до цели, затем стоп. Удержание: короткий разогрев и плато. Чтобы держать 10 000 req/s несколько секунд, берите Hold — на разгоне пик только в последний момент."
   },
   "loadtestRamp": {
     "message": "Время выхода на пик (мс)"
@@ -1056,7 +1056,7 @@
     "message": "Целевые запросы в секунду"
   },
   "loadtestRpsHint": {
-    "message": "0 = без потолка (так быстро, как успевают текущие клиенты). 1000 = на пике профиля агент целится примерно в 1000 запросов/с. В отчёте: сейчас (последняя секунда), среднее (весь прогон), максимум (лучшая секунда). Разгон занижает среднее: старт с 0, поэтому 751 при цели 1000 — нормально, если «сейчас» около 1000. Если «сейчас» сильно ниже цели — мало параллельных клиентов или сервер не успевает."
+    "message": "0 = без потолка (сколько вытянет эта машина). 100000 = 100 000 req/s, 1000000 = 1 000 000. Агент не выдумывает лимит клиентов — in-flight растёт с задержкой. Жёсткий потолок только RAM/CPU (и предохранитель 500 000 одновременных запросов). Разгон с 0 занижает среднее. Если максимум далеко от цели — не успевает сервер."
   },
   "loadtestTimeout": {
     "message": "Бросить один запрос через (мс)"
@@ -1107,7 +1107,7 @@
     "message": "Стоп после N ошибок подряд"
   },
   "loadtestAbortStreakHint": {
-    "message": "Аварийный тормоз, когда API лежит (сплошные 5xx/timeout). 0 = выкл."
+    "message": "Аварийный тормоз, когда API лежит (HTTP 4xx/5xx или timeout подряд). Сброс соединений при перегрузе это правило не срабатывает. 0 = выкл."
   },
   "loadtestAbortAfter": {
     "message": "Минимум запросов до abort"
@@ -1148,6 +1148,9 @@
   "loadtestStartFail": {
     "message": "Не удалось запустить прогон: {error}"
   },
+  "loadtestStartTimeout": {
+    "message": "Агент не принял новый прогон (ещё закрывает предыдущий или не отвечает). Подождите пару секунд и повторите, либо перезапустите агент."
+  },
   "loadtestCopied": {
     "message": "Отчёт скопирован"
   },
@@ -1164,7 +1167,7 @@
   "loadReportAbort": { "message": "Причина abort" },
   "loadReportPhase": { "message": "Фаза" },
   "loadReportElapsed": { "message": "Прошло" },
-  "loadReportClients": { "message": "Клиенты (сейчас / пик)" },
+  "loadReportClients": { "message": "Запросы в полёте" },
   "loadReportRequests": { "message": "Запросов" },
   "loadReportOk": { "message": "Успехи (HTTP < 400)" },
   "loadReportFail": { "message": "Ошибки" },
@@ -1188,6 +1191,7 @@
   "loadReportLatMax": { "message": "max" },
   "loadKpiP95": { "message": "Ответ p95" },
   "loadReportCodes": { "message": "Коды HTTP" },
+  "loadReportCodeNet": { "message": "сеть (нет HTTP-статуса)" },
   "loadStatus_running": { "message": "идёт" },
   "loadStatus_done": { "message": "завершён" },
   "loadStatus_stopped": { "message": "остановлен вручную" },
@@ -1198,11 +1202,17 @@
   "loadPhase_steady": { "message": "постоянная" },
   "loadAbort_error_rate": { "message": "доля ошибок выше лимита" },
   "loadAbort_p95": { "message": "p95 задержки выше лимита" },
-  "loadAbort_consecutive": { "message": "слишком много ошибок подряд" },
+  "loadAbort_consecutive": { "message": "слишком много HTTP-ошибок или timeout подряд" },
   "loadChartRps": { "message": "Запросов в секунду (сейчас)" },
   "loadChartLatency": { "message": "Время ответа p50 / p95 / p99" },
   "loadChartErrors": { "message": "Доля ошибок" },
-  "loadChartClients": { "message": "Клиенты" },
+  "loadChartClients": { "message": "Запросы в полёте" },
+  "loadChartAxisTime": { "message": "Время" },
+  "loadChartAxisRps": { "message": "запр/с" },
+  "loadChartAxisMs": { "message": "мс" },
+  "loadChartAxisErr": { "message": "%" },
+  "loadChartAxisClients": { "message": "клиенты" },
+  "loadChartTarget": { "message": "цель" },
   "loadMixLabel": { "message": "Исходы" },
   "loadReportTextToggle": { "message": "Текстовый отчёт" },
   "loadDlTitle": { "message": "Скачать агент" },

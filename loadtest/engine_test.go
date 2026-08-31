@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,23 @@ func TestNormalizeSpec(t *testing.T) {
 	}
 	if s.Method != "GET" || s.TimeoutMS != 10000 {
 		t.Fatalf("defaults: %+v", s)
+	}
+	if s.Workers != 2 {
+		t.Fatalf("explicit workers %d", s.Workers)
+	}
+	auto, err := normalizeSpec(RunSpec{URL: "http://127.0.0.1/x", Count: 10, RPS: 10000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if auto.Workers != 0 {
+		t.Fatalf("rps run should not invent a client cap, got %d", auto.Workers)
+	}
+	big, err := normalizeSpec(RunSpec{URL: "http://127.0.0.1/x", DurationMS: 1000, RPS: 100000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.RPS != 100000 {
+		t.Fatalf("100k rps rejected: %v", big.RPS)
 	}
 }
 
@@ -76,6 +94,40 @@ func TestEngineStop(t *testing.T) {
 	}
 	if stopped.Total < 1 {
 		t.Fatal("expected some requests")
+	}
+}
+
+func TestEngineSecondStartDoesNotHang(t *testing.T) {
+	block := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-block:
+		case <-r.Context().Done():
+		}
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+	eng := newEngine()
+	first, err := eng.Start(RunSpec{URL: srv.URL, DurationMS: 150, RPS: 80, TimeoutMS: 5000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(40 * time.Millisecond)
+	began := time.Now()
+	second, err := eng.Start(RunSpec{URL: srv.URL, Count: 4, Workers: 2, TimeoutMS: 2000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(began) > 4*time.Second {
+		t.Fatalf("second start blocked %s", time.Since(began))
+	}
+	if second.ID == "" || second.ID == first.ID {
+		t.Fatalf("want a new run, got first=%s second=%s", first.ID, second.ID)
+	}
+	close(block)
+	cur := waitStatus(t, eng, second.ID, 3*time.Second)
+	if cur.Status != StatusDone {
+		t.Fatalf("status %s", cur.Status)
 	}
 }
 
@@ -346,5 +398,113 @@ func TestDeleteAmmoRestoreCompensate(t *testing.T) {
 	}
 	if cur.CompensateOK != 4 {
 		t.Fatalf("compensateOk=%d", cur.CompensateOK)
+	}
+}
+
+func TestListenAddrLoopback(t *testing.T) {
+	if listenAddr("") != "127.0.0.1:8788" || listenAddr(":9") != "127.0.0.1:9" {
+		t.Fatal(listenAddr(""), listenAddr(":9"))
+	}
+	if !isLoopbackAddr("127.0.0.1:8788") || !isLoopbackAddr("[::1]:8788") {
+		t.Fatal("loopback")
+	}
+	if isLoopbackAddr("0.0.0.0:8788") || isLoopbackAddr("192.168.1.2:8788") {
+		t.Fatal("non-loopback treated as loopback")
+	}
+}
+
+func TestWorkersForRPS(t *testing.T) {
+	if oomInFlight(RunSpec{RPS: 10000}) != maxWorkers {
+		t.Fatalf("oom guard %d", oomInFlight(RunSpec{RPS: 10000}))
+	}
+	if oomInFlight(RunSpec{Workers: 50}) != 50 {
+		t.Fatal("explicit cap")
+	}
+}
+
+func TestCurrentRPSRampByTime(t *testing.T) {
+	spec := RunSpec{Profile: "ramp", RPS: 1000, RampMS: 1000, Workers: 10}
+	if v := currentRPS(spec, 0); v != 0 {
+		t.Fatalf("start %v", v)
+	}
+	mid := currentRPS(spec, 500*time.Millisecond)
+	if mid < 490 || mid > 510 {
+		t.Fatalf("mid %v", mid)
+	}
+	if currentRPS(spec, time.Second) != 1000 {
+		t.Fatalf("peak %v", currentRPS(spec, time.Second))
+	}
+}
+
+func TestDesiredAtRampKeepsPoolWhenRPSSet(t *testing.T) {
+	spec := RunSpec{Profile: "ramp", Workers: 80, RampMS: 1000, RPS: 500}
+	n, phase, done := desiredAt(spec, 100*time.Millisecond)
+	if n != 80 || phase != "ramp" || done {
+		t.Fatalf("got n=%d phase=%s done=%v", n, phase, done)
+	}
+	_, phase, done = desiredAt(spec, 1000*time.Millisecond)
+	if phase != "hold" || done {
+		t.Fatalf("at peak %s done=%v", phase, done)
+	}
+	_, _, done = desiredAt(spec, time.Duration(1000+rampPeakDwellMS)*time.Millisecond)
+	if !done {
+		t.Fatal("should finish after peak dwell")
+	}
+}
+
+func TestEngineApproachesTargetRPS(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+	eng := newEngine()
+	snap, err := eng.Start(RunSpec{
+		URL: srv.URL, Profile: "constant", DurationMS: 800, RPS: 400, TimeoutMS: 2000,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := waitStatus(t, eng, snap.ID, 4*time.Second)
+	if cur.Status != StatusDone {
+		t.Fatalf("status %s", cur.Status)
+	}
+	if cur.RPSMax < 280 {
+		t.Fatalf("expected to approach 400 rps, rpsMax=%.1f total=%d workers=%d", cur.RPSMax, cur.Total, cur.Spec.Workers)
+	}
+}
+
+func TestPacerStopsWhenCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	p := newPacer()
+	p.start(ctx, func() float64 { return 5000 })
+	time.Sleep(15 * time.Millisecond)
+	cancel()
+	select {
+	case <-p.done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("pacer goroutine did not park")
+	}
+}
+
+func TestCountRunParksSpareWorkers(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+	time.Sleep(20 * time.Millisecond)
+	before := runtime.NumGoroutine()
+	eng := newEngine()
+	snap, err := eng.Start(RunSpec{URL: srv.URL, Count: 8, Workers: 64, TimeoutMS: 1000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := waitStatus(t, eng, snap.ID, 3*time.Second)
+	if cur.Status != StatusDone || cur.Total != 8 {
+		t.Fatalf("status=%s total=%d", cur.Status, cur.Total)
+	}
+	time.Sleep(80 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	if after > before+12 {
+		t.Fatalf("goroutines still running after count run: before=%d after=%d", before, after)
 	}
 }

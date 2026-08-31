@@ -47,5 +47,11 @@
       },
       "description": "Send request"
     }
+  },
+  "sandbox": {
+    "pages": ["sandbox.html"]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'unsafe-inline'; child-src 'self';"
   }
 }

@@ -13,7 +13,7 @@ import (
 
 var (
 	listenAddr    = flag.String("addr", envOr("PINGTO_ADDR", ":8787"), "listen address")
-	baseLatencyMS = flag.Int("latency", envInt("PINGTO_LATENCY_MS", 8), "base handler latency in ms (plus jitter and 2ms CPU)")
+	baseLatencyMS = flag.Int("latency", envInt("PINGTO_LATENCY_MS", 0), "base handler latency in ms; 0 skips sleep and CPU (use -latency N or ?delay=)")
 )
 
 func main() {
@@ -94,7 +94,6 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
 	_ = enc.Encode(v)
 }
 

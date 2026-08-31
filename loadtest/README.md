@@ -33,7 +33,7 @@ Spec JSON:
   "url": "http://127.0.0.1:8787/health",
   "headers": { "Accept": "application/json" },
   "body": "",
-  "workers": 10,
+  "workers": 0,
   "profile": "ramp",
   "rampMs": 10000,
   "holdMs": 0,
@@ -43,15 +43,15 @@ Spec JSON:
   "followRedirects": true,
   "abortErrorPct": 20,
   "abortP95Ms": 0,
-  "abortConsecutive": 30,
+  "abortConsecutive": 0,
   "abortAfter": 20,
   "abortGraceMs": 2000
 }
 ```
 
-`profile`: `constant` (all workers at once, `durationMs` / `count`), `ramp` (0 → peak over `rampMs`, then stop), `hold` (warmup `rampMs`, then keep peak for `holdMs`).
+`profile`: `constant` (full auto-sized pool at once, `durationMs` / `count`), `ramp` (0 → peak RPS over `rampMs`, then stop), `hold` (warmup `rampMs`, then keep peak for `holdMs`). `workers` is optional: `0` or omitted means the agent sizes the pool from target RPS (or from 10k RPS if uncapped).
 
-Abort (0 = off): error rate %, p95 ms, consecutive failures. Evaluated after `abortGraceMs` and at least `abortAfter` requests. Status `aborted` with `abort` = `error_rate` | `p95` | `consecutive`.
+Abort (0 = off): error rate %, p95 ms, consecutive HTTP 4xx/5xx or timeouts (connection refused/reset does not count toward the streak; it still counts in Failures and error rate). Evaluated after `abortGraceMs` and at least `abortAfter` requests. Status `aborted` with `abort` = `error_rate` | `p95` | `consecutive`. Status histogram includes `0` for transport errors (no HTTP status).
 
 Snapshot: phase, desiredWorkers, totals, errorRate, `rps` (average over the run), `rpsLive` (last 1 s), `rpsMax` (peak of the 1 s window), latency percentiles, status histogram. Compensations: `compensateOk` / `compensateFail` (not counted in RPS).
 
@@ -105,7 +105,11 @@ Check leftovers: `GET http://127.0.0.1:8787/v1/stats`. Reseed: `POST /v1/reset`.
 
 Compensation is best-effort, not a transaction. Failed restore leaves a hole in the pool. Prefer GET when you only need throughput.
 
-Caps: 200 workers, 600s, 1e6 requests, 10k RPS, 2000 ammo. POST `/v1/runs` body up to 8 MiB.
+Caps: target RPS up to 1e6, 500k in-flight (OOM guard only), 600s, 1e6 request count, 2000 ammo. POST `/v1/runs` body up to 8 MiB.
+
+When `rps` is set, the agent **starts** requests at that rate (open-loop). In-flight count is not a user setting — it grows with latency (Little’s law). The 500k ceiling exists only so a wedged server cannot spawn unbounded goroutines. A single process on one PC will not actually sustain 1e6 HTTP req/s; that number is the asked rate, not a promise.
+
+Logs at process start are English and spell out loopback-only bind, no auth, no telemetry, and that load is generated only after a local POST.
 
 ```bash
 go test -C loadtest .

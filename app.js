@@ -41,6 +41,7 @@ import {
   DEFAULT_LOADTEST_AGENT,
   formatLoadReport,
   formatMs,
+  formatStatusCodeLabel,
   httpTone,
   loadProgressPct,
   mixShares,
@@ -48,7 +49,7 @@ import {
   parseCompensate,
   buildLoadReportHtml,
   pushLoadSample,
-  sparklinePoints,
+  chartInnerMarkup,
   startLoadRun,
   stopLoadRun,
   subscribeLoadRun,
@@ -67,6 +68,7 @@ import {
   emptyRequest,
   findItem,
   findParentId,
+  ancestorFolderIds,
   flattenRequests,
   newId,
   searchRequests,
@@ -162,6 +164,7 @@ let loadUnsub = null;
 let loadRunId = null;
 let lastLoadReport = null;
 let loadHistory = [];
+let loadBusy = false;
 let loadManifest = null;
 let loadPlatformId = 'windows-amd64';
 
@@ -244,6 +247,7 @@ function applyProUi() {
   updateFreeQuotaHint();
   renderCollections();
   if (state.tabs.length) writeTabToForm();
+  else syncNoRequestUi();
 }
 
 async function setPro(enabled) {
@@ -260,7 +264,7 @@ async function setPro(enabled) {
 }
 
 function current() {
-  return state.tabs.find((t) => t.id === state.activeId) || state.tabs[0];
+  return state.tabs.find((t) => t.id === state.activeId) || null;
 }
 
 function tabFromDraft(partial = {}) {
@@ -480,9 +484,28 @@ function readFormIntoTab() {
   tab.followRedirects = $('followRedirects').checked;
 }
 
+function focusCollectionForTab(tab) {
+  if (!tab?.collectionId) return;
+  const coll = collectionsManager.collections.find((c) => String(c.id) === String(tab.collectionId));
+  const folderId = coll && tab.collectionItemId ? findParentId(coll.items, tab.collectionItemId) : null;
+  activateCollection(tab.collectionId, folderId || null);
+}
+
+function syncNoRequestUi() {
+  const empty = !current();
+  document.body.classList.toggle('no-open-request', empty);
+  $('noRequestHint')?.classList.toggle('hidden', !empty);
+}
+
 function writeTabToForm() {
   const tab = current();
-  if (!tab) return;
+  if (!tab) {
+    renderTabs();
+    syncNoRequestUi();
+    renderCollections();
+    updateDirtyUi();
+    return;
+  }
   $('methodSelect').value = tab.method;
   $('urlInput').value = tab.url;
   $('bodyType').value = tab.bodyType;
@@ -514,12 +537,15 @@ function writeTabToForm() {
   renderResponse(tab);
   renderTabs();
   syncWorkspaceMode();
+  syncNoRequestUi();
   updateEnvHint();
   updateFileLabels();
+  renderCollections();
 }
 
 function renderKvs() {
   const tab = current();
+  if (!tab) return;
   bindKv($('queryList'), tab.params, ['key', 'value'], () => {
     tab.url = applyParamsToUrl(tab.url.split('?')[0], tab.params);
     $('urlInput').value = tab.url;
@@ -573,16 +599,27 @@ function renderTabs() {
       if (tab.id !== state.activeId) closeSocket(true);
       readFormIntoTab();
       state.activeId = tab.id;
+      focusCollectionForTab(tab);
       writeTabToForm();
     };
     box.appendChild(chip);
   });
-  const add = document.createElement('button');
-  add.className = 'btn small';
-  add.textContent = '+';
-  add.onclick = () => openTab();
-  box.appendChild(add);
   updateDirtyUi();
+  requestAnimationFrame(() => requestAnimationFrame(scrollActiveTabIntoView));
+}
+
+function scrollActiveTabIntoView() {
+  const box = $('reqTabs');
+  const chip = box?.querySelector('.tab-chip.active');
+  if (!box || !chip) return;
+  const chipRect = chip.getBoundingClientRect();
+  const boxRect = box.getBoundingClientRect();
+  const pad = 12;
+  if (chipRect.left < boxRect.left + pad) {
+    box.scrollLeft -= boxRect.left + pad - chipRect.left;
+  } else if (chipRect.right > boxRect.right - pad) {
+    box.scrollLeft += chipRect.right - (boxRect.right - pad);
+  }
 }
 
 function replaceActiveTab(partial) {
@@ -619,8 +656,9 @@ function openTab(partial) {
       if (existing.id !== state.activeId) {
         closeSocket(true);
         state.activeId = existing.id;
-        writeTabToForm();
       }
+      focusCollectionForTab(existing);
+      writeTabToForm();
       return existing;
     }
   }
@@ -628,15 +666,19 @@ function openTab(partial) {
   const tab = tabFromDraft(partial);
   state.tabs.push(tab);
   state.activeId = tab.id;
+  focusCollectionForTab(tab);
   writeTabToForm();
   persistWorkspace();
 }
 
 function removeTab(id) {
-  if (state.tabs.length === 1) return;
   if (state.activeId === id) closeSocket(true);
   state.tabs = state.tabs.filter((t) => t.id !== id);
-  if (state.activeId === id) state.activeId = state.tabs[0].id;
+  if (state.activeId === id) {
+    const next = state.tabs[0];
+    state.activeId = next?.id ?? null;
+    if (next) focusCollectionForTab(next);
+  }
   writeTabToForm();
   persistWorkspace();
   renderCollections();
@@ -694,7 +736,6 @@ async function revertCollectionItem(tab) {
 }
 
 async function requestCloseTab(id) {
-  if (state.tabs.length === 1) return;
   const tab = state.tabs.find((t) => t.id === id);
   if (!tab) return;
   if (tab.id === state.activeId) readFormIntoTab();
@@ -850,6 +891,7 @@ async function connectSocket() {
   if (!requirePro('websocket')) return;
   readFormIntoTab();
   const tab = current();
+  if (!tab) return;
   const variables = await envVars();
   const url = applyEnvVars(tab.url.trim(), variables);
   closeSocket(true);
@@ -982,6 +1024,7 @@ function bodyFeatureId(type) {
 
 async function buildHttpFields() {
   const tab = current();
+  if (!tab) return null;
   readFormIntoTab();
   if (isSocketMethod(tab.method)) return { socket: true, tab };
   let url = tab.url.trim();
@@ -1000,7 +1043,7 @@ async function buildHttpFields() {
   const ctx = { variables: await envVars(), request: tab };
   if (state.isPro && tab.preRequest) {
     try {
-      runPreRequest(tab.preRequest, ctx);
+      await runPreRequest(tab.preRequest, ctx);
     } catch (e) {
       UIHelpers.showToast(I18nManager.t('preRequestFailed').replace('{error}', e.message), 'error');
       return null;
@@ -1092,7 +1135,7 @@ async function sendCurrent() {
   $('cancelBtn').hidden = true;
   tab.response = response;
   try {
-    tab.testResults = state.isPro ? runTests(tab.tests, response, ctx) : [];
+    tab.testResults = state.isPro ? await runTests(tab.tests, response, ctx) : [];
   } catch (error) {
     tab.testResults = [{ name: 'tests', pass: false, error: error.message }];
   }
@@ -1283,7 +1326,16 @@ function renderCollections() {
     return;
   }
   collectionsManager.collections.forEach((coll) => {
-    const selected = String(state.selectedCollectionId) === String(coll.id);
+    const activeTab = current();
+    const fromTree = Boolean(activeTab?.collectionId && activeTab?.collectionItemId);
+    const isActiveColl = fromTree && String(activeTab.collectionId) === String(coll.id);
+    const selected = isActiveColl || (!fromTree && String(state.selectedCollectionId) === String(coll.id));
+    const folderFocus = new Set();
+    if (isActiveColl) {
+      ancestorFolderIds(coll.items, activeTab.collectionItemId).forEach((id) => folderFocus.add(String(id)));
+    } else if (!fromTree && state.selectedFolderId && String(state.selectedCollectionId) === String(coll.id)) {
+      folderFocus.add(String(state.selectedFolderId));
+    }
     const expanded = String(state.expandedCollectionId) === String(coll.id);
     const locked = !collectionUnlocked(coll.id);
     const searching = Boolean(q);
@@ -1315,7 +1367,7 @@ function renderCollections() {
       (items || []).forEach((item) => {
         if (item.type === 'folder') {
           const f = document.createElement('div');
-          f.className = `tree-item${String(state.selectedFolderId) === String(item.id) ? ' selected' : ''}`;
+          f.className = `tree-item tree-folder${folderFocus.has(String(item.id)) ? ' selected' : ''}`;
           f.dataset.testid = 'tree-folder';
           f.dataset.folderId = String(item.id);
           f.style.paddingLeft = `${pad}px`;
@@ -1334,7 +1386,8 @@ function renderCollections() {
           const isOpen = Boolean(findOpenCollectionTab(coll.id, item.id));
           const openTabForItem = findOpenCollectionTab(coll.id, item.id);
           const dirty = Boolean(openTabForItem && isTabDirty(openTabForItem));
-          r.className = `tree-item${isOpen ? ' open-req' : ''}${dirty ? ' dirty' : ''}`;
+          const isActiveReq = isActiveColl && String(activeTab.collectionItemId) === String(item.id);
+          r.className = `tree-item${isOpen ? ' open-req' : ''}${isActiveReq ? ' selected' : ''}${dirty ? ' dirty' : ''}`;
           r.dataset.testid = 'tree-request';
           r.dataset.requestId = String(item.id);
           r.dataset.requestName = item.name || item.url || 'request';
@@ -1808,9 +1861,9 @@ async function init() {
   const cap = historyLimitFor(state.isPro);
   state.historyLimit = settings.historyMax ? Math.min(cap, Number(settings.historyMax) || cap) : cap;
   const saved = (await storage.get('workspace_tabs', null)) || {};
-  if (saved.tabs?.length) {
+  if (Array.isArray(saved.tabs)) {
     state.tabs = saved.tabs.map((t) => tabFromDraft(t));
-    state.activeId = saved.activeId || state.tabs[0].id;
+    state.activeId = state.tabs.some((t) => t.id === saved.activeId) ? saved.activeId : (state.tabs[0]?.id ?? null);
   } else {
     openTab();
   }
@@ -1838,6 +1891,7 @@ async function init() {
     $('environmentSelect').value = String(activeEnv);
     $('environmentSelect').dataset.activeEnv = String(activeEnv);
   }
+  if (current()) focusCollectionForTab(current());
   writeTabToForm();
   syncWorkspaceMode();
   await updateEnvHint();
@@ -1948,16 +2002,11 @@ function syncLoadProfileFields() {
   $('loadHoldWrap')?.classList.toggle('hidden', !hold);
 }
 
-function sparkPolylines(svg, series, maxVal) {
+function paintLoadChart(svg, opts) {
   if (!svg) return;
-  const ns = 'http://www.w3.org/2000/svg';
-  svg.replaceChildren();
-  for (const line of series) {
-    const el = document.createElementNS(ns, 'polyline');
-    el.setAttribute('class', line.className);
-    el.setAttribute('points', sparklinePoints(line.values, 240, 64, maxVal));
-    svg.appendChild(el);
-  }
+  svg.setAttribute('viewBox', '0 0 400 176');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.innerHTML = chartInnerMarkup(opts);
 }
 
 function renderLoadVisual(snap) {
@@ -1987,7 +2036,7 @@ function renderLoadVisual(snap) {
   if ($('loadKpiErr')) $('loadKpiErr').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
   if ($('loadKpiP95')) $('loadKpiP95').textContent = `${formatMs(lat.p95Ms)} ms`;
   if ($('loadKpiTotal')) $('loadKpiTotal').textContent = String(snap.total || 0);
-  if ($('loadKpiClients')) $('loadKpiClients').textContent = `${snap.desiredWorkers || 0} / ${snap.spec?.workers || 0}`;
+  if ($('loadKpiClients')) $('loadKpiClients').textContent = String(snap.desiredWorkers || 0);
   const pct = loadProgressPct(snap);
   if ($('loadProgressFill')) $('loadProgressFill').style.width = `${pct}%`;
   if ($('loadProgressLabel')) {
@@ -1999,14 +2048,41 @@ function renderLoadVisual(snap) {
   const p99 = loadHistory.map((s) => s.p99);
   const err = loadHistory.map((s) => s.err);
   const cli = loadHistory.map((s) => s.clients);
-  sparkPolylines($('loadChartRps'), [{ className: 's-rps', values: rps }]);
-  sparkPolylines($('loadChartLat'), [
-    { className: 's-p50', values: p50 },
-    { className: 's-p95', values: p95 },
-    { className: 's-p99', values: p99 },
-  ], Math.max(0, ...p50, ...p95, ...p99));
-  sparkPolylines($('loadChartErr'), [{ className: 's-err', values: err }], 100);
-  sparkPolylines($('loadChartCli'), [{ className: 's-cli', values: cli }], snap.spec?.workers || Math.max(1, ...cli));
+  const times = loadHistory.map((s) => s.t);
+  const xLabel = t('loadChartAxisTime');
+  paintLoadChart($('loadChartRps'), {
+    series: [{ values: rps, className: 's-rps', color: 'var(--accent)' }],
+    times,
+    yMax: Math.max(...rps, target, 1),
+    yLabel: t('loadChartAxisRps'),
+    xLabel,
+    target: target > 0 ? { value: target, label: `${t('loadChartTarget')} ${target}` } : null,
+  });
+  paintLoadChart($('loadChartLat'), {
+    series: [
+      { values: p50, className: 's-p50', color: 'var(--ok)', label: 'p50' },
+      { values: p95, className: 's-p95', color: 'var(--put)', label: 'p95' },
+      { values: p99, className: 's-p99', color: 'var(--err)', label: 'p99' },
+    ],
+    times,
+    yMax: Math.max(0, ...p50, ...p95, ...p99),
+    yLabel: t('loadChartAxisMs'),
+    xLabel,
+  });
+  paintLoadChart($('loadChartErr'), {
+    series: [{ values: err, className: 's-err', color: 'var(--err)' }],
+    times,
+    yMax: 100,
+    yLabel: t('loadChartAxisErr'),
+    xLabel,
+  });
+  paintLoadChart($('loadChartCli'), {
+    series: [{ values: cli, className: 's-cli', color: 'var(--patch)' }],
+    times,
+    yMax: Math.max(1, ...cli),
+    yLabel: t('loadChartAxisClients'),
+    xLabel,
+  });
   if ($('loadChartRpsVal')) $('loadChartRpsVal').textContent = live.toFixed(0);
   if ($('loadChartLatVal')) $('loadChartLatVal').textContent = `p95 ${formatMs(lat.p95Ms)} ms`;
   if ($('loadChartErrVal')) $('loadChartErrVal').textContent = `${((Number(snap.errorRate) || 0) * 100).toFixed(1)}%`;
@@ -2032,7 +2108,7 @@ function renderLoadVisual(snap) {
       const row = document.createElement('div');
       row.className = 'load-code-row';
       const label = document.createElement('b');
-      label.textContent = code;
+      label.textContent = formatStatusCodeLabel(code, t);
       const bar = document.createElement('div');
       bar.className = `load-code-bar is-${httpTone(code)}`;
       const fill = document.createElement('i');
@@ -2056,6 +2132,7 @@ function renderLoadSnapshot(snap, sample = true) {
 
 async function startLoadTest() {
   if (!requirePro('loadtest')) return;
+  if (loadBusy) return;
   const built = await buildHttpFields();
   if (!built) return;
   if (built.socket) {
@@ -2066,11 +2143,6 @@ async function startLoadTest() {
     UIHelpers.showToast(I18nManager.t('loadtestBodySimple'), 'error');
     return;
   }
-  if (loadUnsub) {
-    loadUnsub();
-    loadUnsub = null;
-  }
-  loadHistory = [];
   let ammo = [];
   try {
     ammo = parseAmmoJson($('loadAmmo')?.value);
@@ -2078,13 +2150,26 @@ async function startLoadTest() {
     UIHelpers.showToast(I18nManager.t('loadtestAmmoBad').replace('{error}', e.message), 'error');
     return;
   }
+  loadBusy = true;
+  const startBtn = $('loadStartBtn');
+  if (startBtn) startBtn.disabled = true;
+  if (loadUnsub) {
+    loadUnsub();
+    loadUnsub = null;
+  }
+  if (loadRunId && lastLoadReport?.status === 'running') {
+    try {
+      await stopLoadRun(loadAgentBase(), loadRunId);
+    } catch {
+      /* agent will preempt the old run on Start */
+    }
+  }
   try {
     const snap = await startLoadRun(loadAgentBase(), clampLoadSpec({
       method: built.tab.method,
       url: built.url,
       headers: built.headers,
       body: built.body || '',
-      workers: $('loadWorkers')?.value,
       profile: $('loadProfile')?.value,
       rampMs: $('loadRampMs')?.value,
       holdMs: $('loadHoldMs')?.value,
@@ -2101,6 +2186,7 @@ async function startLoadTest() {
       compensate: parseCompensate($('loadCompMethod')?.value, $('loadCompUrl')?.value),
       followRedirects: built.tab.followRedirects,
     }));
+    loadHistory = [];
     loadRunId = snap.id;
     renderLoadSnapshot(snap);
     loadUnsub = subscribeLoadRun(loadAgentBase(), snap.id, (s) => {
@@ -2114,7 +2200,13 @@ async function startLoadTest() {
       }
     }, () => {});
   } catch (e) {
-    UIHelpers.showToast(I18nManager.t('loadtestStartFail').replace('{error}', e.message), 'error');
+    const msg = e?.name === 'TimeoutError' || e?.name === 'AbortError'
+      ? I18nManager.t('loadtestStartTimeout')
+      : I18nManager.t('loadtestStartFail').replace('{error}', e.message);
+    UIHelpers.showToast(msg, 'error');
+  } finally {
+    loadBusy = false;
+    if (startBtn) startBtn.disabled = false;
   }
 }
 
@@ -2128,6 +2220,8 @@ async function stopLoadTest() {
   }
   loadUnsub?.();
   loadUnsub = null;
+  loadBusy = false;
+  if ($('loadStartBtn')) $('loadStartBtn').disabled = false;
 }
 
 $('sendBtn').onclick = sendCurrent;
@@ -2201,21 +2295,25 @@ $('methodSelect').onchange = () => {
   renderTabs();
 };
 $('addQueryBtn').onclick = () => {
+  if (!current()) return;
   current().params.push({ key: '', value: '', enabled: true });
   renderKvs();
   noteRequestEdited();
 };
 $('addPathBtn').onclick = () => {
+  if (!current()) return;
   current().pathParams.push({ key: '', value: '', enabled: true });
   renderKvs();
   noteRequestEdited();
 };
 $('addHeaderBtn').onclick = () => {
+  if (!current()) return;
   current().headers.push({ key: '', value: '', enabled: true });
   renderKvs();
   noteRequestEdited();
 };
 $('addCommonHeadersBtn').onclick = () => {
+  if (!current()) return;
   [['Accept', 'application/json'], ['Content-Type', 'application/json']].forEach(([key, value]) => {
     if (!current().headers.find((h) => h.key === key)) current().headers.push({ key, value, enabled: true });
   });
@@ -2224,6 +2322,7 @@ $('addCommonHeadersBtn').onclick = () => {
 };
 $('urlInput').oninput = debounce(() => {
   const tab = current();
+  if (!tab) return;
   tab.url = $('urlInput').value;
   tab.params = parseUrlParams(tab.url);
   renderKvs();
@@ -2480,6 +2579,7 @@ $('importFile').onchange = async (e) => {
   e.target.value = '';
 };
 $('saveRequestBtn').onclick = saveCurrentRequest;
+$('addTabBtn').onclick = () => openTab();
 $('saveToCollectionBtn').onclick = saveCurrentRequest;
 const bindUnsavedChoice = (id, choice) => {
   $(id)?.addEventListener('click', (e) => {
@@ -2510,6 +2610,7 @@ $('app')?.addEventListener('change', (e) => {
   noteRequestEdited();
 });
 $('duplicateBtn').onclick = () => {
+  if (!current()) return;
   readFormIntoTab();
   openTab({
     ...current(),

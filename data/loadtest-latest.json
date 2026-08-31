@@ -9,38 +9,38 @@
   "assets": {
     "windows-amd64": {
       "file": "pingto-loadtest-windows-amd64.exe",
-      "sha256": "6ee82d218975fb3dbcf94e3b94a8a385220cd122ca924aae474bb2560b743dea",
-      "size": 9714176,
+      "sha256": "3413d702388e6ccbd6e88f34cb385f9936f32070c1216f6387239c323081b5cb",
+      "size": 9748480,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-windows-amd64.exe"
     },
     "windows-arm64": {
       "file": "pingto-loadtest-windows-arm64.exe",
-      "sha256": "1d33b811eb01394c7f320979d549104409876a3514787fdba20da00a10703c3b",
-      "size": 8887296,
+      "sha256": "19f8fb89c9803e034a92ff05cb57520b8b4c0e6b7e3261b4b974cf140970eac8",
+      "size": 8921600,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-windows-arm64.exe"
     },
     "macos-amd64": {
       "file": "pingto-loadtest-macos-amd64",
-      "sha256": "2628da2848e2ebe7f99df28ce00434b9351b36387e897f37c3094e600e8af8b8",
-      "size": 9835456,
+      "sha256": "e56237191efb4999ecbbb5c1e0411b34ef96b1a8cda783d7c52ef69cc556899c",
+      "size": 9874624,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-macos-amd64"
     },
     "macos-arm64": {
       "file": "pingto-loadtest-macos-arm64",
-      "sha256": "fedf3db3fc0e87e755750b07cd9f30092e9b71f3693204edd494fad0b9de2a99",
-      "size": 9200386,
+      "sha256": "6d60e29b65bd56947f42ad9f83d1d607664e6d45f36cad6a900a8e3205b61a1d",
+      "size": 9235698,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-macos-arm64"
     },
     "linux-amd64": {
       "file": "pingto-loadtest-linux-amd64",
-      "sha256": "bc45e4260cf90e5859e38a9374fe5441cef3de0a9699018cb4d2a20b226e6e7c",
-      "size": 9645591,
+      "sha256": "b345646c690d39752bf56945cd79b483d8356bfef6e192efe3e9d1fd231fb244",
+      "size": 9680801,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-linux-amd64"
     },
     "linux-arm64": {
       "file": "pingto-loadtest-linux-arm64",
-      "sha256": "64585a2922e7bfc8354e25d6abb4831f9c690ea9c8cbf9bb1252e5d84228baef",
-      "size": 8991506,
+      "sha256": "8cbdbed79eaa92293e549e2db76792dd396dff8df87a47b3d58fe93caeb5f9c9",
+      "size": 9000166,
       "url": "https://github.com/Baraulia/pingTO/releases/download/v1.0.0/pingto-loadtest-linux-arm64"
     }
   }

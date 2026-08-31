@@ -389,6 +389,9 @@
   "testsLabel": {
     "message": "Tests"
   },
+  "scriptsHelp": {
+    "message": "Pro. Pre-request is JavaScript that runs before Send — set variables or signatures with pm.environment.set('token', 'abc'). Tests run after Send and check the response; open the Tests tab on the right for pass/fail. Example: pm.test('status 200', () => pm.expect(pm.response.code).toBe(200)). Also: pm.response.json(), .text(), pm.expect(x).toEqual / toContain / toBeTruthy, pm.environment.get/set."
+  },
   "gqlExecuteBtn": {
     "message": "Execute"
   },
@@ -658,6 +661,9 @@
   },
   "collectionHelp": {
     "message": "Create a collection, click its name to select it, then Save request. Click a request to open it. Double-click a collection to rename or delete."
+  },
+  "noOpenRequest": {
+    "message": "No open request. Press + or open one from a collection."
   },
   "newCollectionNamePlaceholder": {
     "message": "New collection name"
@@ -1010,12 +1016,6 @@
   "loadtestPingBtn": {
     "message": "Check agent"
   },
-  "loadtestWorkers": {
-    "message": "Peak parallel clients"
-  },
-  "loadtestWorkersHint": {
-    "message": "Maximum simultaneous clients (the top of the ramp, or the level to hold). Like N users clicking Send together. Max 200."
-  },
   "loadtestProfile": {
     "message": "How load grows"
   },
@@ -1026,7 +1026,7 @@
     "message": "Reach target quickly, then hold"
   },
   "loadtestProfileHint": {
-    "message": "Ramp: clients increase evenly from 1 to the peak over the time you set; when the peak is reached the test stops. Hold: a short warmup to the peak, then that load is kept for the hold time."
+    "message": "Ramp: target req/s climbs from 0 to the goal, then the test stops. Hold: short warmup, then keep the goal. Use Hold if you need a full interval at 10 000 req/s — a ramp only touches the peak at the last moment."
   },
   "loadtestRamp": {
     "message": "Time to reach peak (ms)"
@@ -1056,7 +1056,7 @@
     "message": "Target requests per second"
   },
   "loadtestRpsHint": {
-    "message": "0 = no limit (as fast as current clients can go). 1000 = the agent aims for about 1000 requests/s at the peak of the profile. The report shows now (last second), average (whole run), and max (best 1-second window). Average is pulled down by the ramp. If now stays well below the target, add parallel clients or the server cannot keep up."
+    "message": "0 = no rate cap (as fast as this machine can go). 100000 = 100 000 req/s, 1000000 = 1 000 000. The agent does not invent a client limit — in-flight requests grow with latency. The only hard cap is RAM/CPU (and a 500 000 in-flight safety valve). Average is pulled down by a ramp from 0. If max stays far below the target, the server cannot keep up."
   },
   "loadtestTimeout": {
     "message": "Give up on one request after (ms)"
@@ -1107,7 +1107,7 @@
     "message": "Stop after N failures in a row"
   },
   "loadtestAbortStreakHint": {
-    "message": "Emergency brake when the API is down (all 5xx/timeouts). 0 = off."
+    "message": "Emergency brake when the API is down (HTTP 4xx/5xx or timeouts in a row). Connection resets under load do not trip this. 0 = off."
   },
   "loadtestAbortAfter": {
     "message": "Min requests before abort"
@@ -1148,6 +1148,9 @@
   "loadtestStartFail": {
     "message": "Could not start run: {error}"
   },
+  "loadtestStartTimeout": {
+    "message": "The agent did not accept a new run (still winding down the previous one, or not responding). Wait a couple of seconds and try again, or restart the agent."
+  },
   "loadtestCopied": {
     "message": "Report copied"
   },
@@ -1164,7 +1167,7 @@
   "loadReportAbort": { "message": "Abort reason" },
   "loadReportPhase": { "message": "Phase" },
   "loadReportElapsed": { "message": "Elapsed" },
-  "loadReportClients": { "message": "Clients (current / peak)" },
+  "loadReportClients": { "message": "In-flight requests" },
   "loadReportRequests": { "message": "Requests" },
   "loadReportOk": { "message": "Success (HTTP < 400)" },
   "loadReportFail": { "message": "Failures" },
@@ -1188,6 +1191,7 @@
   "loadReportLatMax": { "message": "max" },
   "loadKpiP95": { "message": "Response p95" },
   "loadReportCodes": { "message": "HTTP status codes" },
+  "loadReportCodeNet": { "message": "network (no HTTP status)" },
   "loadStatus_running": { "message": "running" },
   "loadStatus_done": { "message": "done" },
   "loadStatus_stopped": { "message": "stopped (manual)" },
@@ -1198,11 +1202,17 @@
   "loadPhase_steady": { "message": "steady" },
   "loadAbort_error_rate": { "message": "error rate exceeded the limit" },
   "loadAbort_p95": { "message": "p95 latency exceeded the limit" },
-  "loadAbort_consecutive": { "message": "too many failures in a row" },
+  "loadAbort_consecutive": { "message": "too many HTTP errors or timeouts in a row" },
   "loadChartRps": { "message": "Requests per second (now)" },
   "loadChartLatency": { "message": "Response time p50 / p95 / p99" },
   "loadChartErrors": { "message": "Error rate" },
-  "loadChartClients": { "message": "Clients" },
+  "loadChartClients": { "message": "In-flight requests" },
+  "loadChartAxisTime": { "message": "Time" },
+  "loadChartAxisRps": { "message": "req/s" },
+  "loadChartAxisMs": { "message": "ms" },
+  "loadChartAxisErr": { "message": "%" },
+  "loadChartAxisClients": { "message": "clients" },
+  "loadChartTarget": { "message": "target" },
   "loadMixLabel": { "message": "Outcomes" },
   "loadReportTextToggle": { "message": "Text report" },
   "loadDlTitle": { "message": "Download the agent" },

@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	maxWorkers    = 200
-	maxDurationMS = 600_000
-	maxCount      = 1_000_000
-	maxRPS        = 10_000
-	maxTimeoutMS  = 120_000
-	minTimeoutMS  = 50
-	maxAmmo       = 2_000
+	maxWorkers      = 500_000
+	maxDurationMS   = 600_000
+	maxCount        = 1_000_000
+	maxRPS          = 1_000_000
+	maxTimeoutMS    = 120_000
+	minTimeoutMS    = 50
+	maxAmmo         = 2_000
+	rampPeakDwellMS = 2_000
 )
 
 var allowedMethods = map[string]bool{
@@ -68,11 +69,14 @@ func normalizeSpec(s RunSpec) (RunSpec, error) {
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return s, fmt.Errorf("url must be http(s)")
 	}
-	if s.Workers <= 0 {
-		s.Workers = 10
+	if s.Workers < 0 {
+		return s, fmt.Errorf("workers cannot be negative")
 	}
 	if s.Workers > maxWorkers {
-		return s, fmt.Errorf("workers max is %d", maxWorkers)
+		s.Workers = maxWorkers
+	}
+	if s.Workers == 0 && s.RPS <= 0 {
+		s.Workers = 256
 	}
 	if s.TimeoutMS <= 0 {
 		s.TimeoutMS = 10_000
@@ -87,7 +91,7 @@ func normalizeSpec(s RunSpec) (RunSpec, error) {
 		return s, fmt.Errorf("count max is %d", maxCount)
 	}
 	if s.RPS < 0 || s.RPS > maxRPS {
-		return s, fmt.Errorf("rps max is %d", maxRPS)
+		return s, fmt.Errorf("rps max is %d (machine still has to keep up)", maxRPS)
 	}
 	if s.RampMS < 0 || s.RampMS > maxDurationMS {
 		return s, fmt.Errorf("rampMs max is %d", maxDurationMS)
@@ -110,6 +114,9 @@ func normalizeSpec(s RunSpec) (RunSpec, error) {
 		}
 		s.HoldMS = 0
 		s.DurationMS = s.RampMS
+		if s.RPS > 0 {
+			s.DurationMS = s.RampMS + rampPeakDwellMS
+		}
 	case "hold":
 		if s.RampMS == 0 {
 			s.RampMS = 1_000
@@ -166,6 +173,13 @@ func normalizeSpec(s RunSpec) (RunSpec, error) {
 		}
 	}
 	return s, nil
+}
+
+func oomInFlight(spec RunSpec) int {
+	if spec.Workers > 0 && spec.Workers < maxWorkers {
+		return spec.Workers
+	}
+	return maxWorkers
 }
 
 func normalizeAmmo(a *AmmoRound, requireMethod bool) error {

@@ -51,9 +51,11 @@ func (s *runStats) record(status int, lat time.Duration, n int64, timedOut, ok, 
 		s.fail.Add(1)
 	}
 	s.bytesIn.Add(n)
-	if timedOut || !ok {
+	// Consecutive abort is for a down API (HTTP 4xx/5xx or timeouts), not
+	// connection resets when the OS/target cannot accept the open-loop rate.
+	if timedOut || status >= 400 {
 		s.failStreak.Add(1)
-	} else {
+	} else if ok {
 		s.failStreak.Store(0)
 	}
 	if countRPS {
@@ -62,11 +64,9 @@ func (s *runStats) record(status int, lat time.Duration, n int64, timedOut, ok, 
 		s.rpsAt = append(s.rpsAt, now)
 		s.rpsMu.Unlock()
 	}
-	if status > 0 {
-		s.codesMu.Lock()
-		s.codes[status]++
-		s.codesMu.Unlock()
-	}
+	s.codesMu.Lock()
+	s.codes[status]++
+	s.codesMu.Unlock()
 	ns := lat.Nanoseconds()
 	if ns < 0 {
 		return

@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"log"
 	mrand "math/rand"
+	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +18,11 @@ import (
 )
 
 const maxBodyRead = 1 << 20
+
+var bodyBufPool = sync.Pool{New: func() any {
+	b := make([]byte, 32*1024)
+	return &b
+}}
 
 type RunStatus string
 
@@ -54,6 +62,7 @@ type run struct {
 	stats   *runStats
 	done    chan struct{}
 	ammoSeq atomic.Int64
+	inflight atomic.Int64
 }
 
 type Engine struct {
@@ -70,6 +79,7 @@ func (e *Engine) Start(spec RunSpec) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	e.preemptRunning(2 * time.Second)
 	ctx, stop := context.WithCancel(context.Background())
 	limitMS := spec.DurationMS
 	if spec.Count == 0 && limitMS > 0 {
@@ -94,13 +104,55 @@ func (e *Engine) Start(spec RunSpec) (*Snapshot, error) {
 	}
 	if spec.Profile == "ramp" || spec.Profile == "hold" {
 		rn.phase = "ramp"
-		rn.desired = 1
+		if spec.RPS > 0 {
+			rn.desired = int32(spec.Workers)
+		} else {
+			rn.desired = 1
+		}
 	}
 	e.mu.Lock()
 	e.runs[rn.id] = rn
 	e.mu.Unlock()
+	log.Printf("run %s started  %s %s  workers=%d  target_rps=%.0f  profile=%s  rampMs=%d holdMs=%d durationMs=%d count=%d  timeoutMs=%d",
+		rn.id, spec.Method, spec.URL, spec.Workers, spec.RPS, spec.Profile, spec.RampMS, spec.HoldMS, spec.DurationMS, spec.Count, spec.TimeoutMS)
 	go e.execute(ctx, rn)
 	return e.Snapshot(rn.id), nil
+}
+
+func (e *Engine) preemptRunning(wait time.Duration) {
+	e.mu.Lock()
+	var waiting []chan struct{}
+	for _, rn := range e.runs {
+		if rn.status == StatusRunning {
+			rn.cancel()
+			waiting = append(waiting, rn.done)
+		}
+	}
+	e.mu.Unlock()
+	deadline := time.Now().Add(wait)
+	for _, done := range waiting {
+		left := time.Until(deadline)
+		if left < 0 {
+			left = 0
+		}
+		select {
+		case <-done:
+		case <-time.After(left):
+			return
+		}
+	}
+}
+
+func waitGroupTimeout(wg *sync.WaitGroup, d time.Duration) {
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	select {
+	case <-ch:
+	case <-time.After(d):
+	}
 }
 
 func (e *Engine) Stop(id string) *Snapshot {
@@ -134,7 +186,7 @@ func (e *Engine) Snapshot(id string) *Snapshot {
 		StartedAt:      rn.started.UnixMilli(),
 		ElapsedMS:      elapsed.Milliseconds(),
 		Phase:          rn.phase,
-		DesiredWorkers: int(atomic.LoadInt32(&rn.desired)),
+		DesiredWorkers: int(rn.inflight.Load()),
 		Abort:          rn.abort,
 		AmmoCount:      ammoN,
 		Spec:           spec,
@@ -144,14 +196,8 @@ func (e *Engine) Snapshot(id string) *Snapshot {
 
 func (e *Engine) execute(ctx context.Context, rn *run) {
 	defer close(rn.done)
-	client := http.Client{
-		Timeout: time.Duration(rn.spec.TimeoutMS) * time.Millisecond,
-		Transport: &http.Transport{
-			MaxIdleConns:        rn.spec.Workers * 4,
-			MaxIdleConnsPerHost: rn.spec.Workers * 4,
-			DisableCompression:  true,
-		},
-	}
+	transport, client := newLoadClient(rn.spec)
+	defer transport.CloseIdleConnections()
 	if !rn.spec.FollowRedirects {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -160,11 +206,109 @@ func (e *Engine) execute(ctx context.Context, rn *run) {
 
 	var remaining atomic.Int64
 	remaining.Store(rn.spec.Count)
-	pace := &pacer{}
+	pace := newPacer()
+	pace.start(ctx, func() float64 {
+		return currentRPS(rn.spec, time.Since(rn.started))
+	})
 
 	stopSched := make(chan struct{})
-	go e.schedule(ctx, rn, stopSched)
+	schedDone := make(chan struct{})
+	go func() {
+		defer close(schedDone)
+		e.schedule(ctx, rn, stopSched)
+	}()
 
+	if rn.spec.RPS > 0 {
+		e.runOpenLoop(ctx, rn, &client, pace, &remaining)
+	} else {
+		e.runClosedLoop(ctx, rn, &client, pace, &remaining)
+	}
+
+	close(stopSched)
+	<-schedDone
+	ctxErr := ctx.Err()
+	rn.cancel()
+	<-pace.done
+
+	e.mu.Lock()
+	if rn.abort != "" {
+		rn.status = StatusAborted
+	} else if rn.endOK.Load() || ctxErr == context.DeadlineExceeded {
+		rn.status = StatusDone
+	} else if ctxErr == context.Canceled {
+		rn.status = StatusStopped
+	} else {
+		rn.status = StatusDone
+	}
+	e.mu.Unlock()
+}
+
+func dispatcherCount(rps float64) int {
+	n := int(rps / 500)
+	if n < 16 {
+		n = 16
+	}
+	if n > 512 {
+		n = 512
+	}
+	procs := runtime.GOMAXPROCS(0) * 8
+	if procs > n {
+		n = procs
+	}
+	if n > 512 {
+		n = 512
+	}
+	return n
+}
+
+// runOpenLoop starts a request for every pacer token. In-flight count follows
+// RPS×latency (Little's law) up to maxWorkers only as an OOM guard.
+func (e *Engine) runOpenLoop(ctx context.Context, rn *run, client *http.Client, pace *pacer, remaining *atomic.Int64) {
+	oom := int64(oomInFlight(rn.spec))
+	var inflight sync.WaitGroup
+	var disp sync.WaitGroup
+	for i := 0; i < dispatcherCount(rn.spec.RPS); i++ {
+		disp.Add(1)
+		go func() {
+			defer disp.Done()
+			for {
+				if ctx.Err() != nil {
+					return
+				}
+				if rn.spec.Count > 0 && remaining.Load() <= 0 {
+					return
+				}
+				if rn.spec.Count > 0 {
+					left := remaining.Add(-1)
+					if left < 0 {
+						return
+					}
+				}
+				if pace.wait(ctx, currentRPS(rn.spec, time.Since(rn.started))) != nil {
+					return
+				}
+				for {
+					if ctx.Err() != nil {
+						return
+					}
+					if rn.inflight.Load() < oom {
+						break
+					}
+					runtime.Gosched()
+				}
+				inflight.Add(1)
+				go func() {
+					defer inflight.Done()
+					e.fire(ctx, client, rn)
+				}()
+			}
+		}()
+	}
+	disp.Wait()
+	waitGroupTimeout(&inflight, 2*time.Second)
+}
+
+func (e *Engine) runClosedLoop(ctx context.Context, rn *run, client *http.Client, pace *pacer, remaining *atomic.Int64) {
 	var wg sync.WaitGroup
 	for i := 0; i < rn.spec.Workers; i++ {
 		wg.Add(1)
@@ -172,6 +316,9 @@ func (e *Engine) execute(ctx context.Context, rn *run) {
 			defer wg.Done()
 			for {
 				if ctx.Err() != nil {
+					return
+				}
+				if rn.spec.Count > 0 && remaining.Load() <= 0 {
 					return
 				}
 				if int32(idx) >= atomic.LoadInt32(&rn.desired) {
@@ -190,26 +337,14 @@ func (e *Engine) execute(ctx context.Context, rn *run) {
 						return
 					}
 				}
-				if pace.wait(ctx, currentRPS(rn.spec, int(atomic.LoadInt32(&rn.desired)), rn.spec.Workers)) != nil {
+				if pace.wait(ctx, currentRPS(rn.spec, time.Since(rn.started))) != nil {
 					return
 				}
-				e.fire(ctx, &client, rn)
+				e.fire(ctx, client, rn)
 			}
 		}(i)
 	}
 	wg.Wait()
-	close(stopSched)
-	e.mu.Lock()
-	if rn.abort != "" {
-		rn.status = StatusAborted
-	} else if rn.endOK.Load() || ctx.Err() == context.DeadlineExceeded {
-		rn.status = StatusDone
-	} else if ctx.Err() == context.Canceled {
-		rn.status = StatusStopped
-	} else {
-		rn.status = StatusDone
-	}
-	e.mu.Unlock()
 }
 
 func (e *Engine) schedule(ctx context.Context, rn *run, stop <-chan struct{}) {
@@ -240,40 +375,37 @@ func (e *Engine) schedule(ctx context.Context, rn *run, stop <-chan struct{}) {
 	}
 }
 
-type pacer struct {
-	mu   sync.Mutex
-	next time.Time
-}
-
-func (p *pacer) wait(ctx context.Context, rps float64) error {
-	if rps <= 0 {
-		return ctx.Err()
+func newLoadClient(spec RunSpec) (*http.Transport, http.Client) {
+	n := spec.Workers
+	if n < 8192 {
+		n = 8192
 	}
-	p.mu.Lock()
-	now := time.Now()
-	waitUntil := p.next
-	gap := time.Duration(float64(time.Second) / rps)
-	if gap < time.Microsecond {
-		gap = time.Microsecond
+	idle := n * 2
+	if idle > 8192 {
+		idle = 8192
 	}
-	if waitUntil.After(now) {
-		p.next = waitUntil.Add(gap)
-		p.mu.Unlock()
-		timer := time.NewTimer(waitUntil.Sub(now))
-		defer timer.Stop()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timer.C:
-			return nil
-		}
+	transport := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+		ForceAttemptHTTP2:     false,
+		MaxIdleConns:          idle,
+		MaxIdleConnsPerHost:   idle,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		DisableCompression:    true,
+		DisableKeepAlives:     false,
 	}
-	p.next = now.Add(gap)
-	p.mu.Unlock()
-	return nil
+	client := http.Client{
+		Timeout:   time.Duration(spec.TimeoutMS) * time.Millisecond,
+		Transport: transport,
+	}
+	return transport, client
 }
 
 func (e *Engine) fire(ctx context.Context, client *http.Client, rn *run) {
+	rn.inflight.Add(1)
+	defer rn.inflight.Add(-1)
 	seq := rn.ammoSeq.Add(1)
 	method, rawURL, body, headers, comp := pickShot(rn, seq)
 	ok := e.doHTTP(ctx, client, rn, method, rawURL, body, headers, true)
@@ -379,7 +511,9 @@ func (e *Engine) doHTTP(ctx context.Context, client *http.Client, rn *run, metho
 		}
 		return false
 	}
-	n, _ := io.Copy(io.Discard, io.LimitReader(res.Body, maxBodyRead))
+	bufp := bodyBufPool.Get().(*[]byte)
+	n, _ := io.CopyBuffer(io.Discard, io.LimitReader(res.Body, maxBodyRead), *bufp)
+	bodyBufPool.Put(bufp)
 	res.Body.Close()
 	ok := res.StatusCode < 400
 	if countRPS {

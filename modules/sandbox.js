@@ -1,91 +1,98 @@
-function getPath(obj, path) {
-  return String(path)
-    .split('.')
-    .reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+import { evalIsBlocked, runPreRequestSync, runTestsSync } from './sandbox-runtime.js';
+
+const pending = new Map();
+let frameReady = null;
+let msgId = 0;
+
+function requestSnap(req) {
+  if (!req) return {};
+  return {
+    method: req.method,
+    url: req.url,
+    name: req.name,
+    headers: Array.isArray(req.headers) ? req.headers.map((row) => ({ ...row })) : [],
+    body: req.body,
+  };
 }
 
-export function runPreRequest(script, ctx) {
-  if (!String(script || '').trim()) return { ctx, logs: [] };
-  const logs = [];
-  const pm = {
-    environment: {
-      get: (key) => ctx.variables[key],
-      set: (key, value) => {
-        ctx.variables[key] = String(value);
-      },
-    },
-    variables: {
-      get: (key) => ctx.variables[key],
-      set: (key, value) => {
-        ctx.variables[key] = String(value);
-      },
-    },
-    request: ctx.request,
-    info: { console: { log: (...args) => logs.push(args.map(String).join(' ')) } },
-  };
-  const fn = new Function('pm', 'console', script);
-  fn(pm, { log: (...args) => logs.push(args.map(String).join(' ')) });
-  return { ctx, logs };
+function inExtensionPage() {
+  return typeof document !== 'undefined' && typeof chrome?.runtime?.getURL === 'function';
 }
 
-export function runTests(script, response, ctx) {
-  const results = [];
-  if (!String(script || '').trim()) return results;
-  const json = (() => {
-    try {
-      return JSON.parse(response.body);
-    } catch {
-      return null;
-    }
-  });
-  const expect = (actual) => ({
-    toBe(expected) {
-      if (actual !== expected) throw new Error(`expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-    },
-    toEqual(expected) {
-      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-        throw new Error('values are not equal');
-      }
-    },
-    toContain(part) {
-      if (!String(actual).includes(part)) throw new Error(`expected to contain ${part}`);
-    },
-    toBeTruthy() {
-      if (!actual) throw new Error('expected truthy value');
-    },
-  });
-  const pm = {
-    test: (name, fn) => {
-      try {
-        fn();
-        results.push({ name, pass: true });
-      } catch (error) {
-        results.push({ name, pass: false, error: error.message });
-      }
-    },
-    expect,
-    response: {
-      code: response.status,
-      status: response.status,
-      json: () => json(),
-      text: () => response.body,
-    },
-    environment: {
-      get: (key) => ctx.variables[key],
-      set: (key, value) => {
-        ctx.variables[key] = String(value);
-      },
-    },
-    get json() {
-      return json();
-    },
-    getPath: (path) => getPath(json(), path),
-  };
-  try {
-    const fn = new Function('pm', 'expect', script);
-    fn(pm, expect);
-  } catch (error) {
-    results.push({ name: 'script', pass: false, error: error.message });
+function ensureFrame() {
+  if (!inExtensionPage()) {
+    return Promise.reject(new Error('sandbox frame unavailable'));
   }
-  return results;
+  if (frameReady) return frameReady;
+  frameReady = new Promise((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.src = chrome.runtime.getURL('sandbox.html');
+    iframe.hidden = true;
+    iframe.title = 'PingTo scripts';
+    const fail = () => reject(new Error('sandbox failed to load'));
+    const timer = setTimeout(fail, 8000);
+    iframe.addEventListener('error', fail, { once: true });
+    const onReady = (event) => {
+      if (event.source !== iframe.contentWindow) return;
+      const data = event.data;
+      if (!data || data.source !== 'pingto-sandbox' || !data.ready) return;
+      clearTimeout(timer);
+      window.removeEventListener('message', onReady);
+      resolve(iframe);
+    };
+    window.addEventListener('message', onReady);
+    document.documentElement.appendChild(iframe);
+  });
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || data.source !== 'pingto-sandbox' || data.ready) return;
+    const wait = pending.get(data.id);
+    if (wait) wait(data);
+  });
+  return frameReady;
+}
+
+async function callFrame(kind, payload) {
+  const iframe = await ensureFrame();
+  const id = ++msgId;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error('script timed out'));
+    }, 8000);
+    pending.set(id, (msg) => {
+      clearTimeout(timer);
+      pending.delete(id);
+      if (msg.error) reject(new Error(msg.error));
+      else resolve(msg);
+    });
+    iframe.contentWindow.postMessage({ source: 'pingto-host', id, kind, payload }, '*');
+  });
+}
+
+export async function runPreRequest(script, ctx) {
+  if (!String(script || '').trim()) return { ctx, logs: [] };
+  if (!inExtensionPage() && !evalIsBlocked()) return runPreRequestSync(script, ctx);
+  const msg = await callFrame('pre', {
+    script,
+    variables: { ...(ctx.variables || {}) },
+    request: requestSnap(ctx.request),
+  });
+  Object.keys(ctx.variables).forEach((key) => {
+    delete ctx.variables[key];
+  });
+  Object.assign(ctx.variables, msg.variables || {});
+  return { ctx, logs: msg.logs || [] };
+}
+
+export async function runTests(script, response, ctx) {
+  if (!String(script || '').trim()) return [];
+  if (!inExtensionPage() && !evalIsBlocked()) return runTestsSync(script, response, ctx);
+  const msg = await callFrame('tests', {
+    script,
+    response: { status: response.status, body: response.body },
+    variables: { ...(ctx.variables || {}) },
+  });
+  Object.assign(ctx.variables, msg.variables || {});
+  return msg.results || [];
 }

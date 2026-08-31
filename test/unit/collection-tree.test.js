@@ -4,6 +4,7 @@ import {
   emptyRequest,
   findItem,
   findParentId,
+  ancestorFolderIds,
   flattenRequests,
   moveItem,
   normalizeCollection,
@@ -39,6 +40,7 @@ describe('collection-tree', () => {
     addItem(items, 'f1', emptyRequest({ id: 'r1', name: 'inside' }));
     expect(findItem(items, 'r1').name).toBe('inside');
     expect(findParentId(items, 'r1')).toBe('f1');
+    expect(ancestorFolderIds(items, 'r1')).toEqual(['f1']);
     expect(flattenRequests(items)).toHaveLength(1);
     expect(removeItem(items, 'r1')).toBe(true);
     expect(findItem(items, 'r1')).toBeNull();
@@ -52,6 +54,18 @@ describe('collection-tree', () => {
     expect(moveItem(items, 'r', 'b')).toBe(true);
     expect(findParentId(items, 'r')).toBe('b');
   });
+
+  it('lists all ancestor folders of a nested request', () => {
+    const items = [
+      {
+        type: 'folder',
+        id: 'a',
+        name: 'A',
+        items: [{ type: 'folder', id: 'b', name: 'B', items: [emptyRequest({ id: 'r', name: 'R' })] }],
+      },
+    ];
+    expect(ancestorFolderIds(items, 'r')).toEqual(['a', 'b']);
+    expect(ancestorFolderIds(items, 'missing')).toEqual([]);
 
   it('searches by name and method', () => {
     const hits = searchRequests(

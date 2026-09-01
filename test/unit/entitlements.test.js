@@ -10,9 +10,12 @@ import {
   canAddEnvVar,
   canAddEnvironment,
   canAddRequest,
+  hasActiveLicense,
   historyLimitFor,
   isCollectionUnlocked,
+  isUnpackedInstall,
   PRO_FEATURES,
+  resolveIsPro,
   unlockedCollectionIds,
 } from '../../modules/entitlements.js';
 
@@ -59,5 +62,16 @@ describe('entitlements', () => {
     expect(isCollectionUnlocked(false, cols, 'c')).toBe(false);
     expect(isCollectionUnlocked(false, cols, 'a')).toBe(true);
     expect(isCollectionUnlocked(true, cols, 'c')).toBe(true);
+  });
+
+  it('does not treat storage isPro as a license in the store build', () => {
+    expect(isUnpackedInstall({})).toBe(true);
+    expect(isUnpackedInstall({ update_url: 'https://clients2.google.com/service/update2/crx' })).toBe(false);
+    expect(resolveIsPro({ unpacked: false, licensed: false, storedDev: true })).toBe(false);
+    expect(resolveIsPro({ unpacked: true, licensed: false, storedDev: true })).toBe(true);
+    expect(resolveIsPro({ unpacked: false, licensed: true, storedDev: false })).toBe(true);
+    expect(hasActiveLicense({ key: 'x', status: 'active' })).toBe(true);
+    expect(hasActiveLicense({ key: 'x', status: 'expired' })).toBe(false);
+    expect(hasActiveLicense({})).toBe(false);
   });
 });

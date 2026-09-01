@@ -9,6 +9,7 @@ import { I18nManager } from './modules/i18n.js';
 import { CodeGenerator } from './modules/code-generator.js';
 import { GraphQLManager } from './modules/graphql.js';
 import { apiClient } from './modules/api-client.js';
+import { hasActiveLicense, isUnpackedInstall, resolveIsPro } from './modules/entitlements.js';
 import {
   applyEnvToHeaders,
   applyEnvVars,
@@ -89,7 +90,6 @@ const dom = {
   codeOutput: $('#codeOutput'),
   copyCodeBtn: $('#copyCodeBtn'),
   closeCodeModal: $('#closeCodeModal'),
-  proToggle: $('#proToggle'),
   proStatus: $('#proStatus'),
   licenseBtn: $('#licenseBtn'),
   historyLimit: $('#historyLimit'),
@@ -187,20 +187,14 @@ function applyProUi() {
   });
 }
 
-if (dom.proToggle) {
-  dom.proToggle.addEventListener('change', async () => {
-    isPro = dom.proToggle.checked;
-    applyProUi();
-    await chrome.storage.local.set({ isPro });
-    await loadSettings();
-    UIHelpers.showToast(isPro ? 'Pro features unlocked!' : 'Free mode', isPro ? 'success' : 'info');
+async function refreshProFromStorage() {
+  const stored = await chrome.storage.local.get(['isPro', 'license']);
+  isPro = resolveIsPro({
+    unpacked: isUnpackedInstall(),
+    licensed: hasActiveLicense(stored.license),
+    storedDev: stored.isPro,
   });
-
-  chrome.storage.local.get(['isPro'], (result) => {
-    isPro = result.isPro || false;
-    dom.proToggle.checked = isPro;
-    applyProUi();
-  });
+  applyProUi();
 }
 
 safeAddListener(dom.themeToggle, 'click', () => {
@@ -1066,7 +1060,7 @@ function initTabs() {
       const tabId = this.dataset.tab;
       const proTabs = ['collections', 'environments'];
       if (proTabs.includes(tabId) && !isPro) {
-        UIHelpers.showToast(`${tabId} is a Pro feature. Enable Pro in the header toggle.`, 'info');
+        UIHelpers.showToast(`${tabId} is a Pro feature.`, 'info');
       }
       switchTab(tabId);
       if (tabId === 'history') renderHistory();
@@ -1117,6 +1111,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 async function init() {
+  await refreshProFromStorage();
   await loadSettings();
   await historyManager.load();
   await updateEnvAndCollectionSelects();

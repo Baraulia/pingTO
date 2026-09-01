@@ -159,9 +159,11 @@
     const proto = document.getElementById('proto');
     const reconnectEl = document.getElementById('reconnect');
 
-    chrome.storage.local.get(['isPro'], (stored) => {
-      if (stored.isPro) return;
-      document.querySelector('.container').innerHTML = '<h1>WebSocket / SSE</h1><p>This is a Pro feature. Enable Pro in PingTo, then open this page again.</p>';
+    chrome.storage.local.get(['isPro', 'license'], (stored) => {
+      const unpacked = !Object.prototype.hasOwnProperty.call(chrome.runtime.getManifest(), 'update_url');
+      const licensed = stored.license && stored.license.status === 'active' && stored.license.key;
+      if (licensed || (unpacked && stored.isPro)) return;
+      document.querySelector('.container').innerHTML = '<h1>WebSocket / SSE</h1><p>This is a Pro feature.</p>';
     });
 
     const messagesEl = document.getElementById('messages');

@@ -31,6 +31,27 @@ export const FREE_REQ_PANES = new Set(['params', 'headers', 'body', 'auth', 'cur
 export const FREE_RESP_PANES = new Set(['body', 'pretty', 'headers', 'preview', 'redirects', 'filter']);
 export const PRO_AUTH = new Set(['digest', 'oauth2']);
 
+export function isUnpackedInstall(manifest) {
+  const m = manifest ?? (typeof chrome !== 'undefined' ? chrome.runtime?.getManifest?.() : null);
+  if (!m) return true;
+  return !Object.prototype.hasOwnProperty.call(m, 'update_url');
+}
+
+export function hasActiveLicense(license) {
+  if (!license || typeof license !== 'object') return false;
+  if (!String(license.key || '').trim()) return false;
+  if (license.status && license.status !== 'active') return false;
+  if (license.expiresAt && Number(license.expiresAt) < Date.now()) return false;
+  return true;
+}
+
+/** Store builds ignore chrome.storage isPro. Unpacked (Load unpacked) may use the dev toggle. */
+export function resolveIsPro({ unpacked, licensed, storedDev } = {}) {
+  if (licensed) return true;
+  if (unpacked) return Boolean(storedDev);
+  return false;
+}
+
 export function historyLimitFor(isPro) {
   return isPro ? PRO_HISTORY_LIMIT : FREE_HISTORY_LIMIT;
 }

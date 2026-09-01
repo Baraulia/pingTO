@@ -405,14 +405,18 @@ pre.load-ammo-doc { white-space: pre-wrap; font-family: ui-monospace, monospace;
 [data-theme="light"] .j-bool { color: #116329; }
 .diff-row.changed { background: color-mix(in srgb, var(--err) 16%, transparent); }
 .check { display: flex; gap: 6px; align-items: center; white-space: nowrap; width: auto; color: var(--muted); }
-.switch { position: relative; width: 34px; height: 18px; display: inline-block; flex-shrink: 0; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--line); border-radius: 10px; }
-.slider:before {
-  content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 1px; background: #fff; border-radius: 50%;
+body.is-store-install .dev-pro-unlock { display: none !important; }
+.billing-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg3);
 }
-.switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
-.switch input:checked + .slider:before { transform: translateX(16px); }
+.billing-box .field { display: flex; flex-direction: column; gap: 4px; }
+.billing-box .fail:empty, .billing-box [hidden] { display: none !important; }
 .palette {
   position: fixed; inset: 10vh 16px auto; background: var(--bg2); border: 1px solid var(--line);
   border-radius: 10px; z-index: 20; padding: 8px; max-height: 60vh; overflow: auto;

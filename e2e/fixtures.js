@@ -55,10 +55,8 @@ export async function ensureDesktopLayout(page) {
 
 async function setProToggle(page, enabled) {
   await ensureDesktopLayout(page);
-  await page.locator('#proToggle').evaluate((el, on) => {
-    if (el.checked === on) return;
-    el.checked = on;
-    el.dispatchEvent(new Event('change', { bubbles: true }));
+  await page.evaluate(async (on) => {
+    await chrome.storage.local.set({ isPro: on });
   }, enabled);
 }
 

@@ -85,10 +85,21 @@ import {
   canAddEnvVar,
   canAddEnvironment,
   canAddRequest,
+  hasActiveLicense,
   historyLimitFor,
   isCollectionUnlocked,
+  isUnpackedInstall,
   PRO_FEATURES,
+  resolveIsPro,
 } from './modules/entitlements.js';
+import { BILLING_CONFIG } from './modules/billing-config.js';
+import {
+  activateLicenseKey,
+  billingStatusText,
+  checkoutConfigured,
+  deactivateLicense,
+  openCheckout,
+} from './modules/billing.js';
 
 const storage = new StorageManager();
 const historyManager = new HistoryManager(storage);
@@ -97,6 +108,10 @@ const collectionsManager = new CollectionsManager(storage);
 const environmentsManager = new EnvironmentsManager(storage);
 
 const $ = (id) => document.getElementById(id);
+if (document.body) {
+  document.body.classList.toggle('is-store-install', !isUnpackedInstall());
+  document.body.classList.toggle('is-unpacked-install', isUnpackedInstall());
+}
 const state = {
   isPro: false,
   tabs: [],
@@ -170,10 +185,14 @@ let loadPlatformId = 'windows-amd64';
 
 function showProModal(featureId) {
   hideActionMenus();
-  lastProFeatureId = featureId;
-  const name = featureName(featureId);
-  const specific = I18nManager.t(`proDesc_${featureId}`, '');
-  $('proModalText').textContent = specific || I18nManager.t('proModalText').replace('{name}', name);
+  lastProFeatureId = featureId || lastProFeatureId;
+  if (featureId) {
+    const name = featureName(featureId);
+    const specific = I18nManager.t(`proDesc_${featureId}`, '');
+    $('proModalText').textContent = specific || I18nManager.t('proModalText').replace('{name}', name);
+  } else {
+    $('proModalText').textContent = I18nManager.t('proModalBillingLead');
+  }
   const list = $('proModalList');
   list.replaceChildren();
   const highlight = PRO_MODAL_HIGHLIGHT[featureId] || featureId;
@@ -189,6 +208,7 @@ function showProModal(featureId) {
     list.appendChild(li);
   });
   $('proModal').classList.remove('hidden');
+  renderBillingUi();
 }
 
 function requirePro(featureId) {
@@ -207,6 +227,8 @@ function syncProOptionLabels() {
 }
 
 function applyProUi() {
+  document.body.classList.toggle('is-store-install', !isUnpackedInstall());
+  document.body.classList.toggle('is-unpacked-install', isUnpackedInstall());
   document.body.classList.toggle('is-pro', state.isPro);
   document.body.classList.toggle('is-free', !state.isPro);
   syncProOptionLabels();
@@ -250,10 +272,64 @@ function applyProUi() {
   else syncNoRequestUi();
 }
 
+async function refreshEntitlements() {
+  const stored = await chrome.storage.local.get(['isPro', 'license']);
+  state.isPro = resolveIsPro({
+    unpacked: isUnpackedInstall(),
+    licensed: hasActiveLicense(stored.license),
+    storedDev: stored.isPro,
+  });
+  applyProUi();
+  await renderBillingUi();
+}
+
+async function renderBillingUi() {
+  const stored = await chrome.storage.local.get(['license']);
+  const license = stored.license;
+  const t = (key, fallback) => I18nManager.t(key, fallback);
+  if ($('billingStatus')) $('billingStatus').textContent = billingStatusText(license, t);
+  const price = BILLING_CONFIG.priceLabel || `$${BILLING_CONFIG.priceUsd}`;
+  const period = t(`billingPeriod_${BILLING_CONFIG.interval || 'year'}`);
+  const checkoutBtn = $('proCheckoutBtn');
+  if (checkoutBtn) {
+    checkoutBtn.disabled = !checkoutConfigured();
+    checkoutBtn.textContent = checkoutConfigured()
+      ? t('proCheckoutBtn').replace('{price}', price).replace('{period}', period)
+      : t('proCheckoutMissing');
+  }
+  if ($('billingPlanHint')) {
+    $('billingPlanHint').textContent = t('billingPlanHint')
+      .replace('{price}', price)
+      .replace('{period}', period)
+      .replace('{n}', String(BILLING_CONFIG.activationLimit || 3));
+  }
+  const keyInput = $('proLicenseKey');
+  if (keyInput && license?.key && !keyInput.value) keyInput.value = license.key;
+  if ($('proClearLicenseBtn')) $('proClearLicenseBtn').hidden = !license?.key;
+  if ($('proPlanBtn')) $('proPlanBtn').textContent = state.isPro ? t('proPlanBtnPro') : t('proPlanBtn');
+}
+
+function showBillingError(err) {
+  const el = $('billingError');
+  if (!el) return;
+  const code = err?.code || '';
+  const mapped = code ? I18nManager.t(`billingErr_${code}`, '') : '';
+  const text = (mapped || err?.message || I18nManager.t('billingErr_invalid_license'))
+    .replace('{n}', String(BILLING_CONFIG.activationLimit || 3));
+  el.textContent = text;
+  el.hidden = !el.textContent;
+}
+
 async function setPro(enabled) {
   const wasPro = state.isPro;
+  if (!isUnpackedInstall()) {
+    const license = (await chrome.storage.local.get(['license'])).license;
+    state.isPro = hasActiveLicense(license);
+    applyProUi();
+    persistWorkspace();
+    return;
+  }
   state.isPro = Boolean(enabled);
-  $('proToggle').checked = state.isPro;
   await chrome.storage.local.set({ isPro: state.isPro });
   applyProUi();
   persistWorkspace();
@@ -262,6 +338,18 @@ async function setPro(enabled) {
     UIHelpers.showToast(I18nManager.t('freeCollectionOverQuota').replace('{n}', String(extra)), 'info');
   }
 }
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.license) {
+    refreshEntitlements();
+    return;
+  }
+  if (!changes.isPro || !isUnpackedInstall()) return;
+  const next = Boolean(changes.isPro.newValue);
+  if (next === state.isPro) return;
+  setPro(next);
+});
 
 function current() {
   return state.tabs.find((t) => t.id === state.activeId) || null;
@@ -1853,9 +1941,12 @@ async function init() {
   await collectionsManager.load();
   await environmentsManager.load();
   await historyManager.load();
-  const proStored = await chrome.storage.local.get(['isPro']);
-  state.isPro = Boolean(proStored.isPro);
-  $('proToggle').checked = state.isPro;
+  const proStored = await chrome.storage.local.get(['isPro', 'license']);
+  state.isPro = resolveIsPro({
+    unpacked: isUnpackedInstall(),
+    licensed: hasActiveLicense(proStored.license),
+    storedDev: proStored.isPro,
+  });
   const settings = (await storage.get('app_settings', {})) || {};
   state.timeout = settings.timeout || 30000;
   const cap = historyLimitFor(state.isPro);
@@ -1880,6 +1971,7 @@ async function init() {
     $('codeLanguage').appendChild(o);
   });
   applyProUi();
+  await renderBillingUi();
   if ($('settingsTimeout')) $('settingsTimeout').value = String(state.timeout);
   if ($('settingsHistoryMax')) $('settingsHistoryMax').value = String(state.historyLimit);
   renderCollections();
@@ -2678,6 +2770,7 @@ $('languageToggle').onclick = async () => {
 document.addEventListener('languageChanged', async () => {
   I18nManager.apply();
   applyProUi();
+  await renderBillingUi();
   await renderEnvs();
   renderHistory();
   renderCollections();
@@ -2705,10 +2798,46 @@ $('wsMessageInput').onkeydown = (e) => {
     sendWsMessage();
   }
 };
-$('proToggle').onchange = () => setPro($('proToggle').checked);
 $('proEnableBtn').onclick = async () => {
+  if (!isUnpackedInstall()) return;
   await setPro(true);
   $('proModal').classList.add('hidden');
+};
+$('proPlanBtn').onclick = () => showProModal();
+$('settingsProBtn').onclick = () => {
+  $('settingsModal').classList.add('hidden');
+  showProModal();
+};
+$('proCheckoutBtn').onclick = () => {
+  try {
+    openCheckout();
+  } catch (e) {
+    showBillingError(e);
+    UIHelpers.showToast(I18nManager.t('billingErr_checkout_not_configured'), 'error');
+  }
+};
+$('proActivateBtn').onclick = async () => {
+  const errEl = $('billingError');
+  if (errEl) {
+    errEl.hidden = true;
+    errEl.textContent = '';
+  }
+  try {
+    const license = await activateLicenseKey($('proLicenseKey')?.value);
+    await chrome.storage.local.set({ license });
+    await refreshEntitlements();
+    UIHelpers.showToast(I18nManager.t('billingActivated'), 'success');
+    if (hasActiveLicense(license)) $('proModal').classList.add('hidden');
+  } catch (e) {
+    showBillingError(e);
+  }
+};
+$('proClearLicenseBtn').onclick = async () => {
+  const stored = await chrome.storage.local.get(['license']);
+  await deactivateLicense(stored.license);
+  await chrome.storage.local.remove('license');
+  if ($('proLicenseKey')) $('proLicenseKey').value = '';
+  await refreshEntitlements();
 };
 $('closeProModal').onclick = () => $('proModal').classList.add('hidden');
 document.addEventListener('click', (e) => {

@@ -516,8 +516,41 @@
     "message": "В Free уже есть безлимит вкладок, HTTP-методы, Bearer / Basic / API Key, тела JSON / form / multipart / text, cookies, docs, JSONPath, 2 коллекции (25 запросов), 1 окружение (10 переменных), история до 50, cURL и импорт/экспорт PingTo JSON."
   },
   "proModalHint": {
-    "message": "Чтобы открыть, включите тумблер Pro в сайдбаре. Позже здесь будет оплата."
+    "message": "Оплатите на странице checkout, затем вставьте лицензионный ключ сюда. Данные карты в PingTo не попадают."
   },
+  "proModalHintDev": {
+    "message": "Load unpacked: кнопка Enable Pro ниже пропускает оплату (только разработка и тесты)."
+  },
+  "proModalBillingLead": {
+    "message": "PingTo Pro открывает GraphQL, WebSocket, нагрузочные тесты, скрипты, Digest/OAuth и большие лимиты коллекций."
+  },
+  "proPlanBtn": { "message": "Pro" },
+  "proPlanBtnPro": { "message": "Pro ✓" },
+  "proCheckoutBtn": { "message": "Перейти на Pro — {price}/{period}" },
+  "billingPeriod_year": { "message": "год" },
+  "billingPlanHint": {
+    "message": "Pro — {price} в {period}. Один ключ действует на {n} устройствах. Слот освобождается кнопкой «Удалить лицензию»."
+  },
+  "proCheckoutMissing": { "message": "URL оплаты не задан (modules/billing-config.js)" },
+  "proLicenseLabel": { "message": "Лицензионный ключ" },
+  "proLicensePlaceholder": { "message": "XXXX-XXXX-XXXX" },
+  "proActivateBtn": { "message": "Активировать" },
+  "proClearLicenseBtn": { "message": "Удалить лицензию" },
+  "billingStatusFree": { "message": "Тариф: Free" },
+  "billingStatusPro": { "message": "Тариф: Pro" },
+  "billingStatusProUntil": { "message": "Тариф: Pro до {date}" },
+  "billingActivated": { "message": "Pro включён" },
+  "billingErr_checkout_not_configured": {
+    "message": "Пропишите URL checkout Lemon Squeezy в modules/billing-config.js и перезагрузите расширение."
+  },
+  "billingErr_empty_key": { "message": "Вставьте ключ с чека оплаты." },
+  "billingErr_invalid_license": { "message": "Этот лицензионный ключ не подходит." },
+  "billingErr_activation_limit": {
+    "message": "Ключ уже активирован на {n} устройствах. Удалите лицензию в PingTo на ненужной машине и повторите."
+  },
+  "billingErr_expired": { "message": "Подписка истекла. Оформите продление на странице оплаты." },
+  "billingErr_disabled": { "message": "Эта лицензия отключена." },
+  "billingErr_license_http": { "message": "Сервер лицензий недоступен. Повторите попытку." },
   "proEnableBtn": {
     "message": "Включить Pro (dev)"
   },

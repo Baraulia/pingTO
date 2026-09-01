@@ -15,7 +15,8 @@
     "test:e2e:headed": "playwright test --headed",
     "testd": "go run -C testd .",
     "loadtest": "go run -C loadtest .",
-    "build:loadtest": "node scripts/build-loadtest.mjs"
+    "build:loadtest": "node scripts/build-loadtest.mjs",
+    "pack": "node scripts/pack-extension.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

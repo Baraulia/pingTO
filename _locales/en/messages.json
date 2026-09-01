@@ -516,8 +516,41 @@
     "message": "Free already includes unlimited tabs, HTTP methods, Bearer / Basic / API Key, JSON / form / multipart / text bodies, cookies, docs, JSONPath, 2 collections (25 saved requests), 1 environment (10 variables), history up to 50, cURL, and PingTo JSON import/export."
   },
   "proModalHint": {
-    "message": "Turn on the Pro toggle in the sidebar to unlock. Later this will be a paid plan."
+    "message": "Pay in the checkout tab, then paste the license key here. Card details never enter PingTo."
   },
+  "proModalHintDev": {
+    "message": "Load unpacked: Enable Pro below skips checkout (developers and tests only)."
+  },
+  "proModalBillingLead": {
+    "message": "PingTo Pro unlocks GraphQL, WebSocket, load testing, scripts, Digest/OAuth, and higher collection limits."
+  },
+  "proPlanBtn": { "message": "Pro" },
+  "proPlanBtnPro": { "message": "Pro ✓" },
+  "proCheckoutBtn": { "message": "Upgrade to Pro — {price}/{period}" },
+  "billingPeriod_year": { "message": "year" },
+  "billingPlanHint": {
+    "message": "Pro is {price} per {period}. One license key works on up to {n} devices. Use Remove license on a machine you no longer use."
+  },
+  "proCheckoutMissing": { "message": "Checkout URL not set (see modules/billing-config.js)" },
+  "proLicenseLabel": { "message": "License key" },
+  "proLicensePlaceholder": { "message": "XXXX-XXXX-XXXX" },
+  "proActivateBtn": { "message": "Activate" },
+  "proClearLicenseBtn": { "message": "Remove license" },
+  "billingStatusFree": { "message": "Plan: Free" },
+  "billingStatusPro": { "message": "Plan: Pro" },
+  "billingStatusProUntil": { "message": "Plan: Pro until {date}" },
+  "billingActivated": { "message": "Pro unlocked" },
+  "billingErr_checkout_not_configured": {
+    "message": "Add your Lemon Squeezy checkout URL in modules/billing-config.js, then reload the extension."
+  },
+  "billingErr_empty_key": { "message": "Paste the license key from your receipt." },
+  "billingErr_invalid_license": { "message": "This license key is not valid." },
+  "billingErr_activation_limit": {
+    "message": "This key is already active on {n} devices. Remove the license in PingTo on a machine you no longer use, then try again."
+  },
+  "billingErr_expired": { "message": "This subscription has expired. Renew on the checkout page." },
+  "billingErr_disabled": { "message": "This license was disabled." },
+  "billingErr_license_http": { "message": "Could not reach the license server. Try again." },
   "proEnableBtn": {
     "message": "Enable Pro (dev)"
   },

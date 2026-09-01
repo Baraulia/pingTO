@@ -34,6 +34,9 @@ loadtest/loadtest.exe
 dist/loadtest/pingto-loadtest-*
 dist/loadtest/latest.json
 
+# Chrome Web Store zip (npm run pack)
+pingto-cws.zip
+
 # Node / Playwright
 node_modules/
 test-results/

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { detectAndImport, importOpenApi, importPostman, isNativePingto } from '../../modules/importers.js';
 
 const testdCollection = JSON.parse(
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../testd/pingto-testd-collection.json'), 'utf8')
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../ToDelete/pingto-testd-collection.json'), 'utf8')
 );
 
 describe('importers', () => {

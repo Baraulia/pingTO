@@ -25,6 +25,8 @@ const entries = [
   'pages',
 ];
 
+// ToDelete/, testd/, loadtest/, tests, and node_modules are not packed.
+
 const missing = entries.filter((name) => !existsSync(join(root, name)));
 if (missing.length) {
   console.error('Missing required paths:', missing.join(', '));

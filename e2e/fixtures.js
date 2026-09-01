@@ -6,7 +6,7 @@ import { test as base, chromium, expect } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const testdUrl = process.env.PINGTO_TESTD_URL || 'http://127.0.0.1:8787';
-const collectionPath = path.join(root, 'testd', 'pingto-testd-collection.json');
+const collectionPath = path.join(root, 'ToDelete', 'pingto-testd-collection.json');
 
 export const test = base.extend({
   context: async ({}, use, testInfo) => {

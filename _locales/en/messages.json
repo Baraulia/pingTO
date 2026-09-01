@@ -261,7 +261,7 @@
     "message": "Error"
   },
   "proFeatures": {
-    "message": "🚀 Pro features:\n• Unlimited history, collections, environments\n• Import/export Postman, Insomnia, Bruno; import OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth and OAuth 2.0\n• Binary body, scripts, tests, codegen\n\nPrice: $5/month"
+    "message": "Pro features:\n• Unlimited history, collections, environments\n• Import/export Postman, Insomnia, Bruno; import OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth and OAuth 2.0\n• Binary body, scripts, tests, codegen, load tests\n\nPrice: $29/year, up to 3 devices"
   },
   "language": {
     "message": "Language"

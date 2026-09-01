@@ -261,7 +261,7 @@
     "message": "Ошибка"
   },
   "proFeatures": {
-    "message": "🚀 Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт/экспорт Postman, Insomnia, Bruno; импорт OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen\n\nЦена: $5/месяц"
+    "message": "Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт/экспорт Postman, Insomnia, Bruno; импорт OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen, нагрузка\n\nЦена: $29/год, до 3 устройств"
   },
   "language": {
     "message": "Язык"

@@ -17,11 +17,15 @@ import {
   PRO_FEATURES,
   resolveIsPro,
   unlockedCollectionIds,
+  savedRequestCount,
+  isProImportFormat,
+  freeImportBlock,
 } from '../../modules/entitlements.js';
 
 describe('entitlements', () => {
   it('keeps Free auth and body sets tight', () => {
     expect(FREE_AUTH.has('bearer')).toBe(true);
+    expect(FREE_AUTH.has('inherit')).toBe(true);
     expect(FREE_AUTH.has('apikey')).toBe(true);
     expect(FREE_AUTH.has('digest')).toBe(false);
     expect(FREE_BODY.has('json')).toBe(true);
@@ -53,6 +57,7 @@ describe('entitlements', () => {
     expect(PRO_FEATURES.importCollections).toBe('importAnyBtn');
     expect(PRO_FEATURES.bruno).toBe('fmtBruno');
     expect(PRO_FEATURES.loadtest).toBe('loadtestBtn');
+    expect(PRO_FEATURES.workspaceSync).toBe('exportWorkspaceBtn');
   });
 
   it('keeps extra Free collections locked instead of deleting them', () => {
@@ -73,5 +78,18 @@ describe('entitlements', () => {
     expect(hasActiveLicense({ key: 'x', status: 'active' })).toBe(true);
     expect(hasActiveLicense({ key: 'x', status: 'expired' })).toBe(false);
     expect(hasActiveLicense({})).toBe(false);
+  });
+
+  it('blocks Free imports that exceed collection or request caps', () => {
+    expect(isProImportFormat('pingto')).toBe(false);
+    expect(isProImportFormat('postman')).toBe(true);
+    expect(freeImportBlock(true, [], [{ items: [{ type: 'request' }] }])).toBeNull();
+    const two = [{ id: 'a', items: [] }, { id: 'b', items: [] }];
+    expect(freeImportBlock(false, two, [{ id: 'c', items: [] }])).toBe('freeImportCollections');
+    const fat = [{ id: 'x', items: Array.from({ length: 26 }, (_, i) => ({ type: 'request', id: String(i) })) }];
+    expect(savedRequestCount(fat)).toBe(26);
+    expect(freeImportBlock(false, [], fat)).toBe('freeImportRequests');
+    const ok = [{ id: 'x', items: Array.from({ length: 2 }, (_, i) => ({ type: 'request', id: String(i) })) }];
+    expect(freeImportBlock(false, [], ok)).toBeNull();
   });
 });

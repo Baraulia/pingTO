@@ -30,6 +30,7 @@
             <button type="button" data-import="insomnia" data-pro="importCollections" data-i18n="fmtInsomnia">Insomnia</button>
             <button type="button" data-import="bruno" data-pro="importCollections" data-i18n="fmtBruno">Bruno</button>
             <button type="button" data-import="openapi" data-pro="importCollections" data-i18n="fmtOpenapi">OpenAPI</button>
+            <button type="button" data-import="har" data-pro="importCollections" data-i18n="fmtHar">HAR</button>
           </div>
         </div>
         <div class="menu-wrap">
@@ -44,7 +45,7 @@
         <button id="saveToCollectionBtn" class="btn" data-i18n="saveToCollectionBtn">Save request</button>
         <button id="runCollectionBtn" class="btn ghost" data-pro="collectionRun" data-i18n="runCollectionBtn">Run collection</button>
       </div>
-      <p class="empty-hint" data-i18n="importExportHint">Free: PingTo JSON. Pro: Postman, Insomnia, Bruno, OpenAPI import, and Postman/Insomnia/Bruno export.</p>
+        <p class="empty-hint" data-i18n="importExportHint">Free: PingTo JSON. Pro: Postman, Insomnia, Bruno, OpenAPI, HAR import, and Postman/Insomnia/Bruno export.</p>
     </aside>
 
     <section class="main">
@@ -66,7 +67,7 @@
           <button id="openTabBtn" class="icon-btn" data-i18n-title="fullscreenBtn" title="Fullscreen" aria-label="Fullscreen">
             <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 2h5v1.5H3.5V7H2zm7 0h5v5h-1.5V3.5H9zM2 9h1.5v3.5H7V14H2zm10.5 0H14v5H9v-1.5h3.5z"/></svg>
           </button>
-          <button id="proPlanBtn" class="btn ghost" data-i18n="proPlanBtn">Pro</button>
+          <button id="proPlanBtn" class="btn ghost" data-i18n="proPlanBtn" data-i18n-title="proPlanBtnTitle">Pro</button>
           <button id="settingsBtn" class="icon-btn" data-i18n-title="settingsBtn" aria-label="Settings">
             <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.3 1.5h3.4l.4 1.6a5 5 0 0 1 1.3.8l1.6-.5 1.7 2.9-1.2 1.2a5 5 0 0 1 0 1.6l1.2 1.2-1.7 2.9-1.6-.5a5 5 0 0 1-1.3.8l-.4 1.6H6.3l-.4-1.6a5 5 0 0 1-1.3-.8l-1.6.5L1.3 10l1.2-1.2a5 5 0 0 1 0-1.6L1.3 6l1.7-2.9 1.6.5a5 5 0 0 1 1.3-.8zm1.7 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5"/></svg>
           </button>
@@ -168,6 +169,7 @@
             <label class="field">
               <span data-i18n="authTypeLabel">Auth type</span>
               <select id="authType">
+                <option value="inherit" data-i18n="authInherit">Inherit from parent</option>
                 <option value="none" data-i18n="authNone">No auth</option>
                 <option value="bearer" data-i18n="authBearer">Bearer token</option>
                 <option value="basic" data-i18n="authBasic">Basic (user + password)</option>
@@ -513,23 +515,34 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
           <div id="respHint" class="hint"></div>
           <div class="subtabs" id="respSubtabs">
             <button data-rpane="body" class="active" data-i18n="responseBodyTab">Body</button>
-            <button data-rpane="pretty" data-i18n="prettyTab">Pretty</button>
             <button data-rpane="headers" data-i18n="responseHeadersTab">Headers</button>
-            <button data-rpane="preview" data-i18n="responsePreviewTab">Preview</button>
             <button data-rpane="redirects" data-i18n="redirectsTab">Redirects</button>
             <button data-rpane="tests" data-pro="testsResp" data-i18n="testsTab">Tests</button>
             <button data-rpane="diff" data-pro="diff" data-i18n="diffTab">Diff</button>
             <button data-rpane="filter" data-i18n="jsonPathTab">JSONPath</button>
           </div>
-          <pre id="responseBody" class="body"></pre>
-          <pre id="responsePretty" class="body hidden"></pre>
+          <div id="pane-body" class="resp-body-pane">
+            <div class="resp-view-modes" id="respViewModes">
+              <button type="button" data-rview="pretty" class="active" data-i18n="prettyTab">Pretty</button>
+              <button type="button" data-rview="raw" data-i18n="rawViewTab">Raw</button>
+              <button type="button" data-rview="preview" data-i18n="responsePreviewTab">Preview</button>
+            </div>
+            <p id="respPathHint" class="resp-path-hint"></p>
+            <div id="responsePretty" class="body resp-view"></div>
+            <div id="responseRawWrap" class="body resp-view hidden"></div>
+            <pre id="responseBody" class="resp-body-source" hidden></pre>
+            <div id="responsePreviewWrap" class="resp-view hidden">
+              <iframe id="responsePreview" class="preview hidden" sandbox></iframe>
+              <img id="responsePreviewImg" class="preview-img hidden" alt="">
+              <p id="responsePreviewEmpty" class="hint hidden" data-i18n="previewEmpty">Preview is for HTML and images.</p>
+            </div>
+          </div>
           <pre id="responseHeaders" class="body hidden"></pre>
-          <iframe id="responsePreview" class="hidden preview" sandbox></iframe>
           <pre id="responseRedirects" class="body hidden"></pre>
           <div id="testResults" class="body hidden"></div>
           <div id="diffView" class="body hidden"></div>
           <div id="pane-filter" class="hidden">
-            <input id="jsonPath" placeholder="$.data.items[0]">
+            <input id="jsonPath" data-i18n-placeholder="jsonPathPlaceholder" placeholder="Filter: $.users[0].id">
             <pre id="jsonPathOut" class="body"></pre>
           </div>
         </div>
@@ -546,7 +559,6 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
       </div>
 
       <footer class="statusline">
-        <span data-i18n="sslHint">Local only · Chrome cannot ignore invalid SSL</span>
         <span id="runStatus"></span>
         <button id="duplicateBtn" class="btn small ghost" data-i18n="duplicateBtn">Duplicate</button>
       </footer>
@@ -590,9 +602,20 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
       <input id="settingsTimeout" type="number" value="30000">
       <label data-i18n="historyLimitLabel">History limit</label>
       <input id="settingsHistoryMax" type="number" value="50">
-      <p class="hint" data-i18n="sslSettingsHint">Invalid TLS certificates cannot be bypassed in Chrome extensions.</p>
       <p class="hint" id="historyProHint" hidden data-i18n="proHistoryHint">History over 50 items is a Pro feature.</p>
-      <button type="button" id="settingsProBtn" class="btn" data-i18n="proPlanBtn">Pro plan</button>
+      <div class="workspace-sync">
+        <h4 data-i18n="workspaceTitle">Sync devices</h4>
+        <p class="hint" data-i18n="workspaceHint">Pro: export collections, environments, open tabs and settings to a file, then import on another computer. License keys are not in the file — activate Pro on each device. Optional passphrase encrypts the file.</p>
+        <label class="field">
+          <span data-i18n="workspacePassphraseLabel">Passphrase (optional)</span>
+          <input id="workspacePassphrase" type="password" autocomplete="new-password" data-i18n-placeholder="workspacePassphrasePlaceholder" placeholder="Leave empty for a plain JSON file">
+        </label>
+        <div class="row">
+          <button type="button" id="exportWorkspaceBtn" class="btn" data-pro="workspaceSync" data-i18n="exportWorkspaceBtn">Export workspace</button>
+          <button type="button" id="importWorkspaceBtn" class="btn" data-pro="workspaceSync" data-i18n="importWorkspaceBtn">Import workspace</button>
+        </div>
+      </div>
+      <button type="button" id="settingsProBtn" class="btn" data-i18n="proPlanBtn">Pro</button>
       <button id="saveSettingsBtn" class="btn primary" data-i18n="saveSettingsBtn">Save</button>
       <button id="closeSettingsBtn" class="btn" data-i18n="closeBtn">Close</button>
     </div>
@@ -600,17 +623,17 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
 
   <div id="proModal" class="modal hidden">
     <div class="modal-card wide">
-      <h3 data-i18n="proModalTitle">Pro feature</h3>
+      <h3 id="proModalTitle" data-i18n="proModalTitle">Pro feature</h3>
       <p id="proModalText"></p>
-      <p id="proModalFreeNote" class="hint" data-i18n="proModalFreeNote">Free already includes unlimited tabs, HTTP, Bearer/Basic/API Key, multipart, cookies, JSONPath, 2 collections / 25 requests, 1 environment, and PingTo JSON import/export.</p>
-      <p id="proFeatureListTitle" class="pro-list-heading" data-i18n="proFeatureListTitle">Included in Pro:</p>
-      <ul id="proModalList" class="pro-list"></ul>
-      <p class="hint" data-i18n="proModalHint">Pay in the checkout tab, then paste the license key here. Card details never enter PingTo.</p>
-      <p class="hint dev-pro-unlock" data-i18n="proModalHintDev">Load unpacked: Enable Pro below skips checkout (developers and tests only).</p>
+      <p id="proModalFreeNote" class="hint pro-upsell" data-i18n="proModalFreeNote">Free already includes unlimited tabs, HTTP, Bearer/Basic/API Key, multipart, cookies, JSONPath, 2 collections / 25 requests, 1 environment, and PingTo JSON import/export.</p>
+      <p id="proFeatureListTitle" class="pro-list-heading pro-upsell" data-i18n="proFeatureListTitle">Included in Pro:</p>
+      <ul id="proModalList" class="pro-list pro-upsell"></ul>
+      <p class="hint pro-upsell" data-i18n="proModalHint">Pay in the checkout tab, then paste the license key here. Card details never enter PingTo.</p>
+      <p class="hint dev-pro-unlock pro-upsell" data-i18n="proModalHintDev">Load unpacked: Enable Pro below skips checkout (developers and tests only).</p>
       <div class="billing-box">
         <p id="billingStatus" class="hint"></p>
-        <p id="billingPlanHint" class="hint" data-i18n="billingPlanHint">Pro is $29 per year. One key works on up to 3 devices.</p>
-        <button type="button" id="proCheckoutBtn" class="btn primary" data-i18n="proCheckoutBtn">Upgrade to Pro — $29/year</button>
+        <p id="billingPlanHint" class="hint pro-upsell" data-i18n="billingPlanHint">Pro is $29 per year. One key works on up to 3 devices.</p>
+        <button type="button" id="proCheckoutBtn" class="btn primary pro-upsell" data-i18n="proCheckoutBtn">Upgrade to Pro — $29/year</button>
         <label class="field">
           <span data-i18n="proLicenseLabel">License key</span>
           <input id="proLicenseKey" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="proLicensePlaceholder" placeholder="XXXX-XXXX-XXXX">
@@ -643,17 +666,91 @@ DELETE pre-seeded rows by {n} (only seed is user 42 unless you created 1…N):
   <div id="runModal" class="modal hidden">
     <div class="modal-card wide">
       <h3 data-i18n="runTitle">Collection run</h3>
-      <label class="check"><input type="checkbox" id="stopOnFail" checked> <span data-i18n="stopOnFail">Stop on fail</span></label>
+      <div class="run-setup">
+        <label class="field">
+          <span data-i18n="runScopeLabel">Run</span>
+          <select id="runScopeSelect"></select>
+        </label>
+        <p id="runScopeHint" class="hint"></p>
+        <label class="check"><input type="checkbox" id="stopOnFail" checked> <span data-i18n="stopOnFail">Stop on fail</span></label>
+        <label class="field">
+          <span data-i18n="runDataLabel">Data file (JSON or CSV)</span>
+          <div class="file-pick">
+            <input type="file" id="runDataFile" accept=".json,.csv,text/csv,application/json" hidden>
+            <button type="button" id="pickRunDataBtn" class="btn small" data-i18n="runDataPick">Choose file</button>
+            <span id="runDataHint" class="file-label" data-i18n="runDataNone">No file — one pass</span>
+          </div>
+        </label>
+        <button type="button" id="startRunBtn" class="btn primary" data-i18n="startRunBtn">Start</button>
+      </div>
       <div id="runReport"></div>
       <button id="closeRunBtn" class="btn" data-i18n="closeBtn">Close</button>
     </div>
   </div>
 
   <div id="treeMenu" class="tree-menu hidden">
+    <button id="treeMenuRun" type="button" data-pro="collectionRun" data-i18n="treeMenuRun">Run</button>
+    <button id="treeMenuAuth" type="button" data-i18n="treeMenuAuth">Auth</button>
     <button id="treeMenuRename" type="button" data-i18n="renameBtn">Rename</button>
     <button id="treeMenuDelete" type="button" class="danger" data-i18n="deleteBtn">Delete</button>
   </div>
-  <input type="file" id="importFile" accept=".json,.bru,.txt,application/json" hidden>
+  <div id="scopeAuthModal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="scopeAuthTitle" data-i18n="scopeAuthTitle">Collection auth</h3>
+      <p id="scopeAuthIntro" class="hint" data-i18n="scopeAuthHintCollection">The collection is the root of the tree, so it cannot inherit. Set Bearer/Basic/… here; child folders and requests with Inherit use it.</p>
+      <label class="field">
+        <span data-i18n="authTypeLabel">Auth type</span>
+        <select id="scopeAuthType">
+          <option value="inherit" id="scopeAuthInheritOpt" data-i18n="authInherit">Inherit from parent</option>
+          <option value="none" data-i18n="authNone">No auth</option>
+          <option value="bearer" data-i18n="authBearer">Bearer token</option>
+          <option value="basic" data-i18n="authBasic">Basic (user + password)</option>
+          <option value="apikey" data-i18n="authApiKey">API Key</option>
+          <option value="digest" data-pro="digest" data-i18n="authDigest">Digest</option>
+          <option value="oauth2" data-pro="oauth" data-i18n="authOauth2">OAuth 2.0</option>
+        </select>
+      </label>
+      <p id="scopeAuthHint" class="hint"></p>
+      <div id="scopeAuthBearerFields" class="auth-fields hidden">
+        <label class="field"><span data-i18n="tokenPlaceholder">Bearer token</span><input id="scopeAuthToken" autocomplete="off"></label>
+      </div>
+      <div id="scopeBasicAuthFields" class="auth-fields hidden">
+        <label class="field"><span data-i18n="usernamePlaceholder">Username</span><input id="scopeBasicUser" autocomplete="off"></label>
+        <label class="field"><span data-i18n="passwordPlaceholder">Password</span><input id="scopeBasicPass" type="password"></label>
+      </div>
+      <div id="scopeApiKeyFields" class="auth-fields hidden">
+        <label class="field"><span data-i18n="apiKeyNamePlaceholder">Header or query name</span><input id="scopeApiKeyName" value="X-API-Key"></label>
+        <label class="field"><span data-i18n="apiKeyValuePlaceholder">Key value</span><input id="scopeApiKeyValue" autocomplete="off"></label>
+        <label class="field">
+          <span data-i18n="apiKeyInLabel">Send as</span>
+          <select id="scopeApiKeyIn">
+            <option value="header">Header</option>
+            <option value="query">Query</option>
+          </select>
+        </label>
+      </div>
+      <div id="scopeOauth2Fields" class="auth-fields hidden">
+        <label class="field"><span data-i18n="oauthGrantLabel">Grant type</span>
+          <select id="scopeOauthGrant">
+            <option value="client_credentials">Client credentials</option>
+            <option value="authorization_code">Authorization code</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="oauthTokenUrlLabel">Token URL</span><input id="scopeOauthTokenUrl"></label>
+        <label class="field"><span data-i18n="oauthAuthUrlLabel">Authorization URL</span><input id="scopeOauthAuthUrl"></label>
+        <label class="field"><span>Client ID</span><input id="scopeOauthClientId" autocomplete="off"></label>
+        <label class="field"><span>Client secret</span><input id="scopeOauthClientSecret" type="password"></label>
+        <label class="field"><span>Scope</span><input id="scopeOauthScope"></label>
+        <label class="field"><span data-i18n="tokenPlaceholder">Bearer token</span><input id="scopeOauthToken" autocomplete="off"></label>
+      </div>
+      <div class="row">
+        <button type="button" id="saveScopeAuthBtn" class="btn primary" data-i18n="saveSettingsBtn">Save</button>
+        <button type="button" id="closeScopeAuthBtn" class="btn" data-i18n="closeBtn">Close</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="importFile" accept=".json,.bru,.txt,.har,application/json" hidden>
+  <input type="file" id="workspaceFile" accept=".json,application/json" hidden>
   <script src="app.js" type="module"></script>
 </body>
 </html>

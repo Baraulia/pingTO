@@ -1,3 +1,5 @@
+import { applyParamsToUrl, applyPathParams } from './url-params.js';
+
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 const WS_PROTOCOLS = new Set(['ws:', 'wss:']);
 const SENSITIVE_HEADERS = /^(authorization|cookie|set-cookie|proxy-authorization|x-api-key|api-key)$/i;
@@ -37,6 +39,60 @@ export function applyEnvToHeaders(headers, variables = {}) {
     result[applyEnvVars(key, variables)] = applyEnvVars(String(value ?? ''), variables);
   });
   return result;
+}
+
+export function resolveTabForCurl(tab, variables, auth = {}) {
+  const substitute = variables != null && typeof variables === 'object';
+  const vars = substitute ? variables : {};
+  const apply = (value) => (substitute ? applyEnvVars(String(value ?? ''), vars) : String(value ?? ''));
+  const type = auth.type || auth.authType || 'none';
+  const params = (tab?.params || []).map((p) => ({
+    ...p,
+    key: apply(p.key || ''),
+    value: apply(p.value ?? ''),
+  }));
+  const pathParams = (tab?.pathParams || []).map((p) => ({
+    ...p,
+    value: apply(p.value ?? ''),
+  }));
+  let url = apply(
+    applyPathParams(applyParamsToUrl(tab?.url || '', params, { encode: substitute }), pathParams, { encode: substitute })
+  );
+  const headerMap = applyEnvToHeaders(
+    Object.fromEntries(
+      (tab?.headers || [])
+        .filter((h) => h.key && h.enabled !== false)
+        .map((h) => [h.key, h.value ?? ''])
+    ),
+    vars
+  );
+  if ((type === 'bearer' || type === 'oauth2') && auth.token) {
+    headerMap.Authorization = `Bearer ${apply(auth.token)}`;
+  } else if (type === 'basic') {
+    headerMap.Authorization = `Basic ${utf8ToBase64(`${apply(auth.user || '')}:${apply(auth.pass || '')}`)}`;
+  } else if (type === 'apikey' && auth.apiKeyName) {
+    const value = apply(auth.apiKeyValue || '');
+    if (auth.apiKeyIn === 'query') {
+      try {
+        const parsed = new URL(url);
+        parsed.searchParams.set(auth.apiKeyName, value);
+        url = parsed.toString();
+      } catch {
+        headerMap[auth.apiKeyName] = value;
+      }
+    } else headerMap[auth.apiKeyName] = value;
+  } else if (type === 'digest') {
+    headerMap['X-Digest-User'] = apply(auth.user || '');
+    headerMap['X-Digest-Pass'] = apply(auth.pass || '');
+  }
+  const skipBody = tab?.bodyType === 'none' || tab?.bodyType === 'binary';
+  const body = skipBody ? '' : apply(tab?.body || '');
+  return {
+    method: tab?.method || 'GET',
+    url,
+    headers: Object.entries(headerMap).map(([key, value]) => ({ key, value })),
+    body,
+  };
 }
 
 export function utf8ToBase64(str) {

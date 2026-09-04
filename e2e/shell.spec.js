@@ -30,6 +30,12 @@ test.describe('Free vs Pro shell', () => {
     await page.locator('#proEnableBtn').click();
     await expect(page.locator('body')).toHaveClass(/is-pro/);
     await expect(page.locator('#proModal')).toHaveClass(/hidden/);
+    await expect(page.locator('#proPlanBtn')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#proPlanBtn').click();
+    await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#proModalTitle')).toHaveText(/Your Pro plan|Ваш тариф Pro/);
+    await expect(page.locator('#proCheckoutBtn')).toBeHidden();
+    await expect(page.locator('#proModalList')).toBeHidden();
   });
 
   test('toggle Pro on and off', async ({ page }) => {

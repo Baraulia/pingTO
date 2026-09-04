@@ -1,0 +1,5 @@
+[
+  { "tag": "alpha", "name": "Ada", "email": "ada@pingto.local" },
+  { "tag": "beta", "name": "Lovelace, Ada", "email": "ada+comma@pingto.local" },
+  { "tag": "gamma", "name": "Cara", "email": "cara@pingto.local" }
+]

@@ -2,6 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"net/http"
 	"strconv"
@@ -93,6 +96,14 @@ func handleXML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`<?xml version="1.0"?><root><item id="1">alpha</item><item id="2">beta</item></root>`))
+}
+
+func handlePNG(w http.ResponseWriter, r *http.Request) {
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{R: 16, G: 185, B: 129, A: 255})
+	w.Header().Set("Content-Type", "image/png")
+	w.WriteHeader(http.StatusOK)
+	_ = png.Encode(w, img)
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {

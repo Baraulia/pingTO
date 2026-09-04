@@ -46,16 +46,17 @@ test.describe('HTTP against testd', () => {
 
     await openRequest(page, 'testd-text');
     await sendAndExpectStatus(page, 200);
-    await expect(page.locator('#responseBody')).toContainText('pingto text body');
+    await expect(page.locator('#responsePretty')).toContainText('pingto text body');
 
     await openRequest(page, 'testd-html');
     await sendAndExpectStatus(page, 200);
-    await page.locator('#respSubtabs button[data-rpane="preview"]').click();
+    await page.locator('#respViewModes button[data-rview="preview"]').click();
     await expect(page.locator('#responsePreview')).toBeVisible();
 
     await openRequest(page, 'testd-xml');
     await sendAndExpectStatus(page, 200);
-    await expect(page.locator('#responseBody')).toContainText('<root>');
+    await page.locator('#respViewModes button[data-rview="pretty"]').click();
+    await expect(page.locator('#responsePretty')).toContainText('<root>');
 
     await openRequest(page, 'testd-status-404');
     await sendAndExpectStatus(page, 404);
@@ -119,7 +120,7 @@ test.describe('HTTP against testd', () => {
     await sendAndExpectStatus(page, 200);
     await openRequest(page, 'testd-cookies-get');
     await sendAndExpectStatus(page, 200);
-    await expect(page.locator('#responseBody')).toContainText('sid');
+    await expect(page.locator('#responsePretty')).toContainText('sid');
   });
 
   test('slow-json returns body and does not block Send', async ({ page }) => {
@@ -141,7 +142,25 @@ test.describe('HTTP against testd', () => {
   test('bytes payload size', async ({ page }) => {
     await openRequest(page, 'testd-bytes-small');
     await sendAndExpectStatus(page, 200);
-    await expect(page.locator('#responseBody')).toHaveText('A'.repeat(100));
+    await expect(page.locator('#responseBody')).toHaveJSProperty('textContent', 'A'.repeat(100));
+  });
+
+  test('pretty json tree, wrap lines, and png preview', async ({ page }) => {
+    await openRequest(page, 'testd-health');
+    await sendAndExpectStatus(page, 200);
+    await page.locator('#respViewModes button[data-rview="pretty"]').click();
+    await expect(page.locator('#responsePretty .json-tree')).toBeVisible();
+    await page.locator('#responsePretty [data-json-path="$.ok"]').hover();
+    await expect(page.locator('#respPathHint')).toHaveText('$.ok');
+    await page.locator('#respViewModes button[data-rview="raw"]').click();
+    await expect(page.locator('#responseRawWrap .ln-n').first()).toHaveText('1');
+
+    await page.locator('#methodSelect').selectOption('GET');
+    await page.locator('#urlInput').fill(`${testdUrl}/png`);
+    await sendAndExpectStatus(page, 200);
+    await page.locator('#respViewModes button[data-rview="preview"]').click();
+    await expect(page.locator('#responsePreviewImg')).toBeVisible();
+    await expect(page.locator('#responsePreviewImg')).toHaveAttribute('src', /^data:image\/png;base64,/);
   });
 
   test('curl import round-trip', async ({ page }) => {

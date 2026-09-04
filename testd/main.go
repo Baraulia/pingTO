@@ -47,6 +47,7 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("GET /text", handleText)
 	mux.HandleFunc("GET /html", handleHTML)
 	mux.HandleFunc("GET /xml", handleXML)
+	mux.HandleFunc("GET /png", handlePNG)
 	mux.HandleFunc("GET /status/{code}", handleStatus)
 	mux.HandleFunc("GET /delay/{ms}", handleDelay)
 	mux.HandleFunc("GET /redirect/{n}", handleRedirect)

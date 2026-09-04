@@ -1,0 +1,15 @@
+{
+  "format": "pingto-environment",
+  "version": 1,
+  "name": "testd",
+  "variables": {
+    "base_url": "http://127.0.0.1:8787",
+    "ws_url": "ws://127.0.0.1:8787",
+    "username": "pingto",
+    "password": "pingto",
+    "bearer_token": "pingto-token",
+    "api_key": "pingto-key",
+    "client_id": "pingto",
+    "client_secret": "pingto-secret"
+  }
+}

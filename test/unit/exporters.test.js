@@ -20,10 +20,13 @@ const sample = [{
           headers: [{ key: 'Accept', value: 'application/json' }],
           bodyType: 'none',
           body: '',
+          authType: 'inherit',
         },
       ],
     },
   ],
+  authType: 'bearer',
+  auth: { token: 'abc' },
 }];
 
 describe('exporters', () => {
@@ -40,6 +43,9 @@ describe('exporters', () => {
     expect(back[0].name).toBe('Demo');
     expect(back[0].items[0].name).toBe('Auth');
     expect(back[0].items[0].items[0].url).toBe('http://x/health');
+    expect(pm.auth.type).toBe('bearer');
+    expect(back[0].authType).toBe('bearer');
+    expect(back[0].items[0].items[0].authType).toBe('inherit');
   });
 
   it('round-trips through Insomnia export', () => {

@@ -17,6 +17,7 @@ import {
   requestEditFingerprint,
   isWebSocketUrl,
   parseMultipartFields,
+  resolveTabForCurl,
   sanitizeHeadersForStorage,
   utf8ToBase64,
 } from './modules/request-utils.js';
@@ -24,15 +25,23 @@ import { applyParamsToUrl, applyPathParams, parseUrlParams } from './modules/url
 import {
   diffText,
   formatJson,
-  highlightJson,
   hintForResponse,
   jsonError,
   minifyJson,
-  prettyXml,
   queryJsonPath,
 } from './modules/json-tools.js';
+import {
+  imageDataUrl,
+  isHtmlContentType,
+  isImageContentType,
+  renderPrettyHtml,
+  renderRawHtml,
+} from './modules/response-view.js';
 import { importAs } from './modules/importers.js';
 import { toBrunoText, toInsomnia, toPingto, toPostman } from './modules/exporters.js';
+import { resolveInheritedAuth } from './modules/auth-inherit.js';
+import { flattenRunnerRow, parseRunnerData } from './modules/runner-data.js';
+import { buildWorkspace, unwrapWorkspace, wrapWorkspace } from './modules/workspace-sync.js';
 import { exchangeCode, launchAuthCode, refreshToken } from './modules/oauth.js';
 import { runPreRequest, runTests } from './modules/sandbox.js';
 import {
@@ -70,6 +79,7 @@ import {
   findParentId,
   ancestorFolderIds,
   flattenRequests,
+  walkItems,
   newId,
   searchRequests,
 } from './modules/collection-tree.js';
@@ -85,9 +95,11 @@ import {
   canAddEnvVar,
   canAddEnvironment,
   canAddRequest,
+  freeImportBlock,
   hasActiveLicense,
   historyLimitFor,
   isCollectionUnlocked,
+  isProImportFormat,
   isUnpackedInstall,
   PRO_FEATURES,
   resolveIsPro,
@@ -124,7 +136,14 @@ const state = {
   selectedCollectionId: null,
   selectedFolderId: null,
   expandedCollectionId: null,
+  collapsedFolderIds: new Set(),
   treeMenuTarget: null,
+  scopeAuthTarget: null,
+  runDataRows: [{}],
+  runVarOverride: null,
+  runBusy: false,
+  runCollectionId: null,
+  respView: 'pretty',
 };
 
 const socketSession = { ws: null, sse: null, reconnectTimer: null, manualClose: false };
@@ -143,6 +162,23 @@ function activateCollection(id, folderId = null, expand = true) {
   if (expand) state.expandedCollectionId = id;
 }
 
+function folderCollapsed(folderId) {
+  return state.collapsedFolderIds.has(String(folderId));
+}
+
+function setFolderCollapsed(folderId, collapsed) {
+  if (folderId == null) return;
+  const id = String(folderId);
+  if (collapsed) state.collapsedFolderIds.add(id);
+  else state.collapsedFolderIds.delete(id);
+  chrome.storage?.local?.set?.({ collapsed_folder_ids: [...state.collapsedFolderIds] });
+}
+
+function expandFoldersToItem(items, itemId) {
+  if (itemId == null) return;
+  ancestorFolderIds(items, itemId).forEach((id) => setFolderCollapsed(id, false));
+}
+
 function isSocketMethod(method) {
   return method === 'WS' || method === 'SSE';
 }
@@ -157,6 +193,7 @@ const PRO_MODAL_ITEMS = [
   { id: 'collections', titleKey: 'proItemCollectionsTitle', descKey: 'proItemCollectionsDesc' },
   { id: 'importCollections', titleKey: 'proItemImportTitle', descKey: 'proItemImportDesc' },
   { id: 'collectionRun', titleKey: 'proItemRunTitle', descKey: 'proItemRunDesc' },
+  { id: 'workspaceSync', titleKey: 'proItemWorkspaceTitle', descKey: 'proItemWorkspaceDesc' },
   { id: 'graphql', titleKey: 'proItemGraphqlTitle', descKey: 'proItemGraphqlDesc' },
   { id: 'websocket', titleKey: 'proItemWebsocketTitle', descKey: 'proItemWebsocketDesc' },
   { id: 'digest', titleKey: 'proItemDigestTitle', descKey: 'proItemDigestDesc' },
@@ -185,7 +222,18 @@ let loadPlatformId = 'windows-amd64';
 
 function showProModal(featureId) {
   hideActionMenus();
+  const titleEl = $('proModalTitle');
+  if (state.isPro) {
+    lastProFeatureId = null;
+    if (titleEl) titleEl.textContent = I18nManager.t('proModalTitleActive');
+    $('proModalText').textContent = I18nManager.t('proModalBillingLeadPro');
+    $('proModalList').replaceChildren();
+    $('proModal').classList.remove('hidden');
+    renderBillingUi();
+    return;
+  }
   lastProFeatureId = featureId || lastProFeatureId;
+  if (titleEl) titleEl.textContent = I18nManager.t('proModalTitle');
   if (featureId) {
     const name = featureName(featureId);
     const specific = I18nManager.t(`proDesc_${featureId}`, '');
@@ -231,6 +279,13 @@ function applyProUi() {
   document.body.classList.toggle('is-unpacked-install', isUnpackedInstall());
   document.body.classList.toggle('is-pro', state.isPro);
   document.body.classList.toggle('is-free', !state.isPro);
+  const planBtn = $('proPlanBtn');
+  if (planBtn) {
+    planBtn.setAttribute('aria-pressed', state.isPro ? 'true' : 'false');
+    planBtn.title = I18nManager.t(state.isPro ? 'proPlanBtnTitlePro' : 'proPlanBtnTitle');
+  }
+  const settingsPro = $('settingsProBtn');
+  if (settingsPro) settingsPro.textContent = I18nManager.t(state.isPro ? 'settingsLicenseBtn' : 'proPlanBtn');
   syncProOptionLabels();
   state.historyLimit = historyLimitFor(state.isPro);
   const maxInput = $('settingsHistoryMax');
@@ -306,7 +361,6 @@ async function renderBillingUi() {
   const keyInput = $('proLicenseKey');
   if (keyInput && license?.key && !keyInput.value) keyInput.value = license.key;
   if ($('proClearLicenseBtn')) $('proClearLicenseBtn').hidden = !license?.key;
-  if ($('proPlanBtn')) $('proPlanBtn').textContent = state.isPro ? t('proPlanBtnPro') : t('proPlanBtn');
 }
 
 function showBillingError(err) {
@@ -387,6 +441,7 @@ function tabFromDraft(partial = {}) {
     collectionItemId: partial.collectionItemId || null,
     savedFingerprint: partial.savedFingerprint || null,
   };
+  if (!partial.authType && !partial.collectionItemId) tab.authType = 'inherit';
   if (!tab.savedFingerprint) markTabClean(tab);
   return tab;
 }
@@ -577,6 +632,7 @@ function focusCollectionForTab(tab) {
   const coll = collectionsManager.collections.find((c) => String(c.id) === String(tab.collectionId));
   const folderId = coll && tab.collectionItemId ? findParentId(coll.items, tab.collectionItemId) : null;
   activateCollection(tab.collectionId, folderId || null);
+  if (coll && tab.collectionItemId) expandFoldersToItem(coll.items, tab.collectionItemId);
 }
 
 function syncNoRequestUi() {
@@ -872,14 +928,67 @@ function updateFreeQuotaHint() {
   el.textContent = I18nManager.t('freeCollectionOverQuota').replace('{n}', String(extra));
 }
 
+function collectionForTab(tab) {
+  if (!tab) return null;
+  if (tab.collectionId) {
+    return collectionsManager.collections.find((c) => String(c.id) === String(tab.collectionId)) || null;
+  }
+  if (state.selectedCollectionId) {
+    return collectionsManager.collections.find((c) => String(c.id) === String(state.selectedCollectionId)) || null;
+  }
+  return null;
+}
+
+function resolvedAuthForTab(tab) {
+  return resolveInheritedAuth(collectionForTab(tab), tab?.collectionItemId || null, tab, {
+    folderId: state.selectedFolderId,
+  });
+}
+
+function authTypeLabel(type) {
+  const map = {
+    inherit: 'authInherit',
+    none: 'authNone',
+    bearer: 'authBearer',
+    basic: 'authBasic',
+    apikey: 'authApiKey',
+    digest: 'authDigest',
+    oauth2: 'authOauth2',
+  };
+  return I18nManager.t(map[type] || 'authNone');
+}
+
+function toggleAuthFields(type, ids) {
+  $(ids.hint) && ($(ids.hint).textContent = I18nManager.t(`authHint_${type}`) || '');
+  $(ids.bearer)?.classList.toggle('hidden', type !== 'bearer');
+  $(ids.basic)?.classList.toggle('hidden', type !== 'basic' && type !== 'digest');
+  $(ids.digestHint)?.classList.toggle('hidden', type !== 'digest');
+  $(ids.apikey)?.classList.toggle('hidden', type !== 'apikey');
+  $(ids.oauth)?.classList.toggle('hidden', type !== 'oauth2');
+}
+
 function toggleAuth() {
   const type = $('authType')?.value || 'none';
-  $('authHint') && ($('authHint').textContent = I18nManager.t(`authHint_${type}`));
-  $('authBearerFields')?.classList.toggle('hidden', type !== 'bearer');
-  $('basicAuthFields')?.classList.toggle('hidden', type !== 'basic' && type !== 'digest');
-  $('digestHint')?.classList.toggle('hidden', type !== 'digest');
-  $('apiKeyFields')?.classList.toggle('hidden', type !== 'apikey');
-  $('oauth2Fields')?.classList.toggle('hidden', type !== 'oauth2');
+  if (type === 'inherit') {
+    const resolved = resolvedAuthForTab(current());
+    if ($('authHint')) {
+      $('authHint').textContent = I18nManager.t('authHint_inherit').replace('{type}', authTypeLabel(resolved.authType));
+    }
+    $('authBearerFields')?.classList.add('hidden');
+    $('basicAuthFields')?.classList.add('hidden');
+    $('digestHint')?.classList.add('hidden');
+    $('apiKeyFields')?.classList.add('hidden');
+    $('oauth2Fields')?.classList.add('hidden');
+    return;
+  }
+  toggleAuthFields(type, {
+    hint: 'authHint',
+    bearer: 'authBearerFields',
+    basic: 'basicAuthFields',
+    digestHint: 'digestHint',
+    apikey: 'apiKeyFields',
+    oauth: 'oauth2Fields',
+  });
 }
 
 function updateFileLabels() {
@@ -1093,9 +1202,24 @@ function updateCollectionTarget() {
 
 async function envVars() {
   const id = $('environmentSelect').value;
-  if (!id) return {};
-  const env = await environmentsManager.getById(id);
-  return { ...(env?.variables || {}) };
+  let vars = {};
+  if (id && !isEnvSelectAction(id)) {
+    const env = await environmentsManager.getById(id);
+    vars = { ...(env?.variables || {}) };
+  }
+  if (state.runVarOverride) vars = { ...vars, ...state.runVarOverride };
+  return vars;
+}
+
+function selectedEnvironmentId() {
+  const id = $('environmentSelect')?.value;
+  if (!id || isEnvSelectAction(id)) return null;
+  return id;
+}
+
+async function curlVariables() {
+  if (!selectedEnvironmentId()) return null;
+  return envVars();
 }
 
 function authFeatureId(type) {
@@ -1120,8 +1244,9 @@ async function buildHttpFields() {
     UIHelpers.showToast(I18nManager.t('enterUrl'), 'error');
     return null;
   }
-  if (!state.isPro && !FREE_AUTH.has(tab.authType)) {
-    requirePro(authFeatureId(tab.authType));
+  const resolved = resolvedAuthForTab(tab);
+  if (!state.isPro && !FREE_AUTH.has(resolved.authType)) {
+    requirePro(authFeatureId(resolved.authType));
     return null;
   }
   if (!state.isPro && !FREE_BODY.has(tab.bodyType)) {
@@ -1147,22 +1272,23 @@ async function buildHttpFields() {
     Object.fromEntries((tab.headers || []).filter((h) => h.key && h.enabled !== false).map((h) => [h.key, h.value])),
     ctx.variables
   );
-  if (tab.authType === 'bearer' && tab.auth.token) {
-    headers.Authorization = `Bearer ${applyEnvVars(tab.auth.token, ctx.variables)}`;
-  } else if (tab.authType === 'basic') {
-    headers.Authorization = `Basic ${utf8ToBase64(`${tab.auth.user}:${tab.auth.pass}`)}`;
-  } else if (tab.authType === 'apikey' && tab.auth.apiKeyName) {
-    const value = applyEnvVars(tab.auth.apiKeyValue, ctx.variables);
-    if (tab.auth.apiKeyIn === 'query') {
+  const auth = { ...(resolved.auth || {}) };
+  if (resolved.authType === 'bearer' && auth.token) {
+    headers.Authorization = `Bearer ${applyEnvVars(auth.token, ctx.variables)}`;
+  } else if (resolved.authType === 'basic') {
+    headers.Authorization = `Basic ${utf8ToBase64(`${applyEnvVars(auth.user || '', ctx.variables)}:${applyEnvVars(auth.pass || '', ctx.variables)}`)}`;
+  } else if (resolved.authType === 'apikey' && auth.apiKeyName) {
+    const value = applyEnvVars(auth.apiKeyValue, ctx.variables);
+    if (auth.apiKeyIn === 'query') {
       const u = new URL(url);
-      u.searchParams.set(tab.auth.apiKeyName, value);
+      u.searchParams.set(auth.apiKeyName, value);
       url = u.toString();
-    } else headers[tab.auth.apiKeyName] = value;
-  } else if (tab.authType === 'oauth2') {
-    headers.Authorization = `Bearer ${await resolveOAuth(tab, ctx.variables)}`;
-  } else if (tab.authType === 'digest') {
-    headers['X-Digest-User'] = applyEnvVars(tab.auth.user || '', ctx.variables);
-    headers['X-Digest-Pass'] = applyEnvVars(tab.auth.pass || '', ctx.variables);
+    } else headers[auth.apiKeyName] = value;
+  } else if (resolved.authType === 'oauth2') {
+    headers.Authorization = `Bearer ${await resolveOAuth({ ...tab, authType: 'oauth2', auth }, ctx.variables)}`;
+  } else if (resolved.authType === 'digest') {
+    headers['X-Digest-User'] = applyEnvVars(auth.user || '', ctx.variables);
+    headers['X-Digest-Pass'] = applyEnvVars(auth.pass || '', ctx.variables);
   }
 
   let body = applyEnvVars(tab.body, ctx.variables);
@@ -1188,7 +1314,7 @@ async function buildHttpFields() {
     body = null;
   } else if (tab.bodyType === 'none') body = null;
 
-  return { tab, ctx, url, headers, body, multipart, binaryBody };
+  return { tab, ctx, url, headers, body, multipart, binaryBody, resolved };
 }
 
 async function sendCurrent() {
@@ -1215,7 +1341,12 @@ async function sendCurrent() {
     binaryBody,
     requestId,
     followRedirects: tab.followRedirects,
-    digest: tab.authType === 'digest' ? { username: tab.auth.user, password: tab.auth.pass } : null,
+    digest: built.resolved?.authType === 'digest'
+      ? {
+          username: applyEnvVars(built.resolved.auth.user || '', ctx.variables),
+          password: applyEnvVars(built.resolved.auth.pass || '', ctx.variables),
+        }
+      : null,
   };
   const response = await apiClient.sendRequest(payload);
   state.sendingId = null;
@@ -1223,7 +1354,7 @@ async function sendCurrent() {
   $('cancelBtn').hidden = true;
   tab.response = response;
   try {
-    tab.testResults = state.isPro ? await runTests(tab.tests, response, ctx) : [];
+    tab.testResults = state.isPro ? await runTests(applyEnvVars(tab.tests || '', ctx.variables), response, ctx) : [];
   } catch (error) {
     tab.testResults = [{ name: 'tests', pass: false, error: error.message }];
   }
@@ -1301,12 +1432,65 @@ async function resolveOAuth(tab, variables) {
   return tab.auth.token;
 }
 
+function clearResponsePreview() {
+  const iframe = $('responsePreview');
+  const img = $('responsePreviewImg');
+  iframe?.removeAttribute('srcdoc');
+  iframe?.classList.add('hidden');
+  if (img) {
+    img.removeAttribute('src');
+    img.classList.add('hidden');
+  }
+  $('responsePreviewEmpty')?.classList.add('hidden');
+}
+
+function fillResponsePreview(res) {
+  clearResponsePreview();
+  const ct = res.headers?.['content-type'] || res.contentType || '';
+  if (isHtmlContentType(ct) && !res.truncated) {
+    $('responsePreview').srcdoc = res.body;
+    $('responsePreview').classList.remove('hidden');
+    return;
+  }
+  if (isImageContentType(ct) && res.bodyBase64) {
+    $('responsePreviewImg').src = imageDataUrl(ct, res.bodyBase64);
+    $('responsePreviewImg').classList.remove('hidden');
+    return;
+  }
+  $('responsePreviewEmpty')?.classList.remove('hidden');
+}
+
+function applyRespView() {
+  const view = state.respView || 'pretty';
+  document.querySelectorAll('#respViewModes [data-rview]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.rview === view);
+  });
+  $('responsePretty')?.classList.toggle('hidden', view !== 'pretty');
+  $('responseRawWrap')?.classList.toggle('hidden', view !== 'raw');
+  $('responsePreviewWrap')?.classList.toggle('hidden', view !== 'preview');
+}
+
+function toggleJsonTreeNode(node) {
+  const collapsed = node.classList.toggle('is-collapsed');
+  node.dataset.expanded = collapsed ? 'false' : 'true';
+  const btn = node.querySelector(':scope > .jt-line > .jt-toggle');
+  if (btn) {
+    btn.textContent = collapsed ? '▸' : '▾';
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+  node.querySelector(':scope > .jt-line > .jt-summary')?.classList.toggle('hidden', !collapsed);
+}
+
 function renderResponse(tab) {
   const res = tab.response;
   const status = $('responseStatus');
   if (!res) {
     status.textContent = '—';
-    $('responseBody').textContent = I18nManager.t('responseEmpty');
+    const empty = I18nManager.t('responseEmpty');
+    $('responseBody').textContent = empty;
+    $('responsePretty').textContent = empty;
+    $('responseRawWrap').textContent = empty;
+    clearResponsePreview();
     return;
   }
   status.textContent = `${res.status} ${res.statusText || ''}`;
@@ -1314,28 +1498,17 @@ function renderResponse(tab) {
   $('responseTime').textContent = res.timings ? `${res.timings.total}ms` : `${res.time || 0}ms`;
   $('responseSize').textContent = UIHelpers.formatSize(res.size || 0);
   $('responseTtfb').textContent = res.timings ? `TTFB ${res.timings.ttfb}ms · dl ${res.timings.download}ms` : '';
-  $('responseBody').textContent = res.body || res.error || '';
-  try {
-    $('responsePretty').innerHTML = highlightJson(formatJson(res.body));
-  } catch {
-    try {
-      $('responsePretty').textContent = prettyXml(res.body);
-    } catch {
-      $('responsePretty').textContent = res.body || '';
-    }
-  }
+  const bodyText = res.body || res.error || '';
+  $('responseBody').textContent = bodyText;
+  const ct = res.headers?.['content-type'] || res.contentType || '';
+  $('responsePretty').innerHTML = renderPrettyHtml(bodyText, ct);
+  $('responseRawWrap').innerHTML = renderRawHtml(bodyText);
+  fillResponsePreview(res);
+  applyRespView();
   $('responseHeaders').textContent = JSON.stringify(res.headers || {}, null, 2);
   $('responseRedirects').textContent = JSON.stringify(res.redirects || [], null, 2);
   const hintKey = hintForResponse(res);
   $('respHint').textContent = hintKey ? I18nManager.t(hintKey) : '';
-  const iframe = $('responsePreview');
-  const ct = res.headers?.['content-type'] || res.contentType || '';
-  if (ct.includes('text/html') && !res.truncated) {
-    iframe.srcdoc = res.body;
-    iframe.classList.remove('hidden');
-  } else {
-    iframe.removeAttribute('srcdoc');
-  }
   const tests = $('testResults');
   tests.replaceChildren();
   (tab.testResults || []).forEach((t) => {
@@ -1364,19 +1537,23 @@ function showPane(name) {
 }
 
 function showResp(name) {
+  const pane = name === 'pretty' || name === 'preview' ? 'body' : name;
   const map = {
-    body: 'responseBody',
-    pretty: 'responsePretty',
+    body: 'pane-body',
     headers: 'responseHeaders',
-    preview: 'responsePreview',
     redirects: 'responseRedirects',
     tests: 'testResults',
     diff: 'diffView',
     filter: 'pane-filter',
   };
+  if (name === 'pretty' || name === 'preview') {
+    state.respView = name === 'preview' ? 'preview' : 'pretty';
+    applyRespView();
+  }
   Object.values(map).forEach((id) => $(id)?.classList.add('hidden'));
-  $(map[name])?.classList.remove('hidden');
-  document.querySelectorAll('#respSubtabs button').forEach((b) => b.classList.toggle('active', b.dataset.rpane === name));
+  $(map[pane])?.classList.remove('hidden');
+  if (pane === 'body') $('pane-body')?.classList.remove('hidden');
+  document.querySelectorAll('#respSubtabs button').forEach((b) => b.classList.toggle('active', b.dataset.rpane === pane));
 }
 
 function hideTreeMenu() {
@@ -1397,7 +1574,7 @@ function showTreeMenu(event, target) {
   state.treeMenuTarget = target;
   menu.classList.remove('hidden');
   menu.style.left = `${Math.min(event.clientX, window.innerWidth - 170)}px`;
-  menu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - 160)}px`;
 }
 
 function renderCollections() {
@@ -1454,21 +1631,34 @@ function renderCollections() {
     const draw = (items, pad) => {
       (items || []).forEach((item) => {
         if (item.type === 'folder') {
+          const folderOpen = searching || !folderCollapsed(item.id);
+          const folderSelected = folderFocus.has(String(item.id))
+            || (String(state.selectedCollectionId) === String(coll.id)
+              && String(state.selectedFolderId) === String(item.id));
           const f = document.createElement('div');
-          f.className = `tree-item tree-folder${folderFocus.has(String(item.id)) ? ' selected' : ''}`;
+          f.className = `tree-item tree-folder${folderSelected ? ' selected' : ''}`;
           f.dataset.testid = 'tree-folder';
           f.dataset.folderId = String(item.id);
+          f.setAttribute('aria-expanded', folderOpen ? 'true' : 'false');
           f.style.paddingLeft = `${pad}px`;
-          f.textContent = `▸ ${item.name}`;
+          f.textContent = `${folderOpen ? '▾' : '▸'} ${item.name}`;
           f.title = I18nManager.t('collectionDblHint');
           f.onclick = () => {
-            activateCollection(coll.id, item.id);
+            const selectedHere = String(state.selectedCollectionId) === String(coll.id)
+              && String(state.selectedFolderId) === String(item.id);
+            if (selectedHere && !folderCollapsed(item.id)) {
+              setFolderCollapsed(item.id, true);
+            } else {
+              activateCollection(coll.id, item.id);
+              setFolderCollapsed(item.id, false);
+              expandFoldersToItem(coll.items, item.id);
+            }
             renderCollections();
           };
           f.ondblclick = (e) => showTreeMenu(e, { kind: 'folder', coll, item });
           makeDropTarget(f, coll.id, item.id);
           wrap.appendChild(f);
-          draw(item.items, pad + 12);
+          if (folderOpen) draw(item.items, pad + 12);
         } else if (!q || `${item.name} ${item.url}`.toLowerCase().includes(q)) {
           const r = document.createElement('div');
           const isOpen = Boolean(findOpenCollectionTab(coll.id, item.id));
@@ -1500,6 +1690,7 @@ function renderCollections() {
               return;
             }
             activateCollection(coll.id, findParentId(coll.items, item.id) || null);
+            expandFoldersToItem(coll.items, item.id);
             openTab({ ...item, collectionId: coll.id, collectionItemId: item.id });
             renderCollections();
           };
@@ -1545,6 +1736,7 @@ function makeDropTarget(el, collectionId, folderId) {
       state.selectedCollectionId = collectionId;
       state.selectedFolderId = folderId;
       state.expandedCollectionId = collectionId;
+      if (folderId) setFolderCollapsed(folderId, false);
       renderCollections();
     }
   });
@@ -1874,13 +2066,53 @@ function generateCode() {
   if (!requirePro('codegen')) return;
   readFormIntoTab();
   const tab = current();
-  const headers = Object.fromEntries((tab.headers || []).filter((h) => h.key).map((h) => [h.key, h.value]));
-  $('codeOutput').textContent = CodeGenerator.generate(tab.method, tab.url, headers, tab.body, $('codeLanguage').value);
+  if (!tab) return;
+  curlVariables().then((variables) => {
+    const resolved = resolvedAuthForTab(tab);
+    const parts = resolveTabForCurl(tab, variables, { type: resolved.authType, ...resolved.auth });
+    const headers = Object.fromEntries(parts.headers.map((h) => [h.key, h.value]));
+    $('codeOutput').textContent = CodeGenerator.generate(parts.method, parts.url, headers, parts.body, $('codeLanguage').value);
+  });
 }
 
-async function runCollection() {
+function fillRunScopeSelect(collectionId, folderId = null) {
+  const select = $('runScopeSelect');
+  if (!select) return;
+  const coll = collectionsManager.collections.find((c) => String(c.id) === String(collectionId));
+  select.replaceChildren();
+  const all = document.createElement('option');
+  all.value = '';
+  all.textContent = coll ? I18nManager.t('runScopeAll').replace('{name}', coll.name) : I18nManager.t('runTitle');
+  select.appendChild(all);
+  if (coll) {
+    walkItems(coll.items, (item) => {
+      if (item.type !== 'folder') return;
+      const opt = document.createElement('option');
+      opt.value = String(item.id);
+      opt.textContent = I18nManager.t('runScopeFolder').replace('{name}', item.name || 'Folder');
+      select.appendChild(opt);
+    });
+  }
+  if (folderId && [...select.options].some((o) => o.value === String(folderId))) {
+    select.value = String(folderId);
+  } else {
+    select.value = '';
+  }
+  updateRunScopeHint();
+}
+
+function updateRunScopeHint() {
+  const hint = $('runScopeHint');
+  if (!hint) return;
+  const id = state.runCollectionId || state.selectedCollectionId;
+  const folderId = $('runScopeSelect')?.value || null;
+  const n = collectionsManager.flatten(id, folderId || null).length;
+  hint.textContent = I18nManager.t('runScopeHint').replace('{n}', String(n));
+}
+
+function openRunModal(opts = {}) {
   if (!requirePro('collectionRun')) return;
-  const id = state.selectedCollectionId;
+  const id = opts.collectionId || state.selectedCollectionId;
   if (!id) {
     UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
     return;
@@ -1889,26 +2121,72 @@ async function runCollection() {
     requirePro('collections');
     return;
   }
-  const reqs = collectionsManager.flatten(id);
+  const folderId = opts.folderId !== undefined ? opts.folderId : state.selectedFolderId;
+  state.runCollectionId = id;
+  activateCollection(id, folderId || null, true);
+  state.runDataRows = [{}];
+  if ($('runDataFile')) $('runDataFile').value = '';
+  if ($('runDataHint')) $('runDataHint').textContent = I18nManager.t('runDataNone');
+  $('runReport')?.replaceChildren();
+  fillRunScopeSelect(id, folderId || null);
   $('runModal').classList.remove('hidden');
+}
+
+async function executeCollectionRun() {
+  if (!requirePro('collectionRun')) return;
+  if (state.runBusy) return;
+  const id = state.runCollectionId || state.selectedCollectionId;
+  if (!id) {
+    UIHelpers.showToast(I18nManager.t('collectionSelectFirst'), 'error');
+    return;
+  }
+  if (!collectionUnlocked(id)) {
+    requirePro('collections');
+    return;
+  }
+  const folderId = $('runScopeSelect')?.value || null;
+  const reqs = collectionsManager.flatten(id, folderId || null);
+  if (!reqs.length) {
+    UIHelpers.showToast(I18nManager.t('runEmpty'), 'error');
+    return;
+  }
   const report = $('runReport');
   report.replaceChildren();
-  for (const req of reqs) {
-    loadCollectionRunTab({ ...req, collectionId: id, collectionItemId: req.id });
-    await sendCurrent();
-    const tab = current();
-    const line = document.createElement('div');
-    const tests = tab.testResults || [];
-    const status = tab.response?.status;
-    const aborted = /abort/i.test(String(status ?? ''));
-    const failed = !tab.response || aborted || tests.some((t) => !t.pass);
-    line.className = failed ? 'fail' : 'pass';
-    const shownUrl = tab.sentUrl || tab.url;
-    const passedTests = tests.filter((t) => t.pass).length;
-    line.textContent = `${tab.method} ${shownUrl} → ${status ?? '—'} tests ${passedTests}/${tests.length}`;
-    I18nManager.markNoTranslate(line);
-    report.appendChild(line);
-    if (failed && $('stopOnFail').checked) break;
+  const rows = state.runDataRows?.length ? state.runDataRows : [{}];
+  state.runBusy = true;
+  if ($('startRunBtn')) $('startRunBtn').disabled = true;
+  try {
+    for (let ri = 0; ri < rows.length; ri += 1) {
+      state.runVarOverride = flattenRunnerRow(rows[ri]);
+      const prefix = rows.length > 1 ? `[${ri + 1}/${rows.length}] ` : '';
+      for (const req of reqs) {
+        const line = document.createElement('div');
+        I18nManager.markNoTranslate(line);
+        if (isSocketMethod(req.method)) {
+          line.className = 'pass';
+          line.textContent = `${prefix}${req.method} ${req.url || req.name} → ${I18nManager.t('runSkipSocket')}`;
+          report.appendChild(line);
+          continue;
+        }
+        loadCollectionRunTab({ ...req, collectionId: id, collectionItemId: req.id });
+        await sendCurrent();
+        const tab = current();
+        const tests = tab.testResults || [];
+        const status = tab.response?.status;
+        const aborted = /abort/i.test(String(status ?? ''));
+        const failed = !tab.response || aborted || tests.some((t) => !t.pass);
+        line.className = failed ? 'fail' : 'pass';
+        const shownUrl = tab.sentUrl || tab.url;
+        const passedTests = tests.filter((t) => t.pass).length;
+        line.textContent = `${prefix}${tab.method} ${shownUrl} → ${status ?? '—'} tests ${passedTests}/${tests.length}`;
+        report.appendChild(line);
+        if (failed && $('stopOnFail')?.checked) return;
+      }
+    }
+  } finally {
+    state.runVarOverride = null;
+    state.runBusy = false;
+    if ($('startRunBtn')) $('startRunBtn').disabled = false;
   }
 }
 
@@ -1941,12 +2219,13 @@ async function init() {
   await collectionsManager.load();
   await environmentsManager.load();
   await historyManager.load();
-  const proStored = await chrome.storage.local.get(['isPro', 'license']);
+  const proStored = await chrome.storage.local.get(['isPro', 'license', 'collapsed_folder_ids']);
   state.isPro = resolveIsPro({
     unpacked: isUnpackedInstall(),
     licensed: hasActiveLicense(proStored.license),
     storedDev: proStored.isPro,
   });
+  state.collapsedFolderIds = new Set((proStored.collapsed_folder_ids || []).map(String));
   const settings = (await storage.get('app_settings', {})) || {};
   state.timeout = settings.timeout || 30000;
   const cap = historyLimitFor(state.isPro);
@@ -2349,6 +2628,7 @@ $('authType').onchange = () => {
     $('authType').value = current()?.authType && FREE_AUTH.has(current().authType) ? current().authType : 'none';
   }
   toggleAuth();
+  noteRequestEdited();
 };
 $('bodyType').onchange = () => {
   const type = $('bodyType').value;
@@ -2464,16 +2744,46 @@ $('respSubtabs').onclick = (e) => {
   if (feature && !requirePro(feature)) return;
   showResp(pane);
 };
+if ($('respViewModes')) {
+  $('respViewModes').onclick = (e) => {
+    const view = e.target.closest('[data-rview]')?.dataset.rview;
+    if (!view) return;
+    state.respView = view;
+    applyRespView();
+  };
+}
+if ($('responsePretty')) {
+  $('responsePretty').addEventListener('mouseover', (e) => {
+    const el = e.target.closest('[data-json-path]');
+    if ($('respPathHint')) $('respPathHint').textContent = el?.dataset.jsonPath || '';
+  });
+  $('responsePretty').addEventListener('click', (e) => {
+    const toggle = e.target.closest('.jt-toggle');
+    if (toggle) {
+      const node = toggle.closest('.jt-node');
+      if (node) toggleJsonTreeNode(node);
+      return;
+    }
+    const key = e.target.closest('[data-json-path]');
+    if (!key) return;
+    const path = key.dataset.jsonPath;
+    navigator.clipboard.writeText(path);
+    UIHelpers.showToast(I18nManager.t('pathCopied').replace('{path}', path), 'success');
+  });
+}
 $('copyResponseBtn').onclick = () => navigator.clipboard.writeText($('responseBody').textContent);
 $('saveResponseBtn').onclick = () => UIHelpers.downloadText(`response_${Date.now()}.json`, $('responseBody').textContent);
 $('snapshotBtn').onclick = () => {
   current().snapshot = current().response?.body || '';
   UIHelpers.showToast(I18nManager.t('snapshotSaved'), 'success');
 };
-$('copyAsCurlBtn').onclick = () => {
+$('copyAsCurlBtn').onclick = async () => {
   readFormIntoTab();
   const tab = current();
-  navigator.clipboard.writeText(CurlParser.stringify(tab.method, tab.url, tab.headers, tab.body));
+  if (!tab) return;
+  const resolved = resolvedAuthForTab(tab);
+  const parts = resolveTabForCurl(tab, await curlVariables(), { type: resolved.authType, ...resolved.auth });
+  await navigator.clipboard.writeText(CurlParser.stringify(parts.method, parts.url, parts.headers, parts.body));
 };
 $('parseCurlBtn').onclick = () => {
   const parsed = CurlParser.parse($('curlInput').value);
@@ -2531,7 +2841,8 @@ $('gqlPlayBtn').onclick = async () => {
 };
 $('gqlIntroBtn').onclick = async () => {
   readFormIntoTab();
-  state.gqlSchema = await introspect($('urlInput').value);
+  const url = applyEnvVars($('urlInput').value, await envVars());
+  state.gqlSchema = await introspect(url);
   $('gqlSchema').textContent = (state.gqlSchema.types || []).map((t) => t.name).join('\n');
 };
 $('graphqlQuery').oninput = debounce(() => {
@@ -2541,14 +2852,20 @@ $('graphqlQuery').oninput = debounce(() => {
     .join(' · ');
 }, 150);
 $('loadCookiesBtn').onclick = async () => {
-  const res = await chrome.runtime.sendMessage({ type: 'getCookies', url: $('urlInput').value });
+  const url = applyEnvVars($('urlInput').value, await envVars());
+  const res = await chrome.runtime.sendMessage({ type: 'getCookies', url });
   $('cookieList').textContent = JSON.stringify(res.cookies || [], null, 2);
 };
 $('setCookieBtn').onclick = async () => {
-  const url = $('urlInput').value;
+  const vars = await envVars();
+  const url = applyEnvVars($('urlInput').value, vars);
   await chrome.runtime.sendMessage({
     type: 'setCookie',
-    details: { url, name: $('cookieName').value, value: $('cookieValue').value },
+    details: {
+      url,
+      name: applyEnvVars($('cookieName').value, vars),
+      value: applyEnvVars($('cookieValue').value, vars),
+    },
   });
   $('loadCookiesBtn').click();
 };
@@ -2611,7 +2928,11 @@ $('importMenu').onclick = (e) => {
   if (btn.dataset.pro && !state.isPro) return;
   pendingImportFormat = btn.dataset.import;
   hideActionMenus();
-  $('importFile').accept = pendingImportFormat === 'bruno' ? '.bru,.txt,text/plain' : '.json,application/json';
+  const accept = {
+    bruno: '.bru,.txt,text/plain',
+    har: '.har,.json,application/json,application/har+json',
+  }[pendingImportFormat] || '.json,application/json';
+  $('importFile').accept = accept;
   $('importFile').click();
 };
 $('exportMenu').onclick = async (e) => {
@@ -2647,8 +2968,18 @@ $('importFile').onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
+    if (isProImportFormat(pendingImportFormat) && !state.isPro) {
+      requirePro('importCollections');
+      return;
+    }
     const text = await file.text();
     const imported = importAs(pendingImportFormat, text);
+    const block = freeImportBlock(state.isPro, collectionsManager.collections, imported);
+    if (block) {
+      requirePro('collections');
+      UIHelpers.showToast(I18nManager.t(block), 'error');
+      return;
+    }
     const before = collectionsManager.collections.length;
     await collectionsManager.importMany(imported);
     const added = collectionsManager.collections[before];
@@ -2663,6 +2994,7 @@ $('importFile').onchange = async (e) => {
       'Not a Postman collection': 'importNotPostman',
       'Not an Insomnia export': 'importNotInsomnia',
       'Not an OpenAPI file': 'importNotOpenapi',
+      'Not a HAR file': 'importNotHar',
       'Nothing to import': 'importNothing',
     }[err.message];
     UIHelpers.showToast(key ? I18nManager.t(key) : (err.message || I18nManager.t('importFailed')), 'error');
@@ -2713,7 +3045,7 @@ $('duplicateBtn').onclick = () => {
     savedFingerprint: null,
   });
 };
-$('runCollectionBtn').onclick = runCollection;
+$('runCollectionBtn').onclick = openRunModal;
 $('createEnvBtn').onclick = async () => {
   if (!canAddEnvironment(state.isPro, environmentsManager.environments.length)) {
     UIHelpers.showToast(I18nManager.t('freeEnvLimit'), 'error');
@@ -2761,7 +3093,97 @@ $('saveSettingsBtn').onclick = async () => {
   await storage.set('app_settings', { timeout: state.timeout, historyMax: state.historyLimit });
   $('settingsModal').classList.add('hidden');
 };
+$('exportWorkspaceBtn').onclick = async () => {
+  if (!requirePro('workspaceSync')) return;
+  try {
+    const payload = buildWorkspace({
+      collections: await collectionsManager.exportAll(),
+      environments: await environmentsManager.getAll(),
+      settings: { timeout: state.timeout, historyMax: state.historyLimit },
+      activeEnvId: $('environmentSelect')?.value || null,
+      language: I18nManager.getCurrentLanguage(),
+      theme: themeManager.isDark() ? 'dark' : 'light',
+      tabs: {
+        tabs: state.tabs.map(({ files, binary, ...rest }) => rest),
+        activeId: state.activeId,
+      },
+    });
+    const wrapped = await wrapWorkspace(payload, $('workspacePassphrase')?.value);
+    UIHelpers.downloadText('pingto-workspace.json', JSON.stringify(wrapped, null, 2), 'application/json');
+    UIHelpers.showToast(I18nManager.t('workspaceExported'), 'success');
+  } catch (err) {
+    UIHelpers.showToast(err.message || I18nManager.t('workspaceExportFailed'), 'error');
+  }
+};
+$('importWorkspaceBtn').onclick = () => {
+  if (!requirePro('workspaceSync')) return;
+  $('workspaceFile').click();
+};
+$('workspaceFile').onchange = async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!requirePro('workspaceSync')) return;
+  if (!confirm(I18nManager.t('workspaceImportConfirm'))) return;
+  try {
+    const raw = JSON.parse(await file.text());
+    const data = await unwrapWorkspace(raw, $('workspacePassphrase')?.value);
+    await collectionsManager.replaceAll(data.collections || []);
+    await environmentsManager.replaceAll(data.environments || []);
+    const settings = data.settings || {};
+    if (settings.timeout) state.timeout = Number(settings.timeout) || state.timeout;
+    const cap = historyLimitFor(state.isPro);
+    if (settings.historyMax) state.historyLimit = Math.min(cap, Number(settings.historyMax) || cap);
+    await storage.set('app_settings', { timeout: state.timeout, historyMax: state.historyLimit });
+    if ($('settingsTimeout')) $('settingsTimeout').value = String(state.timeout);
+    if ($('settingsHistoryMax')) $('settingsHistoryMax').value = String(state.historyLimit);
+    if (data.language) await I18nManager.setLanguage(data.language);
+    if (data.theme) await themeManager.setDark(data.theme !== 'light');
+    if (data.tabs?.tabs) {
+      state.tabs = data.tabs.tabs.map((t) => tabFromDraft(t));
+      state.activeId = state.tabs.some((t) => t.id === data.tabs.activeId)
+        ? data.tabs.activeId
+        : (state.tabs[0]?.id ?? null);
+      await persistWorkspace();
+    }
+    if (data.activeEnvId) await storage.set('active_env_id', data.activeEnvId);
+    await renderEnvs();
+    if (data.activeEnvId && $('environmentSelect')) $('environmentSelect').value = String(data.activeEnvId);
+    if (collectionsManager.collections[0]) activateCollection(collectionsManager.collections[0].id);
+    applyProUi();
+    writeTabToForm();
+    UIHelpers.showToast(I18nManager.t('workspaceImported'), 'success');
+  } catch (err) {
+    const key = {
+      'Not a PingTo workspace': 'workspaceNotFormat',
+      'Workspace passphrase required': 'workspaceNeedPass',
+      'Workspace decrypt failed': 'workspaceBadPass',
+    }[err.message];
+    UIHelpers.showToast(key ? I18nManager.t(key) : (err.message || I18nManager.t('workspaceImportFailed')), 'error');
+  }
+};
 $('closeRunBtn').onclick = () => $('runModal').classList.add('hidden');
+$('startRunBtn').onclick = executeCollectionRun;
+$('runScopeSelect')?.addEventListener('change', updateRunScopeHint);
+$('pickRunDataBtn').onclick = () => $('runDataFile').click();
+$('runDataFile').onchange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) {
+    state.runDataRows = [{}];
+    if ($('runDataHint')) $('runDataHint').textContent = I18nManager.t('runDataNone');
+    return;
+  }
+  try {
+    state.runDataRows = parseRunnerData(await file.text(), file.name);
+    if ($('runDataHint')) {
+      $('runDataHint').textContent = I18nManager.t('runDataLoaded').replace('{n}', String(state.runDataRows.length));
+    }
+  } catch {
+    state.runDataRows = [{}];
+    UIHelpers.showToast(I18nManager.t('runDataInvalid'), 'error');
+    if ($('runDataHint')) $('runDataHint').textContent = I18nManager.t('runDataNone');
+  }
+};
 $('themeToggle').onclick = () => themeManager.toggle();
 $('languageToggle').onclick = async () => {
   await I18nManager.toggle();
@@ -2778,7 +3200,7 @@ document.addEventListener('languageChanged', async () => {
   syncWorkspaceMode();
   updateFileLabels();
   themeManager.apply();
-  if (lastProFeatureId && !$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
+  if (!$('proModal').classList.contains('hidden')) showProModal(lastProFeatureId);
   if (lastLoadReport) renderLoadSnapshot(lastLoadReport, false);
   renderLoadDownload();
 });
@@ -2859,7 +3281,9 @@ $('sidebarSearch').oninput = debounce(renderCollections, 150);
 $('oauthLoginBtn').onclick = async () => {
   if (!requirePro('oauth')) return;
   readFormIntoTab();
-  const token = await resolveOAuth(current(), await envVars());
+  const tab = current();
+  const resolved = resolvedAuthForTab(tab);
+  const token = await resolveOAuth({ ...tab, authType: resolved.authType, auth: resolved.auth }, await envVars());
   $('authToken').value = token || '';
   UIHelpers.showToast(I18nManager.t('tokenReady'), 'success');
 };
@@ -2880,6 +3304,8 @@ document.addEventListener('keydown', (e) => {
     $('envModal').classList.add('hidden');
     $('settingsModal').classList.add('hidden');
     $('proModal').classList.add('hidden');
+    $('runModal')?.classList.add('hidden');
+    $('scopeAuthModal')?.classList.add('hidden');
     hideTreeMenu();
     hideActionMenus();
   }
@@ -2890,6 +3316,117 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#treeMenu')) return;
   hideTreeMenu();
 });
+function toggleScopeAuth() {
+  const type = $('scopeAuthType')?.value || 'none';
+  if (type === 'inherit') {
+    if ($('scopeAuthHint')) $('scopeAuthHint').textContent = I18nManager.t('authHint_inheritFolder');
+    $('scopeAuthBearerFields')?.classList.add('hidden');
+    $('scopeBasicAuthFields')?.classList.add('hidden');
+    $('scopeApiKeyFields')?.classList.add('hidden');
+    $('scopeOauth2Fields')?.classList.add('hidden');
+    return;
+  }
+  toggleAuthFields(type, {
+    hint: 'scopeAuthHint',
+    bearer: 'scopeAuthBearerFields',
+    basic: 'scopeBasicAuthFields',
+    apikey: 'scopeApiKeyFields',
+    oauth: 'scopeOauth2Fields',
+  });
+}
+
+function writeScopeAuth(authType, auth = {}) {
+  if ($('scopeAuthType')) $('scopeAuthType').value = authType || 'none';
+  if ($('scopeAuthToken')) $('scopeAuthToken').value = auth.token || '';
+  if ($('scopeBasicUser')) $('scopeBasicUser').value = auth.user || '';
+  if ($('scopeBasicPass')) $('scopeBasicPass').value = auth.pass || '';
+  if ($('scopeApiKeyName')) $('scopeApiKeyName').value = auth.apiKeyName || 'X-API-Key';
+  if ($('scopeApiKeyValue')) $('scopeApiKeyValue').value = auth.apiKeyValue || '';
+  if ($('scopeApiKeyIn')) $('scopeApiKeyIn').value = auth.apiKeyIn || 'header';
+  if ($('scopeOauthGrant')) $('scopeOauthGrant').value = auth.grant || 'client_credentials';
+  if ($('scopeOauthTokenUrl')) $('scopeOauthTokenUrl').value = auth.tokenUrl || '';
+  if ($('scopeOauthAuthUrl')) $('scopeOauthAuthUrl').value = auth.authUrl || '';
+  if ($('scopeOauthClientId')) $('scopeOauthClientId').value = auth.clientId || '';
+  if ($('scopeOauthClientSecret')) $('scopeOauthClientSecret').value = auth.clientSecret || '';
+  if ($('scopeOauthScope')) $('scopeOauthScope').value = auth.scope || '';
+  if ($('scopeOauthToken')) $('scopeOauthToken').value = auth.token || '';
+  toggleScopeAuth();
+}
+
+function readScopeAuth() {
+  const type = $('scopeAuthType').value;
+  const token = type === 'oauth2' ? ($('scopeOauthToken').value || $('scopeAuthToken').value) : $('scopeAuthToken').value;
+  return {
+    authType: type,
+    auth: {
+      token,
+      user: $('scopeBasicUser').value,
+      pass: $('scopeBasicPass').value,
+      apiKeyName: $('scopeApiKeyName').value,
+      apiKeyValue: $('scopeApiKeyValue').value,
+      apiKeyIn: $('scopeApiKeyIn').value,
+      grant: $('scopeOauthGrant').value,
+      tokenUrl: $('scopeOauthTokenUrl').value,
+      authUrl: $('scopeOauthAuthUrl').value,
+      clientId: $('scopeOauthClientId').value,
+      clientSecret: $('scopeOauthClientSecret').value,
+      scope: $('scopeOauthScope').value,
+    },
+  };
+}
+
+function openScopeAuthModal(target) {
+  state.scopeAuthTarget = target;
+  const isColl = target.kind === 'collection';
+  if ($('scopeAuthInheritOpt')) $('scopeAuthInheritOpt').hidden = isColl;
+  if ($('scopeAuthTitle')) {
+    $('scopeAuthTitle').textContent = isColl
+      ? I18nManager.t('scopeAuthTitle')
+      : I18nManager.t('scopeAuthTitleFolder');
+  }
+  if ($('scopeAuthIntro')) {
+    $('scopeAuthIntro').textContent = I18nManager.t(isColl ? 'scopeAuthHintCollection' : 'scopeAuthHintFolder');
+  }
+  const node = isColl ? target.coll : target.item;
+  let type = node.authType || (isColl ? 'none' : 'inherit');
+  if (isColl && type === 'inherit') type = 'none';
+  writeScopeAuth(type, node.auth || {});
+  $('scopeAuthModal').classList.remove('hidden');
+}
+
+$('treeMenuRun')?.addEventListener('click', () => {
+  const target = state.treeMenuTarget;
+  hideTreeMenu();
+  if (!target) return;
+  if (target.kind === 'collection') openRunModal({ collectionId: target.coll.id, folderId: null });
+  else if (target.kind === 'folder') openRunModal({ collectionId: target.coll.id, folderId: target.item.id });
+});
+$('treeMenuAuth')?.addEventListener('click', () => {
+  const target = state.treeMenuTarget;
+  hideTreeMenu();
+  if (!target || (target.kind !== 'collection' && target.kind !== 'folder')) return;
+  openScopeAuthModal(target);
+});
+$('scopeAuthType')?.addEventListener('change', () => {
+  const type = $('scopeAuthType').value;
+  if (!FREE_AUTH.has(type) && !requirePro(authFeatureId(type))) {
+    $('scopeAuthType').value = 'none';
+  }
+  toggleScopeAuth();
+});
+$('closeScopeAuthBtn')?.addEventListener('click', () => $('scopeAuthModal').classList.add('hidden'));
+$('saveScopeAuthBtn')?.addEventListener('click', async () => {
+  const target = state.scopeAuthTarget;
+  if (!target) return;
+  const next = readScopeAuth();
+  if (!FREE_AUTH.has(next.authType) && !requirePro(authFeatureId(next.authType))) return;
+  const itemId = target.kind === 'collection' ? null : target.item.id;
+  await collectionsManager.updateAuth(target.coll.id, itemId, next);
+  $('scopeAuthModal').classList.add('hidden');
+  toggleAuth();
+  renderCollections();
+});
+
 $('treeMenuRename').onclick = async () => {
   const target = state.treeMenuTarget;
   hideTreeMenu();

@@ -4,6 +4,43 @@ function asList(collections) {
   return (Array.isArray(collections) ? collections : [collections]).filter(Boolean);
 }
 
+function pmKv(key, value) {
+  return { key, value: value || '', type: 'string' };
+}
+
+export function toPostmanAuth(authType, auth = {}) {
+  if (!authType || authType === 'inherit') return { type: 'inherit' };
+  if (authType === 'none') return { type: 'noauth' };
+  if (authType === 'bearer') return { type: 'bearer', bearer: [pmKv('token', auth.token)] };
+  if (authType === 'basic') {
+    return { type: 'basic', basic: [pmKv('username', auth.user), pmKv('password', auth.pass)] };
+  }
+  if (authType === 'apikey') {
+    return {
+      type: 'apikey',
+      apikey: [pmKv('key', auth.apiKeyName), pmKv('value', auth.apiKeyValue), pmKv('in', auth.apiKeyIn || 'header')],
+    };
+  }
+  if (authType === 'digest') {
+    return { type: 'digest', digest: [pmKv('username', auth.user), pmKv('password', auth.pass)] };
+  }
+  if (authType === 'oauth2') {
+    return {
+      type: 'oauth2',
+      oauth2: [
+        pmKv('accessToken', auth.token),
+        pmKv('accessTokenUrl', auth.tokenUrl),
+        pmKv('authUrl', auth.authUrl),
+        pmKv('clientId', auth.clientId),
+        pmKv('clientSecret', auth.clientSecret),
+        pmKv('scope', auth.scope),
+        pmKv('grant_type', auth.grant || 'client_credentials'),
+      ],
+    };
+  }
+  return { type: 'noauth' };
+}
+
 function toPostmanBody(req) {
   if (!req?.body || req.bodyType === 'none') return undefined;
   if (req.bodyType === 'json' || req.bodyType === 'graphql') {
@@ -33,9 +70,11 @@ function toPostmanBody(req) {
 function toPostmanItems(items) {
   return (items || []).map((item) => {
     if (item.type === 'folder') {
-      return { name: item.name || 'Folder', item: toPostmanItems(item.items) };
+      const folder = { name: item.name || 'Folder', item: toPostmanItems(item.items) };
+      if (item.authType && item.authType !== 'inherit') folder.auth = toPostmanAuth(item.authType, item.auth);
+      return folder;
     }
-    return {
+    const req = {
       name: item.name || item.url || 'Request',
       request: {
         method: item.method || 'GET',
@@ -45,6 +84,10 @@ function toPostmanItems(items) {
         description: item.docs || '',
       },
     };
+    if (item.authType && item.authType !== 'inherit') {
+      req.request.auth = toPostmanAuth(item.authType, item.auth);
+    }
+    return req;
   });
 }
 
@@ -52,14 +95,24 @@ export function toPostman(collections) {
   const list = asList(collections).map((c) => sanitizeExport(c));
   const schema = 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json';
   if (list.length === 1) {
-    return {
+    const out = {
       info: { name: list[0].name || 'PingTo', schema },
       item: toPostmanItems(list[0].items),
     };
+    if (list[0].authType && list[0].authType !== 'inherit' && list[0].authType !== 'none') {
+      out.auth = toPostmanAuth(list[0].authType, list[0].auth);
+    }
+    return out;
   }
   return {
     info: { name: 'PingTo export', schema },
-    item: list.map((c) => ({ name: c.name || 'Collection', item: toPostmanItems(c.items) })),
+    item: list.map((c) => {
+      const node = { name: c.name || 'Collection', item: toPostmanItems(c.items) };
+      if (c.authType && c.authType !== 'inherit' && c.authType !== 'none') {
+        node.auth = toPostmanAuth(c.authType, c.auth);
+      }
+      return node;
+    }),
   };
 }
 

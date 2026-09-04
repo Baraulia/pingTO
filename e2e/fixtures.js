@@ -70,11 +70,41 @@ export async function disablePro(page) {
   await expect(page.locator('body')).toHaveClass(/is-free/);
 }
 
+export async function seedTestdEnvironment(page) {
+  const testdWs = testdUrl.replace(/^http/i, 'ws');
+  await page.evaluate(async ({ testdUrl, testdWs }) => {
+    const env = {
+      id: 'pingto-testd-env',
+      name: 'testd',
+      variables: {
+        base_url: testdUrl,
+        ws_url: testdWs,
+        username: 'pingto',
+        password: 'pingto',
+        bearer_token: 'pingto-token',
+        api_key: 'pingto-key',
+        client_id: 'pingto',
+        client_secret: 'pingto-secret',
+      },
+      secrets: {},
+      created: new Date().toISOString(),
+    };
+    await chrome.storage.local.set({ api_environments: [env], active_env_id: env.id });
+  }, { testdUrl, testdWs });
+  await page.reload();
+  await page.locator('#sendBtn').waitFor({ state: 'visible' });
+  await ensureDesktopLayout(page);
+}
+
 export async function importTestdCollection(page) {
+  await enablePro(page);
   await page.locator('#importFile').setInputFiles(collectionPath);
   await expect(page.locator('[data-testid="tree-collection"]')).toContainText('PingTo testd');
   await expect(page.locator('[data-testid="tree-request"][data-request-id="testd-health"]')).toBeVisible();
   await page.locator('[data-testid="toast"]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+  await seedTestdEnvironment(page);
+  await expect(page.locator('[data-testid="tree-collection"]')).toContainText('PingTo testd');
+  await expect(page.locator('#environmentSelect')).toHaveValue('pingto-testd-env');
 }
 
 export async function openRequest(page, requestId) {
@@ -89,6 +119,6 @@ export async function sendAndExpectStatus(page, status, timeout = 20_000) {
 }
 
 export async function responseJson(page) {
-  const text = await page.locator('#responseBody').innerText();
+  const text = await page.locator('#responseBody').evaluate((el) => el.textContent);
   return JSON.parse(text);
 }

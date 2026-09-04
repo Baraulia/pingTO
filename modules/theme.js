@@ -27,6 +27,12 @@ export class ThemeManager {
     await this.save();
   }
 
+  async setDark(dark) {
+    this.dark = Boolean(dark);
+    this.apply();
+    await this.save();
+  }
+
   apply() {
     document.documentElement.setAttribute('data-theme', this.dark ? 'dark' : 'light');
     const btn = document.getElementById('themeToggle');

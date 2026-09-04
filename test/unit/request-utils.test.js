@@ -6,6 +6,7 @@ import {
   isWebSocketUrl,
   parseMultipartFields,
   requestEditFingerprint,
+  resolveTabForCurl,
   sanitizeHeadersForStorage,
   utf8ToBase64,
 } from '../../modules/request-utils.js';
@@ -29,6 +30,63 @@ describe('request-utils', () => {
 
   it('applies env vars to header keys and values', () => {
     expect(applyEnvToHeaders({ '{{h}}': '{{v}}' }, { h: 'X-A', v: '1' })).toEqual({ 'X-A': '1' });
+  });
+
+  it('resolves placeholders for copy as curl', () => {
+    const parts = resolveTabForCurl(
+      {
+        method: 'POST',
+        url: '{{base_url}}/echo',
+        params: [{ key: 'tag', value: '{{tag}}', enabled: true }],
+        pathParams: [],
+        headers: [{ key: 'X-Name', value: '{{name}}', enabled: true }],
+        bodyType: 'json',
+        body: '{"email":"{{email}}"}',
+        auth: {},
+      },
+      {
+        base_url: 'http://127.0.0.1:8787',
+        tag: 'alpha',
+        name: 'Ada',
+        email: 'ada@pingto.local',
+        bearer_token: 'pingto-token',
+      },
+      { type: 'bearer', token: '{{bearer_token}}' }
+    );
+    expect(parts.url).toBe('http://127.0.0.1:8787/echo?tag=alpha');
+    expect(parts.body).toBe('{"email":"ada@pingto.local"}');
+    expect(parts.headers).toEqual(
+      expect.arrayContaining([
+        { key: 'X-Name', value: 'Ada' },
+        { key: 'Authorization', value: 'Bearer pingto-token' },
+      ])
+    );
+    expect(parts.url).not.toContain('{{');
+    expect(parts.body).not.toContain('{{');
+  });
+
+  it('keeps placeholders when no environment is selected', () => {
+    const parts = resolveTabForCurl(
+      {
+        method: 'POST',
+        url: '{{base_url}}/echo',
+        params: [{ key: 'tag', value: '{{tag}}', enabled: true }],
+        pathParams: [],
+        headers: [{ key: 'X-Name', value: '{{name}}', enabled: true }],
+        bodyType: 'json',
+        body: '{"email":"{{email}}"}',
+      },
+      null,
+      { type: 'bearer', token: '{{bearer_token}}' }
+    );
+    expect(parts.url).toBe('{{base_url}}/echo?tag={{tag}}');
+    expect(parts.body).toBe('{"email":"{{email}}"}');
+    expect(parts.headers).toEqual(
+      expect.arrayContaining([
+        { key: 'X-Name', value: '{{name}}' },
+        { key: 'Authorization', value: 'Bearer {{bearer_token}}' },
+      ])
+    );
   });
 
   it('encodes basic auth as base64', () => {

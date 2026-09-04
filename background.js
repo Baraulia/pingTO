@@ -6,10 +6,27 @@ const APP_PATH = 'app.html';
 const APP_WINDOW_WIDTH = 1280;
 const APP_WINDOW_HEIGHT = 860;
 let appWindowId = null;
+let openAppLock = null;
 const windowRestore = new Map();
 
 function appUrl() {
   return chrome.runtime.getURL(APP_PATH);
+}
+
+function isAppTabUrl(url) {
+  if (!url) return false;
+  const base = appUrl();
+  return url === base || url.startsWith(`${base}?`) || url.startsWith(`${base}#`);
+}
+
+async function rememberAppWindow(id) {
+  appWindowId = id ?? null;
+  try {
+    if (appWindowId == null) await chrome.storage.session?.remove('appWindowId');
+    else await chrome.storage.session?.set({ appWindowId });
+  } catch {
+    /* session storage optional */
+  }
 }
 
 async function closeSidePanel(windowId) {
@@ -30,45 +47,105 @@ async function closeSidePanel(windowId) {
   }
 }
 
-async function openAppWindow() {
-  const [active] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (active?.windowId) await closeSidePanel(active.windowId);
+async function closeAllSidePanels() {
+  if (!chrome.sidePanel) return;
+  const windows = await chrome.windows.getAll();
+  await Promise.all(windows.map((win) => closeSidePanel(win.id)));
+}
 
+async function listAppTabs() {
+  const tabs = await chrome.tabs.query({});
+  return tabs.filter((tab) => isAppTabUrl(tab.url) || isAppTabUrl(tab.pendingUrl));
+}
+
+async function closeExtraAppTabs(keepTab) {
+  const tabs = await listAppTabs();
+  for (const tab of tabs) {
+    if (tab.id === keepTab.id) continue;
+    try {
+      const win = await chrome.windows.get(tab.windowId, { populate: true });
+      const onlyApp = (win.tabs || []).every((t) => isAppTabUrl(t.url) || isAppTabUrl(t.pendingUrl));
+      if (onlyApp) await chrome.windows.remove(tab.windowId);
+      else await chrome.tabs.remove(tab.id);
+    } catch {
+      /* already gone */
+    }
+  }
+}
+
+async function adoptExistingAppWindow() {
+  if (appWindowId == null) {
+    try {
+      const stored = await chrome.storage.session?.get('appWindowId');
+      if (stored?.appWindowId) appWindowId = stored.appWindowId;
+    } catch {
+      /* ignore */
+    }
+  }
   if (appWindowId != null) {
     try {
+      await chrome.windows.get(appWindowId);
       await chrome.windows.update(appWindowId, { focused: true });
-      return;
+      const tabs = await listAppTabs();
+      const keep = tabs.find((tab) => tab.windowId === appWindowId) || tabs[0];
+      if (keep) await closeExtraAppTabs(keep);
+      return appWindowId;
     } catch {
-      appWindowId = null;
+      await rememberAppWindow(null);
     }
   }
 
-  const existing = await chrome.tabs.query({ url: `${appUrl()}*` });
-  for (const tab of existing) {
+  const tabs = await listAppTabs();
+  if (!tabs.length) return null;
+  const windows = await Promise.all(tabs.map(async (tab) => {
     try {
-      const win = await chrome.windows.get(tab.windowId);
-      if (win.type === 'popup') {
-        appWindowId = win.id;
-        await chrome.windows.update(win.id, { focused: true });
-        return;
-      }
+      return { tab, win: await chrome.windows.get(tab.windowId) };
     } catch {
-      /* keep looking */
+      return null;
     }
-  }
-
-  const created = await chrome.windows.create({
-    url: appUrl(),
-    type: 'popup',
-    width: APP_WINDOW_WIDTH,
-    height: APP_WINDOW_HEIGHT,
-    focused: true,
+  }));
+  const ranked = windows.filter(Boolean).sort((a, b) => {
+    const score = (row) => (row.win.type === 'popup' ? 2 : 0) + (row.win.focused ? 1 : 0);
+    return score(b) - score(a);
   });
-  appWindowId = created.id ?? null;
+  const keep = ranked[0]?.tab;
+  if (!keep) return null;
+  await chrome.windows.update(keep.windowId, { focused: true });
+  try {
+    await chrome.tabs.update(keep.id, { active: true });
+  } catch {
+    /* ignore */
+  }
+  await closeExtraAppTabs(keep);
+  await rememberAppWindow(keep.windowId);
+  return keep.windowId;
+}
+
+async function openAppWindow() {
+  if (openAppLock) return openAppLock;
+  openAppLock = (async () => {
+    await closeAllSidePanels();
+    const existing = await adoptExistingAppWindow();
+    if (existing != null) return existing;
+    const created = await chrome.windows.create({
+      url: appUrl(),
+      type: 'popup',
+      width: APP_WINDOW_WIDTH,
+      height: APP_WINDOW_HEIGHT,
+      focused: true,
+    });
+    await rememberAppWindow(created.id ?? null);
+    const keepTab = created.tabs?.[0];
+    if (keepTab?.id) await closeExtraAppTabs(keepTab);
+    return created.id ?? null;
+  })().finally(() => {
+    openAppLock = null;
+  });
+  return openAppLock;
 }
 
 async function toggleFullscreen(senderWindowId) {
-  await closeSidePanel(senderWindowId);
+  await closeAllSidePanels();
 
   let win = null;
   if (senderWindowId) {
@@ -131,7 +208,7 @@ chrome.action.onClicked.addListener(() => {
 });
 
 chrome.windows.onRemoved.addListener((id) => {
-  if (id === appWindowId) appWindowId = null;
+  if (id === appWindowId) rememberAppWindow(null);
   windowRestore.delete(id);
 });
 
@@ -403,20 +480,28 @@ async function formatResponse(response, startTime, method = 'GET') {
   const size = buffer.byteLength;
   const truncated = size > MAX_RESPONSE_BYTES;
   const slice = truncated ? buffer.slice(0, MAX_RESPONSE_BYTES) : buffer;
-  let responseBody = new TextDecoder('utf-8', { fatal: false }).decode(slice);
-
   const contentType = response.headers.get('content-type') || '';
-  if (!truncated && contentType.includes('json') && responseBody.trim()) {
-    try {
-      responseBody = JSON.stringify(JSON.parse(responseBody), null, 2);
-    } catch {
-      /* keep raw */
+  const mime = String(contentType).split(';')[0].trim().toLowerCase();
+  const isImage = mime.startsWith('image/');
+  let bodyBase64 = '';
+  let responseBody = '';
+  if (isImage) {
+    bodyBase64 = arrayBufferToBase64(slice);
+    responseBody = `[image ${mime || 'image'}, ${size} bytes]`;
+  } else {
+    responseBody = new TextDecoder('utf-8', { fatal: false }).decode(slice);
+    if (!truncated && mime.includes('json') && responseBody.trim()) {
+      try {
+        responseBody = JSON.stringify(JSON.parse(responseBody), null, 2);
+      } catch {
+        /* keep raw */
+      }
+    } else if (!truncated && /xml|html/.test(mime)) {
+      responseBody = prettyXml(responseBody);
     }
-  } else if (!truncated && /xml|html/.test(contentType)) {
-    responseBody = prettyXml(responseBody);
   }
 
-  if (truncated) {
+  if (truncated && !isImage) {
     responseBody += `\n\n[truncated: response is ${size} bytes, showing first ${MAX_RESPONSE_BYTES}]`;
   }
 
@@ -425,12 +510,23 @@ async function formatResponse(response, startTime, method = 'GET') {
     statusText: response.statusText,
     headers: responseHeaders,
     body: responseBody,
+    bodyBase64,
     time,
     size,
     ok: response.ok,
     truncated,
     contentType,
   };
+}
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  const chunk = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
 }
 
 function prettyXml(xml) {

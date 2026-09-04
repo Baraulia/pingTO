@@ -50,6 +50,13 @@ export function flattenRequests(items) {
   return out;
 }
 
+export function flattenRequestsInScope(items, folderId = null) {
+  if (!folderId) return flattenRequests(items);
+  const folder = findItem(items, folderId);
+  if (!folder || folder.type !== 'folder') return flattenRequests(items);
+  return flattenRequests(folder.items);
+}
+
 export function findItem(items, id) {
   for (const item of items || []) {
     if (String(item.id) === String(id)) return item;
@@ -128,16 +135,33 @@ export function moveItem(items, itemId, targetFolderId = null) {
   return true;
 }
 
+function normalizeTreeItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  if (item.type === 'folder' || (Array.isArray(item.items) && item.type !== 'request')) {
+    return {
+      type: 'folder',
+      id: item.id || newId(),
+      name: item.name || 'Folder',
+      authType: item.authType || 'inherit',
+      auth: clonePlain(item.auth, {}),
+      items: (item.items || []).map(normalizeTreeItem).filter(Boolean),
+    };
+  }
+  return emptyRequest(item);
+}
+
 export function normalizeCollection(coll) {
   if (!coll || typeof coll !== 'object') return null;
-  const items = Array.isArray(coll.items)
+  const rawItems = Array.isArray(coll.items)
     ? coll.items
     : (coll.requests || []).map((r) => ({ type: 'request', ...emptyRequest(r), ...r }));
   return {
     id: coll.id || Date.now(),
     name: coll.name || 'Collection',
     description: coll.description || '',
-    items,
+    authType: coll.authType || 'none',
+    auth: clonePlain(coll.auth, {}),
+    items: rawItems.map(normalizeTreeItem).filter(Boolean),
     created: coll.created || new Date().toISOString(),
   };
 }

@@ -12,9 +12,6 @@ const entries = [
   'app.html',
   'app.js',
   'app.css',
-  'popup.html',
-  'popup.js',
-  'popup.css',
   'sandbox.html',
   'sandbox-frame.js',
   'modules',
@@ -22,9 +19,9 @@ const entries = [
   'icons',
   'lib',
   'data',
-  'pages',
 ];
 
+// Live UI is app.html. popup.js / pages/* are unused and must not ship.
 // ToDelete/, testd/, loadtest/, tests, and node_modules are not packed.
 
 const missing = entries.filter((name) => !existsSync(join(root, name)));

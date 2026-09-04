@@ -87,6 +87,8 @@ const TECHNICAL_SELECTORS = [
   '#codeLanguage',
   '#responseBody',
   '#responsePretty',
+  '#responseRawWrap',
+  '#respPathHint',
   '#responseHeaders',
   '#responseRedirects',
   '#jsonPath',

@@ -166,6 +166,13 @@ func TestMultipartBinaryTextHTMLXMLStatus(t *testing.T) {
 	}
 	res.Body.Close()
 
+	res, _ = http.Get(srv.URL + "/png")
+	raw, _ = io.ReadAll(res.Body)
+	res.Body.Close()
+	if !strings.Contains(res.Header.Get("Content-Type"), "image/png") || len(raw) < 8 || raw[0] != 0x89 {
+		t.Fatalf("png ct %s len %d", res.Header.Get("Content-Type"), len(raw))
+	}
+
 	code, body = getJSON(t, srv, "/status/404")
 	if code != 404 || body["ok"] != false {
 		t.Fatalf("status %#v", body)

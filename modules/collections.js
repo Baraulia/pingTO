@@ -1,5 +1,5 @@
 import { idsEqual } from './request-utils.js';
-import { normalizeCollection, addItem, removeItem, flattenRequests, findItem, emptyRequest, newId, moveItem } from './collection-tree.js';
+import { normalizeCollection, addItem, removeItem, flattenRequestsInScope, findItem, emptyRequest, newId, moveItem } from './collection-tree.js';
 
 export class CollectionsManager {
   constructor(storage) {
@@ -125,9 +125,41 @@ export class CollectionsManager {
     if (!this.loaded) await this.load();
     const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
     if (!collection) return false;
-    addItem(collection.items, parentId, { type: 'folder', id: Date.now(), name, items: [] });
+    addItem(collection.items, parentId, {
+      type: 'folder',
+      id: newId(),
+      name,
+      items: [],
+      authType: 'inherit',
+      auth: {},
+    });
     await this.save();
     return true;
+  }
+
+  async updateAuth(collectionId, itemId, { authType, auth }) {
+    if (!this.loaded) await this.load();
+    const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
+    if (!collection) return false;
+    if (!itemId) {
+      collection.authType = authType;
+      collection.auth = { ...(auth || {}) };
+      await this.save();
+      return true;
+    }
+    const item = findItem(collection.items, itemId);
+    if (!item) return false;
+    item.authType = authType;
+    item.auth = { ...(auth || {}) };
+    await this.save();
+    return true;
+  }
+
+  async replaceAll(list) {
+    if (!this.loaded) await this.load();
+    this.collections = (list || []).map((c) => normalizeCollection(c)).filter(Boolean);
+    await this.save();
+    return this.collections.length;
   }
 
   async removeItem(collectionId, itemId) {
@@ -138,9 +170,10 @@ export class CollectionsManager {
     await this.save();
   }
 
-  flatten(collectionId) {
+  flatten(collectionId, folderId = null) {
     const collection = this.collections.find((c) => idsEqual(c.id, collectionId));
-    return collection ? flattenRequests(collection.items) : [];
+    if (!collection) return [];
+    return flattenRequestsInScope(collection.items, folderId);
   }
 
   async importMany(list) {

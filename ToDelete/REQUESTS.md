@@ -1,20 +1,22 @@
 # testd — все запросы
 
-База: `http://127.0.0.1:8787`  
+База testd: `http://127.0.0.1:8787`  
 Запуск: в каталоге `testd` выполнить `go run .`  
-Окружение PingTo: `base_url` = `http://127.0.0.1:8787`
+Окружение PingTo: файл [`pingto-testd-environment.json`](pingto-testd-environment.json) — переменные `base_url`, `ws_url`, `username`, `password`, `bearer_token`, `api_key`, `client_id`, `client_secret`.
 
 ## Импорт в расширение
 
-Файл коллекции: [`pingto-testd-collection.json`](pingto-testd-collection.json) (`format: pingto`).
+Файл коллекции: [`pingto-testd-collection.json`](pingto-testd-collection.json) (`format: pingto`, две коллекции: все маршруты + **PingTo testd runner**).
 
 Автотесты (unit + testd + e2e расширения): из корня репозитория `npm test` (см. README). Testd отдельно: `go test -C testd .`.
 
-1. Collections → **Import** → выберите этот JSON (PingTo JSON доступен в Free).
-2. `go run .` в `testd`, затем открывайте запросы и Send.
-3. Папка **Env {{base_url}}**: Environment `testd` с `base_url=http://127.0.0.1:8787` и `ws_url=ws://127.0.0.1:8787` (Free: 1 окружение, 10 переменных).
-4. GraphQL, WebSocket, Digest, OAuth, binary body — включите **Pro**.
+1. Collections → **Import** → PingTo JSON → этот файл (Free). Появятся **PingTo testd** и **PingTo testd runner**. Импорт коллекции **не** создаёт окружение.
+2. Environments → создайте `testd` и скопируйте 8 переменных из [`pingto-testd-environment.json`](pingto-testd-environment.json) (Free: 1 окружение, 10 переменных). Выберите это окружение. Без него URL `{{base_url}}/...` невалидны.
+3. `go run .` в `testd`, затем открывайте запросы и Send.
+4. GraphQL, WebSocket, Digest, OAuth, binary body, **Run collection** — включите **Pro**.
 5. Binary: после импорта выберите файл вручную. Multipart доступен в Free.
+6. **Inherit auth:** папка Auth хранит Bearer `{{bearer_token}}`. Запросы **Bearer (inherit folder)** и **Bearer via nested inherit** с типом Inherit. Двойной клик по папке Auth → Auth. Basic / Digest / API Key / OAuth на запросе перекрывают папку.
+7. **Runner JSON/CSV (Pro):** кликните коллекцию **PingTo testd runner** или двойной клик по папке → **Прогон**. В панели выберите папку, если нужно не всё дерево. Файл [`pingto-testd-runner.json`](pingto-testd-runner.json) или [`pingto-testd-runner.csv`](pingto-testd-runner.csv) → Start. Три строки подставляют `{{tag}}`, `{{name}}`, `{{email}}`. WebSocket/SSE в полном testd пропускаются.
 
 ## Общее для всех HTTP-запросов
 
@@ -331,7 +333,7 @@ Upsert: было → **200**, не было → **201**. `id` берётся и�
 - Успех: **200** `{ "ok": true, "auth": "bearer" }`
 - Иначе: **401** `{ "error": "invalid bearer" }`
 
-В PingTo: Auth = Bearer, token = `pingto-token`
+В PingTo: папка **Auth** → Auth type Bearer, token `{{bearer_token}}`. Запрос **Bearer (inherit folder)** — Inherit (тот же токен). Без токена → **401** `{ "error": "invalid bearer" }`
 
 ---
 
@@ -574,12 +576,12 @@ CORS preflight. Метод OPTIONS обрабатывается до хендл�
 4. POST `{{base_url}}/form`  
 5. GET `{{base_url}}/delay/8000` + Cancel  
 6. GET `{{base_url}}/redirect/3`  
-7. GET `{{base_url}}/auth/bearer` Bearer `pingto-token`  
-8. GET `{{base_url}}/auth/basic` pingto/pingto  
-9. GET `{{base_url}}/auth/digest` pingto/pingto  
-10. GET `{{base_url}}/auth/apikey` header `X-API-Key: pingto-key`  
+7. GET `{{base_url}}/auth/bearer` Bearer `{{bearer_token}}`  
+8. GET `{{base_url}}/auth/basic` `{{username}}` / `{{password}}`  
+9. GET `{{base_url}}/auth/digest` `{{username}}` / `{{password}}`  
+10. GET `{{base_url}}/auth/apikey` header `X-API-Key: {{api_key}}`  
 11. POST `{{base_url}}/graphql` query `{ ping }`  
-12. WS `ws://127.0.0.1:8787/ws/echo`  
+12. WS `{{ws_url}}/ws/echo`  
 13. SSE `{{base_url}}/sse`  
 14. GET `{{base_url}}/html` → Preview  
 15. GET `{{base_url}}/slow-json` → Tests  

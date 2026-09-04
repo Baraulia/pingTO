@@ -1,3 +1,5 @@
+import { flattenRequests } from './collection-tree.js';
+
 export const FREE_HISTORY_LIMIT = 50;
 export const PRO_HISTORY_LIMIT = 2000;
 export const FREE_COLLECTION_LIMIT = 2;
@@ -23,12 +25,13 @@ export const PRO_FEATURES = {
   bruno: 'fmtBruno',
   importCollections: 'importAnyBtn',
   loadtest: 'loadtestBtn',
+  workspaceSync: 'exportWorkspaceBtn',
 };
 
-export const FREE_AUTH = new Set(['none', 'bearer', 'basic', 'apikey']);
+export const FREE_AUTH = new Set(['none', 'inherit', 'bearer', 'basic', 'apikey']);
 export const FREE_BODY = new Set(['none', 'json', 'form', 'text', 'multipart']);
 export const FREE_REQ_PANES = new Set(['params', 'headers', 'body', 'auth', 'curl', 'cookies', 'docs']);
-export const FREE_RESP_PANES = new Set(['body', 'pretty', 'headers', 'preview', 'redirects', 'filter']);
+export const FREE_RESP_PANES = new Set(['body', 'headers', 'redirects', 'filter']);
 export const PRO_AUTH = new Set(['digest', 'oauth2']);
 
 export function isUnpackedInstall(manifest) {
@@ -70,6 +73,22 @@ export function canAddEnvironment(isPro, count) {
 
 export function canAddEnvVar(isPro, count) {
   return isPro || count < FREE_ENV_VAR_LIMIT;
+}
+
+export function savedRequestCount(collections) {
+  return (collections || []).reduce((n, c) => n + flattenRequests(c.items || []).length, 0);
+}
+
+export function isProImportFormat(format) {
+  return Boolean(format && format !== 'pingto');
+}
+
+export function freeImportBlock(isPro, existing, incoming) {
+  if (isPro) return null;
+  const nextCols = (existing?.length || 0) + (incoming?.length || 0);
+  if (nextCols > FREE_COLLECTION_LIMIT) return 'freeImportCollections';
+  if (savedRequestCount(existing) + savedRequestCount(incoming) > FREE_REQUEST_LIMIT) return 'freeImportRequests';
+  return null;
 }
 
 export function unlockedCollectionIds(isPro, collections) {

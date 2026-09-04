@@ -20,8 +20,8 @@ test.describe('Auth against testd', () => {
     await openRequest(page, 'testd-auth-digest');
     await page.locator('#reqSubtabs button[data-pane="auth"]').click();
     await expect(page.locator('#authType')).toHaveValue('digest');
-    await expect(page.locator('#basicUser')).toHaveValue('pingto');
-    await expect(page.locator('#basicPass')).toHaveValue('pingto');
+    await expect(page.locator('#basicUser')).toHaveValue('{{username}}');
+    await expect(page.locator('#basicPass')).toHaveValue('{{password}}');
     await sendAndExpectStatus(page, 200);
     expect((await responseJson(page)).auth).toBe('digest');
   });

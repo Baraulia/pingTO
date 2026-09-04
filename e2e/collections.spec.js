@@ -1,4 +1,4 @@
-import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, testdUrl } from './fixtures.js';
+import { test, expect, importTestdCollection, openRequest, sendAndExpectStatus, testdUrl, collectionPath } from './fixtures.js';
 
 test.describe('Collections and environments', () => {
   test('create collection, save request, reopen', async ({ page }) => {
@@ -25,16 +25,8 @@ test.describe('Collections and environments', () => {
 
   test('environment substitutes base_url', async ({ page }) => {
     await importTestdCollection(page);
-    await page.locator('#environmentSelect').selectOption('__env_new__');
-    await page.locator('#newEnvName').fill('testd');
-    await page.locator('#createEnvBtn').click();
-    const card = page.locator('.env-card').filter({ hasText: 'testd' });
-    const val = card.locator('.env-val').first();
-    await val.fill(testdUrl);
-    await val.dispatchEvent('change');
-    await page.locator('#closeEnvBtn').click();
-    await page.locator('#environmentSelect').selectOption({ label: 'testd' });
     await openRequest(page, 'testd-env-health');
+    await expect(page.locator('#urlInput')).toHaveValue('{{base_url}}/health');
     await expect(page.locator('[data-testid="tree-request"][data-request-id="testd-env-health"]')).toHaveClass(/selected/);
     await expect(page.locator('[data-testid="tree-folder"]').filter({ hasText: 'Env' })).toHaveClass(/selected/);
     await expect(page.locator('[data-testid="tree-collection"]')).toHaveClass(/selected/);
@@ -70,6 +62,28 @@ test.describe('Collections and environments', () => {
     await page.locator('#unsavedSaveBtn').click();
     await expect(page.locator('[data-testid="tree-request"]')).toContainText('Keep me');
     await expect(page.locator('.tab-chip', { hasText: 'Keep me' })).toHaveCount(0);
+  });
+
+  test('folders collapse like collections', async ({ page }) => {
+    await importTestdCollection(page);
+    const catalog = page.locator('[data-testid="tree-folder"][data-folder-id="testd-folder-catalog"]');
+    const health = page.locator('[data-testid="tree-request"][data-request-id="testd-health"]');
+    await expect(health).toBeVisible();
+    await catalog.click();
+    await expect(catalog).toHaveClass(/selected/);
+    await expect(catalog).toHaveAttribute('aria-expanded', 'true');
+    await catalog.click();
+    await expect(catalog).toHaveAttribute('aria-expanded', 'false');
+    await expect(health).toHaveCount(0);
+    await catalog.click();
+    await expect(health).toBeVisible();
+  });
+
+  test('Free import refuses testd-sized PingTo JSON', async ({ page }) => {
+    await page.locator('#importFile').setInputFiles(collectionPath);
+    await expect(page.locator('[data-testid="toast"]')).toBeVisible();
+    await expect(page.locator('#proModal')).not.toHaveClass(/hidden/);
+    await expect(page.locator('[data-testid="tree-request"][data-request-id="testd-health"]')).toHaveCount(0);
   });
 
   test('search filters the tree', async ({ page }) => {

@@ -57,4 +57,11 @@ export class EnvironmentsManager {
       await this.save();
     }
   }
+
+  async replaceAll(list) {
+    if (!this.loaded) await this.load();
+    this.environments = Array.isArray(list) ? list.filter((e) => e && typeof e === 'object') : [];
+    await this.save();
+    return this.environments.length;
+  }
 }

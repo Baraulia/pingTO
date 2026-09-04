@@ -261,7 +261,7 @@
     "message": "Ошибка"
   },
   "proFeatures": {
-    "message": "Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Импорт/экспорт Postman, Insomnia, Bruno; импорт OpenAPI\n• Run collection\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты, тесты, codegen, нагрузка\n\nЦена: $29/год, до 3 устройств"
+    "message": "Функции Pro:\n• Безлимитные история, коллекции, окружения\n• Postman v2 / Insomnia / Bruno .bru импорт-экспорт; OpenAPI (пути) и HAR импорт\n• Прогон коллекции или папки с JSON/CSV\n• Файл workspace (лицензия на каждом устройстве)\n• GraphQL, WebSocket, SSE\n• Digest Auth и OAuth 2.0\n• Бинарное тело, скрипты в песочнице, тесты, codegen, нагрузка\n\nЦена: $29/год, до 3 устройств"
   },
   "language": {
     "message": "Язык"
@@ -434,6 +434,15 @@
   "prettyTab": {
     "message": "Pretty"
   },
+  "rawViewTab": {
+    "message": "Raw"
+  },
+  "previewEmpty": {
+    "message": "Предпросмотр — для HTML и картинок."
+  },
+  "pathCopied": {
+    "message": "Скопировано {path}"
+  },
   "redirectsTab": {
     "message": "Редиректы"
   },
@@ -446,11 +455,8 @@
   "jsonPathTab": {
     "message": "JSONPath"
   },
-  "sslHint": {
-    "message": "Только локально · Chrome не умеет игнорировать невалидный SSL"
-  },
-  "sslSettingsHint": {
-    "message": "Невалидные TLS-сертификаты в Chrome-расширении обойти нельзя."
+  "jsonPathPlaceholder": {
+    "message": "Фильтр ответа, например $.users[0].id"
   },
   "duplicateBtn": {
     "message": "Дублировать"
@@ -479,8 +485,47 @@
   "runTitle": {
     "message": "Прогон коллекции"
   },
+  "runScopeLabel": {
+    "message": "Область"
+  },
+  "runScopeAll": {
+    "message": "Вся коллекция ({name})"
+  },
+  "runScopeFolder": {
+    "message": "Папка: {name}"
+  },
+  "runScopeHint": {
+    "message": "{n} HTTP-запросов в этой области. WebSocket/SSE пропускаются."
+  },
+  "runEmpty": {
+    "message": "В этой папке нечего прогонять"
+  },
+  "runSkipSocket": {
+    "message": "пропуск (не HTTP)"
+  },
+  "treeMenuRun": {
+    "message": "Прогон"
+  },
   "stopOnFail": {
     "message": "Останавливать при ошибке"
+  },
+  "startRunBtn": {
+    "message": "Старт"
+  },
+  "runDataLabel": {
+    "message": "Файл данных (JSON или CSV)"
+  },
+  "runDataPick": {
+    "message": "Выбрать файл"
+  },
+  "runDataNone": {
+    "message": "Без файла — один проход"
+  },
+  "runDataLoaded": {
+    "message": "{n} строк(и) — каждый запрос на каждую строку"
+  },
+  "runDataInvalid": {
+    "message": "Не удалось прочитать JSON или CSV"
   },
   "newEnvNamePlaceholder": {
     "message": "Имя нового окружения"
@@ -509,6 +554,9 @@
   "proModalTitle": {
     "message": "Функция Pro"
   },
+  "proModalTitleActive": {
+    "message": "Ваш тариф Pro"
+  },
   "proModalText": {
     "message": "«{name}» доступна только в тарифе Pro."
   },
@@ -524,8 +572,13 @@
   "proModalBillingLead": {
     "message": "PingTo Pro открывает GraphQL, WebSocket, нагрузочные тесты, скрипты, Digest/OAuth и большие лимиты коллекций."
   },
+  "proModalBillingLeadPro": {
+    "message": "Pro уже включён: GraphQL, WebSocket, нагрузочные тесты, скрипты и повышенные лимиты доступны. Здесь только статус лицензии и снятие ключа с этого устройства."
+  },
   "proPlanBtn": { "message": "Pro" },
-  "proPlanBtnPro": { "message": "Pro ✓" },
+  "proPlanBtnTitle": { "message": "Перейти на Pro" },
+  "proPlanBtnTitlePro": { "message": "Лицензия Pro" },
+  "settingsLicenseBtn": { "message": "Лицензия" },
   "proCheckoutBtn": { "message": "Перейти на Pro — {price}/{period}" },
   "billingPeriod_year": { "message": "год" },
   "billingPlanHint": {
@@ -576,7 +629,7 @@
     "message": "Бинарное тело отправляет сырой файл как payload (картинки, protobuf, zip). Multipart с файлами уже есть в Free."
   },
   "proDesc_scripts": {
-    "message": "Pre-request скрипты выполняют JavaScript до Send — заголовки, метки времени, подписи, вычисляемые переменные."
+    "message": "Pre-request скрипты выполняют JavaScript до Send в изолированной песочнице на этом устройстве — заголовки, метки времени, подписи, вычисляемые переменные."
   },
   "proDesc_testsResp": {
     "message": "Тесты ответа проверяют статус, JSON-поля и время после Send и показывают pass/fail на вкладке Tests."
@@ -591,13 +644,13 @@
     "message": "Генерация кода превращает текущий запрос в сниппеты JavaScript, Python, PHP или Go."
   },
   "proDesc_collectionRun": {
-    "message": "Run collection — кнопка в сайдбаре коллекций. Последовательно отправляет все сохранённые запросы выбранной коллекции, с опцией остановки на ошибке, и показывает какие прошли."
+    "message": "Run collection в сайдбаре или Run на коллекции/папке в меню дерева. В панели прогона выберите папку, чтобы не слать всё дерево. JSON/CSV строки — {{переменные}} на итерацию."
   },
   "proDesc_bruno": {
     "message": "Bruno в меню Import и Export. Pro импортирует .bru и экспортирует бандл для клиента Bruno и git. PingTo JSON остаётся бесплатным."
   },
   "proDesc_importCollections": {
-    "message": "Import и Export в сайдбаре открывают меню формата. Free — только PingTo JSON. Pro добавляет Postman Collection v2, Insomnia и Bruno (импорт и экспорт) и импорт OpenAPI."
+    "message": "Import и Export в сайдбаре открывают меню формата. Free — только PingTo JSON (2 коллекции / 25 запросов). Pro: Postman Collection v2, Insomnia и Bruno .bru в обе стороны, OpenAPI (пути и методы) и HAR. Это не полный клон воркспейса Postman/Bruno."
   },
   "proDesc_historyCap": {
     "message": "Free хранит последние 50 записей истории. Pro поднимает лимит до 2000."
@@ -615,10 +668,10 @@
     "message": "Снимаются лимиты 2 коллекции / 25 запросов / 1 окружение / 10 переменных."
   },
   "proItemImportTitle": {
-    "message": "Postman, Insomnia, Bruno, OpenAPI"
+    "message": "Postman, Insomnia, Bruno, OpenAPI, HAR"
   },
   "proItemImportDesc": {
-    "message": "Меню Import и Export: Postman, Insomnia и Bruno в обе стороны; импорт OpenAPI. PingTo JSON остаётся бесплатным. Сначала формат, потом файл."
+    "message": "Меню Import и Export: Postman v2, Insomnia и Bruno .bru в обе стороны; импорт OpenAPI (пути/методы) и HAR. PingTo JSON остаётся бесплатным. Сначала формат, потом файл."
   },
   "proItemBrunoTitle": {
     "message": "Импорт и экспорт Bruno"
@@ -630,7 +683,16 @@
     "message": "Run collection"
   },
   "proItemRunDesc": {
-    "message": "Кнопка в сайдбаре коллекций. Прогон всех запросов выбранной коллекции и отчёт об ошибках."
+    "message": "Run в сайдбаре или Run на папке в дереве. В панели прогона есть список папок. JSON/CSV строки подставляют {{переменные}} на каждой итерации."
+  },
+  "proItemWorkspaceTitle": {
+    "message": "Синхронизация 3 устройств"
+  },
+  "proItemWorkspaceDesc": {
+    "message": "Настройки → Export workspace копирует коллекции, окружения, вкладки и настройки в файл. Import на другом компьютере. Лицензия остаётся на каждом устройстве. Опциональный пароль шифрует файл."
+  },
+  "proDesc_workspaceSync": {
+    "message": "Облачного workspace нет. Экспортируйте файл в Settings, перенесите на другой компьютер, Import. Тот же Pro-ключ активируется максимум на 3 устройствах."
   },
   "proItemGraphqlTitle": {
     "message": "GraphQL"
@@ -666,7 +728,7 @@
     "message": "Pre-request скрипты"
   },
   "proItemScriptsDesc": {
-    "message": "JavaScript перед отправкой: заголовки, подписи, переменные."
+    "message": "JavaScript в изолированной песочнице перед отправкой: заголовки, подписи, переменные."
   },
   "proItemTestsTitle": {
     "message": "Тесты, snapshot и diff"
@@ -732,7 +794,7 @@
     "message": "Неизвестный формат. Нужен PingTo JSON, Postman v2, Insomnia, OpenAPI или Bruno."
   },
   "importPingtoOnly": {
-    "message": "В бесплатной версии можно импортировать только PingTo JSON. Postman, Insomnia, OpenAPI и Bruno — это Pro."
+    "message": "В бесплатной версии можно импортировать только PingTo JSON. Postman, Insomnia, OpenAPI, HAR и Bruno — это Pro."
   },
   "fmtPingto": {
     "message": "PingTo JSON"
@@ -749,8 +811,11 @@
   "fmtOpenapi": {
     "message": "OpenAPI"
   },
+  "fmtHar": {
+    "message": "HAR (запись браузера)"
+  },
   "importExportHint": {
-    "message": "Импорт/экспорт: PingTo JSON бесплатно. Postman, Insomnia, Bruno и OpenAPI импорт, плюс экспорт Postman/Insomnia/Bruno — Pro. Формат выбирается в меню Import или Export."
+    "message": "Импорт/экспорт: PingTo JSON бесплатно (2 коллекции / 25 запросов). Pro: Postman v2, Insomnia, Bruno .bru в обе стороны; OpenAPI (пути/методы) и HAR."
   },
   "collectionOpened": {
     "message": "Запрос открыт из коллекции"
@@ -782,11 +847,26 @@
   "freeCollectionLocked": {
     "message": "Коллекция сверх лимита Free (2). Открыть запросы можно в Pro либо удалить лишние коллекции — тогда разблокируются следующие."
   },
+  "freeImportCollections": {
+    "message": "В Free две коллекции. Этот файл выйдет за лимит — включите Pro или импортируйте меньше коллекций."
+  },
+  "freeImportRequests": {
+    "message": "В Free 25 сохранённых запросов. Этот файл выйдет за лимит — включите Pro или импортируйте меньший PingTo JSON."
+  },
   "authHelp": {
     "message": "Выберите один тип авторизации. Он уйдёт с Send; остальные поля не используются."
   },
   "authTypeLabel": {
     "message": "Тип авторизации"
+  },
+  "authInherit": {
+    "message": "Наследовать от родителя"
+  },
+  "authHint_inherit": {
+    "message": "Свои учётные данные запрос не хранит. PingTo идёт вверх: ближайшая папка, затем коллекция. Берётся первый тип, который не Inherit. Коллекция — корень дерева, ей наследовать не от кого. Сейчас: {type}."
+  },
+  "authHint_inheritFolder": {
+    "message": "Папка не хранит свои учётные данные. Берёт их у родительской папки или у коллекции, если родители тоже наследуют. Свой тип здесь нужен, только если детям нужен другой auth, чем у коллекции."
   },
   "authHint_none": {
     "message": "Без учётных данных. Для открытых эндпоинтов."
@@ -1034,8 +1114,71 @@
   "importNotOpenapi": {
     "message": "Это не файл OpenAPI"
   },
+  "importNotHar": {
+    "message": "Это не файл HAR"
+  },
   "importNothing": {
     "message": "Нечего импортировать"
+  },
+  "treeMenuAuth": {
+    "message": "Авторизация"
+  },
+  "scopeAuthTitle": {
+    "message": "Auth коллекции"
+  },
+  "scopeAuthTitleFolder": {
+    "message": "Auth папки"
+  },
+  "scopeAuthHint": {
+    "message": "Запросы с Inherit берут этот auth. Папка перекрывает коллекцию; у запроса может быть свой тип."
+  },
+  "scopeAuthHintCollection": {
+    "message": "Коллекция — корень дерева: выше неё нечего наследовать, поэтому Inherit в списке нет. Задайте здесь Bearer, Basic или API Key. Папки и запросы с «Наследовать от родителя» возьмут это. Папка или запрос могут перекрыть."
+  },
+  "scopeAuthHintFolder": {
+    "message": "«Наследовать от родителя» берёт auth у папки выше или у коллекции, если эти папки тоже наследуют. Либо задайте Bearer/Basic/… на этой папке — тогда все дочерние запросы с Inherit получат его."
+  },
+  "workspaceTitle": {
+    "message": "Синхронизация устройств"
+  },
+  "workspaceHint": {
+    "message": "Pro: экспорт коллекций, окружений, вкладок и настроек в файл, затем импорт на другом компьютере. Ключ лицензии в файл не входит — Pro активируется на каждом устройстве. Опциональный пароль шифрует файл."
+  },
+  "workspacePassphraseLabel": {
+    "message": "Пароль (необязательно)"
+  },
+  "workspacePassphrasePlaceholder": {
+    "message": "Пусто — обычный JSON"
+  },
+  "exportWorkspaceBtn": {
+    "message": "Экспорт workspace"
+  },
+  "importWorkspaceBtn": {
+    "message": "Импорт workspace"
+  },
+  "workspaceImportConfirm": {
+    "message": "Заменить коллекции, окружения, вкладки и настройки на этом устройстве содержимым файла? Отменить нельзя. Лицензия не импортируется."
+  },
+  "workspaceExported": {
+    "message": "Файл workspace сохранён"
+  },
+  "workspaceImported": {
+    "message": "Workspace импортирован"
+  },
+  "workspaceExportFailed": {
+    "message": "Не удалось экспортировать workspace"
+  },
+  "workspaceImportFailed": {
+    "message": "Не удалось импортировать workspace"
+  },
+  "workspaceNotFormat": {
+    "message": "Это не файл workspace PingTo"
+  },
+  "workspaceNeedPass": {
+    "message": "Файл зашифрован. Сначала введите пароль в Settings."
+  },
+  "workspaceBadPass": {
+    "message": "Неверный пароль или повреждённый файл"
   },
   "loadtestHelp": {
     "message": "Нагрузочный тест много раз параллельно повторяет текущий HTTP-запрос. Chrome столько соединений не откроет — скачайте агент PingTo для этой ОС, запустите его и нажмите «Проверить агент». Агент слушает только этот компьютер (127.0.0.1)."

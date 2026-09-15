@@ -192,6 +192,8 @@ REST · GraphQL · WebSocket
 
 Capture the live extension. Do not generate a fake PingTo UI with an image model (misleading listing). Promo tiles may be designed in Figma / an image model, then overlay the real logo.
 
+Run Load Tests Locally 
+No Data Leaves Your Machine
 ---
 
 ## Additional dashboard fields

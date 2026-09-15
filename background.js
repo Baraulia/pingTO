@@ -4,7 +4,7 @@ const inflight = new Map();
 
 const APP_PATH = 'app.html';
 const APP_WINDOW_WIDTH = 1280;
-const APP_WINDOW_HEIGHT = 860;
+const APP_WINDOW_HEIGHT = 800;
 let appWindowId = null;
 let openAppLock = null;
 const windowRestore = new Map();

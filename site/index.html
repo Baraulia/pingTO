@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PingTo — Local API client for Chrome</title>
+  <meta name="description" content="PingTo is a local API client that runs as a Chrome extension. REST, cURL, collections and environment variables. Pro adds GraphQL, WebSocket, scripts and load testing. Data stays on your device.">
+  <meta name="theme-color" content="#0b0f17">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="PingTo — Local API client for Chrome">
+  <meta property="og:description" content="Send HTTP requests from the browser. Collections and environments stay on this device.">
+  <meta property="og:image" content="assets/og.png">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="PingTo">
+        <img class="brand-mark" src="assets/logo-mark.svg" alt="" width="40" height="12">
+        <span class="brand-name">PingTo</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="#features" data-i18n="navFeatures">Features</a>
+        <a href="#screens" data-i18n="navScreens">Screenshots</a>
+        <a href="#loadtest" data-i18n="navLoad">Load testing</a>
+        <a href="#pricing" data-i18n="navPricing">Pricing</a>
+        <a href="#faq" data-i18n="navFaq">FAQ</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="lang-toggle" id="langToggle" aria-label="Switch language">RU</button>
+        <a class="btn btn-primary btn-sm" data-link="store" hidden data-i18n="ctaInstallShort">Add to Chrome</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow" data-i18n="heroEyebrow">Chrome extension for developers</p>
+          <h1 data-i18n="heroTitle">Local API client in&nbsp;Chrome</h1>
+          <p class="lead" data-i18n="heroLead">Send HTTP requests from the browser, keep collections and environments on this device, and skip the desktop app. No account, no cloud workspace.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" data-link="store" hidden data-i18n="ctaInstall">Add to Chrome — free</a>
+            <a class="btn btn-primary" id="heroPricing" href="#pricing" data-i18n="ctaPricing">View pricing</a>
+          </div>
+          <ul class="hero-facts">
+            <li data-i18n="factLocal">Data stays on this computer</li>
+            <li data-i18n="factAccount">No sign-up</li>
+            <li data-i18n="factLicense">MIT licensed</li>
+          </ul>
+        </div>
+        <div class="hero-visual">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+            <img src="assets/shot-rest.png" width="1024" height="640" data-i18n-alt="altRest" alt="PingTo sending a GET request with a path parameter and showing a JSON response">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="principles" aria-label="Principles">
+      <div class="container principles-grid">
+        <div class="principle">
+          <h3 data-i18n="pLocalTitle">Local by design</h3>
+          <p data-i18n-html="pLocalText">Collections, environments, history and response bodies are stored in <code>chrome.storage.local</code>. Nothing is synced to a server.</p>
+        </div>
+        <div class="principle">
+          <h3 data-i18n="pCorsTitle">Not blocked by CORS</h3>
+          <p data-i18n="pCorsText">Requests are sent by the extension, not by the page, so page CORS rules do not get in the way.</p>
+        </div>
+        <div class="principle">
+          <h3 data-i18n="pKeysTitle">Keyboard-first</h3>
+          <p data-i18n-html="pKeysText">Open with <span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></span>, send with <span class="keys"><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>, jump anywhere with <span class="keys"><kbd>Ctrl</kbd>+<kbd>K</kbd></span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow" data-i18n="featEyebrow">Features</p>
+          <h2 data-i18n="featTitle">Everything a daily API workflow needs</h2>
+          <p class="section-lead" data-i18n="featLead">The Free plan covers REST work end to end. Pro adds protocols, automation and imports from other clients.</p>
+        </header>
+        <div class="feature-grid">
+          <article class="feature">
+            <div class="feature-head"><span class="methods" aria-hidden="true"><span class="m m-get">GET</span><span class="m m-post">POST</span></span><span class="tag tag-free">Free</span></div>
+            <h3 data-i18n="fHttpTitle">HTTP requests</h3>
+            <p data-i18n="fHttpText">GET, POST, PUT, PATCH, DELETE, OPTIONS and HEAD. Query and path params, headers, cookies, JSON, form, multipart and text bodies. Unlimited tabs.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">{{ }}</span><span class="tag tag-free">Free</span></div>
+            <h3 data-i18n="fCollTitle">Collections and environments</h3>
+            <p data-i18n-html="fCollText">Folders, drag and drop, per-request docs. <code>{{base_url}}</code> variables in URL, headers, body and auth, with secret values masked.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">200</span><span class="tag tag-free">Free</span></div>
+            <h3 data-i18n="fRespTitle">Response inspection</h3>
+            <p data-i18n="fRespText">Collapsible JSON tree with click-to-copy paths, highlighted XML, raw view with line numbers, HTML and image preview, JSONPath filter, redirect chain.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">$ curl</span><span class="tag tag-free">Free</span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fCurlTitle">cURL and code snippets</h3>
+            <p data-i18n="fCurlText">Paste cURL to build a request; copy any request as cURL with environment values substituted. Pro generates JavaScript, Python, PHP and Go snippets.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">Auth</span><span class="tag tag-free">Free</span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fAuthTitle">Authentication</h3>
+            <p data-i18n="fAuthText">Bearer, Basic and API Key, plus inheritance from a folder or collection. Pro adds Digest and OAuth 2.0: client credentials and authorization code with PKCE.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">query</span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fGqlTitle">GraphQL</h3>
+            <p data-i18n="fGqlText">Query editor, variables and schema introspection against any GraphQL endpoint.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="methods" aria-hidden="true"><span class="m m-ws">WS</span><span class="m m-ws">SSE</span></span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fWsTitle">WebSocket and SSE</h3>
+            <p data-i18n="fWsText">Open live connections, send messages and read event streams, with optional automatic reconnect.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">pm.test</span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fAutoTitle">Scripts, tests and runs</h3>
+            <p data-i18n-html="fAutoText">Pre-request scripts and tests in JavaScript, executed in an isolated sandbox on this device. Snapshots, response diff, and collection runs with JSON or CSV rows filling <code>{{variables}}</code>.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-head"><span class="glyph" aria-hidden="true">.json .bru</span><span class="tag tag-pro">Pro</span></div>
+            <h3 data-i18n="fImportTitle">Import and export</h3>
+            <p data-i18n="fImportText">Postman v2, Insomnia and Bruno in both directions; OpenAPI and HAR import. A workspace file moves collections, environments and settings to another computer.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="screens">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow" data-i18n="screensEyebrow">Screenshots</p>
+          <h2 data-i18n="screensTitle">The real interface</h2>
+          <p class="section-lead" data-i18n="screensLead">Captured from the extension running against a local test server.</p>
+        </header>
+        <div class="gallery">
+          <div class="gallery-tabs" role="tablist" aria-label="Screenshots">
+            <button type="button" role="tab" class="gallery-tab is-active" aria-selected="true" data-shot="rest" data-i18n="tabRest">REST</button>
+            <button type="button" role="tab" class="gallery-tab" aria-selected="false" data-shot="environments" data-i18n="tabEnv">Environments</button>
+            <button type="button" role="tab" class="gallery-tab" aria-selected="false" data-shot="curl" data-i18n="tabCurl">cURL and code</button>
+            <button type="button" role="tab" class="gallery-tab" aria-selected="false" data-shot="graphql" data-i18n="tabGql">GraphQL</button>
+            <button type="button" role="tab" class="gallery-tab" aria-selected="false" data-shot="loadtest" data-i18n="tabLoad">Load test</button>
+          </div>
+          <div class="window gallery-frame">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+            <img id="galleryImage" src="assets/shot-rest.png" width="1024" height="640" data-i18n-alt="altRest" alt="PingTo sending a GET request with a path parameter and showing a JSON response">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="loadtest">
+      <div class="container split">
+        <div class="split-copy">
+          <p class="eyebrow"><span data-i18n="loadEyebrow">Load testing</span> <span class="tag tag-pro">Pro</span></p>
+          <h2 data-i18n="loadTitle">Load tests that run on your machine</h2>
+          <p class="section-lead" data-i18n="loadLead">Chrome cannot open thousands of parallel connections, so PingTo drives a small agent you download for your OS. It repeats the current HTTP request and streams results back to the extension.</p>
+          <ol class="steps">
+            <li>
+              <h3 data-i18n="step1Title">Download the agent</h3>
+              <p data-i18n="step1Text">Builds for Windows, macOS and Linux from GitHub Releases, with a SHA-256 checksum to verify.</p>
+            </li>
+            <li>
+              <h3 data-i18n="step2Title">Run it locally</h3>
+              <p data-i18n-html="step2Text">Listens on <code>127.0.0.1:8788</code> only. No login and no telemetry.</p>
+            </li>
+            <li>
+              <h3 data-i18n="step3Title">Ramp or hold</h3>
+              <p data-i18n="step3Text">Grow from zero to a target rate, or hold the peak. Abort rules stop the run on error rate, p95 latency or a streak of failures.</p>
+            </li>
+            <li>
+              <h3 data-i18n="step4Title">Read the report</h3>
+              <p data-i18n="step4Text">Live and peak requests per second, p50/p95/p99 latency and status codes. Export the report as HTML.</p>
+            </li>
+          </ol>
+        </div>
+        <div class="split-visual">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+            <img src="assets/shot-loadtest.png" width="1024" height="640" loading="lazy" data-i18n-alt="altLoad" alt="Load test report with requests per second and latency percentile charts">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="pricing">
+      <div class="container">
+        <header class="section-head center">
+          <p class="eyebrow" data-i18n="priceEyebrow">Pricing</p>
+          <h2 data-i18n="priceTitle">Start free. Upgrade when the work needs it</h2>
+          <p class="section-lead" data-i18n="priceLead">One plan for individual developers. No seats, no usage metering.</p>
+        </header>
+        <div class="pricing-grid">
+          <article class="plan">
+            <h3 class="plan-name">Free</h3>
+            <p class="plan-price"><span class="amount">$0</span> <span class="period" data-i18n="priceForever">forever</span></p>
+            <p class="plan-desc" data-i18n="freeDesc">Everything you need for REST work.</p>
+            <ul class="plan-list">
+              <li data-i18n="free1">Unlimited tabs and all HTTP methods</li>
+              <li data-i18n="free2">Bearer, Basic, API Key and inherited auth</li>
+              <li data-i18n="free3">2 collections, 25 saved requests</li>
+              <li data-i18n="free4">1 environment, 10 variables</li>
+              <li data-i18n="free5">History of the last 50 requests</li>
+              <li data-i18n="free6">cURL import and export, PingTo JSON import and export</li>
+              <li data-i18n="free7">Light and dark theme, English and Russian</li>
+            </ul>
+            <a class="btn btn-ghost btn-block" data-link="store" hidden data-i18n="ctaInstallShort">Add to Chrome</a>
+          </article>
+          <article class="plan plan-pro">
+            <div class="plan-top">
+              <h3 class="plan-name">Pro</h3>
+              <span class="plan-badge" data-i18n="proBadge">For daily work</span>
+            </div>
+            <p class="plan-price"><span class="amount">$29</span> <span class="period" data-i18n="pricePerYear">per year</span></p>
+            <p class="plan-desc" data-i18n="proDesc">One license key on up to 3 devices.</p>
+            <ul class="plan-list">
+              <li data-i18n="pro1">Everything in Free</li>
+              <li data-i18n="pro2">Unlimited collections, requests and environments</li>
+              <li data-i18n="pro3">History of up to 2000 requests</li>
+              <li data-i18n="pro4">GraphQL, WebSocket and SSE</li>
+              <li data-i18n="pro5">Digest and OAuth 2.0</li>
+              <li data-i18n="pro6">Scripts, tests, snapshots, diff, binary body</li>
+              <li data-i18n="pro7">Collection runner with JSON or CSV data</li>
+              <li data-i18n="pro8">Postman, Insomnia, Bruno, OpenAPI and HAR</li>
+              <li data-i18n="pro9">Code snippets: JavaScript, Python, PHP, Go</li>
+              <li data-i18n="pro10">Load testing via a local agent</li>
+              <li data-i18n="pro11">Workspace file for moving between computers</li>
+            </ul>
+            <a class="btn btn-primary btn-block" id="buyPro" aria-disabled="true" data-i18n="ctaBuy">Buy Pro</a>
+          </article>
+        </div>
+        <p class="pricing-note" data-i18n="priceNote">Billed yearly in USD. Checkout is handled by Lemon Squeezy; card details never reach PingTo. After payment you receive a license key and paste it into the extension.</p>
+      </div>
+    </section>
+
+    <section class="section" id="privacy">
+      <div class="container split split-text">
+        <header class="section-head">
+          <p class="eyebrow" data-i18n="privEyebrow">Privacy</p>
+          <h2 data-i18n="privTitle">What leaves your computer</h2>
+          <p class="section-lead" data-i18n="privLead">PingTo is built to work without a backend. These are the only network calls it makes on its own.</p>
+        </header>
+        <ul class="check-list">
+          <li data-i18n-html="priv1">Requests you send, collections, environments and history stay in <code>chrome.storage.local</code> on this device.</li>
+          <li data-i18n="priv2">License activation and deactivation call Lemon Squeezy.</li>
+          <li data-i18n="priv3">The load-test agent and its release manifest are downloaded from GitHub only when you use that feature.</li>
+          <li data-i18n="priv4">Pro scripts run in an isolated sandbox page without access to extension APIs.</li>
+          <li data-i18n="priv5">There is no account system and no cloud workspace.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="faq">
+      <div class="container narrow">
+        <header class="section-head center">
+          <p class="eyebrow" data-i18n="faqEyebrow">FAQ</p>
+          <h2 data-i18n="faqTitle">Questions</h2>
+        </header>
+        <div class="faq">
+          <details>
+            <summary data-i18n="q1">Do I need an account?</summary>
+            <p data-i18n="a1">No. Install the extension and send requests. A license key is only needed for Pro.</p>
+          </details>
+          <details>
+            <summary data-i18n="q2">Where is my data stored?</summary>
+            <p data-i18n="a2">In chrome.storage.local on this device. Use PingTo JSON export or the Pro workspace file to move it to another computer.</p>
+          </details>
+          <details>
+            <summary data-i18n="q3">How many devices does a Pro license cover?</summary>
+            <p data-i18n="a3">Up to three. Activate the same key on each device; deactivate one to free a slot.</p>
+          </details>
+          <details>
+            <summary data-i18n="q4">What happens if I do not renew Pro?</summary>
+            <p data-i18n="a4">Your data stays. Pro features lock, and collections beyond the first two are locked, not deleted, until you renew.</p>
+          </details>
+          <details>
+            <summary data-i18n="q5">Can PingTo ignore invalid TLS certificates?</summary>
+            <p data-i18n="a5">No. Chrome extensions cannot bypass certificate errors. Use a valid certificate, or plain HTTP for local services.</p>
+          </details>
+          <details>
+            <summary data-i18n="q6">Is the load-test agent safe to run?</summary>
+            <p data-i18n="a6">It listens on 127.0.0.1 only and has no telemetry. It also has no login, so any program on this computer can call it while it runs. Stop it when you are done, and load only APIs you own or are permitted to test.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="container cta-inner">
+        <div>
+          <h2 data-i18n="ctaBandTitle">Open PingTo, paste a URL, press Send</h2>
+          <p data-i18n="ctaBandText">Free to install. Upgrade only if you need more.</p>
+        </div>
+        <a class="btn btn-primary" data-link="store" hidden data-i18n="ctaInstall">Add to Chrome — free</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a class="brand" href="#top" aria-label="PingTo">
+          <img class="brand-mark" src="assets/logo-mark.svg" alt="" width="40" height="12">
+          <span class="brand-name">PingTo</span>
+        </a>
+        <p data-i18n="footerTag">Local API client for Chrome.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#features" data-i18n="navFeatures">Features</a>
+        <a href="#pricing" data-i18n="navPricing">Pricing</a>
+        <a href="#privacy" data-i18n="navPrivacy">Privacy</a>
+        <a data-link="repo" href="https://github.com/Baraulia/pingTO">GitHub</a>
+        <a data-link="support" href="https://github.com/Baraulia/pingTO/issues" data-i18n="navSupport">Support</a>
+      </nav>
+      <p class="footer-legal">© 2026 PingTo. <span data-i18n="footerLicense">Released under the MIT License.</span></p>
+    </div>
+  </footer>
+
+  <script src="site.js"></script>
+</body>
+</html>
